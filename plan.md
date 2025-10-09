@@ -340,7 +340,7 @@ ______________________________________________________________________
   class Settings(BaseSettings):
       model_config = SettingsConfigDict(
           env_file=".env",
-          env_prefix="QUICKEXPENSE_",
+          env_prefix="QUICKEXPENSE_RAG_",
           case_sensitive=False
       )
 
