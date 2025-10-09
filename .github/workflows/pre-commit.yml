@@ -1,0 +1,64 @@
+name: Pre-commit Checks
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  pre-commit:
+    name: Run pre-commit hooks
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Cache uv venv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Run pre-commit hooks
+        id: pre-commit
+        run: |
+          uv run pre-commit run --all-files --show-diff-on-failure 2>&1 | tee pre-commit.log
+        continue-on-error: true
+
+      - name: Upload pre-commit artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pre-commit-artifacts
+          path: pre-commit.log
+          retention-days: 7
+
+      - name: Fail job if pre-commit failed
+        if: steps.pre-commit.outcome == 'failure'
+        run: |
+          echo "❌ Pre-commit checks failed. See the log artifact for details."
+          exit 1
