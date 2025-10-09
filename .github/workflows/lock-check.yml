@@ -2,9 +2,16 @@ name: Lock File Check
 
 on:
   push:
-    branches: ["**"]
+    branches: [develop]
   pull_request:
-    branches: ["**"]
+    branches: [develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
   lock-check:

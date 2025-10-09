@@ -2,9 +2,16 @@ name: Pre-commit Checks
 
 on:
   push:
-    branches: ["**"]
+    branches: [develop]
   pull_request:
-    branches: ["**"]
+    branches: [develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
   pre-commit:
@@ -25,9 +32,16 @@ jobs:
         with:
           enable-cache: true
 
+      - name: Cache uv venv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
       - name: Install dependencies
-        run: |
-          uv sync --all-extras
+        run: uv sync --all-extras
 
       - name: Run pre-commit hooks
         id: pre-commit
@@ -40,11 +54,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pre-commit-artifacts
-          path: |
-            pre-commit.log
-            .pre-commit-cache/
+          path: pre-commit.log
           retention-days: 7
 
       - name: Fail job if pre-commit failed
         if: steps.pre-commit.outcome == 'failure'
-        run: exit 1
+        run: |
+          echo "❌ Pre-commit checks failed. See the log artifact for details."
+          exit 1

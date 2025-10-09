@@ -2,9 +2,16 @@ name: Tests
 
 on:
   push:
-    branches: ["**"]
+    branches: [develop]
   pull_request:
-    branches: ["**"]
+    branches: [develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -31,9 +38,16 @@ jobs:
         with:
           enable-cache: true
 
+      - name: Cache uv venv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: ${{ runner.os }}-${{ matrix.python-version }}-uv-${{ hashFiles('**/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.python-version }}-uv-
+
       - name: Install dependencies
-        run: |
-          uv sync --all-extras
+        run: uv sync --all-extras
 
       - name: Run tests with coverage
         id: pytest
@@ -55,7 +69,6 @@ jobs:
             htmlcov/
             test-results.xml
             pytest.log
-            .pytest_cache/
           retention-days: 7
 
       - name: Upload coverage reports
@@ -70,4 +83,6 @@ jobs:
 
       - name: Fail job if tests failed
         if: steps.pytest.outcome == 'failure'
-        run: exit 1
+        run: |
+          echo "❌ Pytest failed on ${{ matrix.os }} with Python ${{ matrix.python-version }}. See artifacts for details."
+          exit 1
