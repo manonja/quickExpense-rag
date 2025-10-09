@@ -1,21 +1,34 @@
 """
-Database schema definition and versioning.
+Database schema definition for QuickExpense RAG.
 
-Defines the canonical SQLite schema for rules, FTS5 index, and vector search.
+This module defines the canonical SQLite schema including:
+- Main content table (rules)
+- FTS5 virtual table for keyword search (rules_fts)
+- sqlite-vec virtual table for semantic search (rules_vec)
+- Metadata table for versioning and provenance
+
+Schema follows SQLite best practices:
+- WITHOUT ROWID for metadata table (non-integer PK optimization)
+- External content FTS5 to minimize storage
+- Indexes on frequently filtered columns
+- ISO 8601 TEXT dates for human readability
 """
+
+import sqlite3
 
 SCHEMA_VERSION = "1.0"
 
 CREATE_TABLES_SQL = """
--- Metadata table for versioning
+-- Metadata table for database versioning and provenance.
+-- WITHOUT ROWID optimization for non-integer PK tables.
 CREATE TABLE IF NOT EXISTS metadata (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
-);
+) WITHOUT ROWID;
 
--- Main content table
+-- Main content table storing processed chunks of CRA rules.
 CREATE TABLE IF NOT EXISTS rules (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY,
     content TEXT NOT NULL,
     citation_id TEXT UNIQUE NOT NULL,
     source_url TEXT NOT NULL,
@@ -24,11 +37,12 @@ CREATE TABLE IF NOT EXISTS rules (
     business_type TEXT,
     expense_type TEXT,
     metadata_json TEXT,
-    retrieved_at TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    retrieved_at TEXT NOT NULL,  -- ISO 8601
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP  -- ISO 8601
 );
 
--- FTS5 virtual table for keyword search
+-- FTS5 virtual table for fast keyword search.
+-- Uses external content table to save space.
 CREATE VIRTUAL TABLE IF NOT EXISTS rules_fts USING fts5(
     content,
     content='rules',
@@ -36,7 +50,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS rules_fts USING fts5(
     tokenize='porter unicode61'
 );
 
--- Triggers to keep FTS in sync
+-- Triggers to automatically update the FTS table on changes to 'rules'.
 CREATE TRIGGER IF NOT EXISTS rules_ai AFTER INSERT ON rules BEGIN
     INSERT INTO rules_fts(rowid, content) VALUES (new.id, new.content);
 END;
@@ -49,15 +63,57 @@ CREATE TRIGGER IF NOT EXISTS rules_au AFTER UPDATE ON rules BEGIN
     UPDATE rules_fts SET content = new.content WHERE rowid = new.id;
 END;
 
--- Vector table for semantic search
+-- Vector search virtual table powered by sqlite-vec.
+-- The implicit 'rowid' of this table corresponds to 'rules.id'.
+-- No auxiliary columns needed - always hydrate from rules table.
 CREATE VIRTUAL TABLE IF NOT EXISTS rules_vec USING vec0(
-    id INTEGER PRIMARY KEY,
-    embedding FLOAT[384]
+    embedding FLOAT[384]  -- BGE-small-en-v1.5
 );
 
--- Indexes for metadata filtering
+-- Indexes for efficient filtering on common metadata fields.
+-- Justified for read-heavy workload despite write-time overhead.
 CREATE INDEX IF NOT EXISTS idx_province ON rules(province);
 CREATE INDEX IF NOT EXISTS idx_business_type ON rules(business_type);
 CREATE INDEX IF NOT EXISTS idx_expense_type ON rules(expense_type);
 CREATE INDEX IF NOT EXISTS idx_citation ON rules(citation_id);
 """
+
+
+def init_metadata(
+    conn: sqlite3.Connection, data_version: str, embedding_model: str
+) -> None:
+    """
+    Initialize metadata table with version info.
+
+    Args:
+        conn: SQLite connection
+        data_version: Data version (YYYY.MM format)
+        embedding_model: Name of embedding model used
+
+    """
+    conn.execute(
+        "INSERT OR REPLACE INTO metadata VALUES (?, ?)",
+        ("schema_version", SCHEMA_VERSION),
+    )
+    conn.execute(
+        "INSERT OR REPLACE INTO metadata VALUES (?, ?)",
+        ("data_version", data_version),
+    )
+    conn.execute(
+        "INSERT OR REPLACE INTO metadata VALUES (?, ?)",
+        ("embedding_model", embedding_model),
+    )
+
+
+def optimize_database(conn: sqlite3.Connection) -> None:
+    """
+    Run post-build optimizations.
+
+    Call this after all data is inserted. ANALYZE updates query planner
+    statistics for optimal read performance.
+
+    Args:
+        conn: SQLite connection
+
+    """
+    conn.execute("ANALYZE")
