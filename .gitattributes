@@ -1,2 +1,5 @@
 # uv.lock should use binary merge and be marked as generated
 uv.lock merge=binary linguist-language=YAML linguist-generated=true
+
+# Track SQLite fixture databases with Git LFS
+tests/fixtures/*.db filter=lfs diff=lfs merge=lfs -text
