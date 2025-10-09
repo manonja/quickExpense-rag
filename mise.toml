@@ -1,0 +1,38 @@
+[tools]
+# uv for Python package management
+uv = "latest"
+
+# pre-commit for git hooks
+"pipx:pre-commit" = "latest"
+
+[tasks.install]
+description = "Install all dependencies"
+run = "uv sync"
+
+[tasks.lint]
+description = "Run ruff linting"
+run = "uvx ruff check src/ tests/"
+
+[tasks.format]
+description = "Run ruff formatting"
+run = "uvx ruff format src/ tests/"
+
+[tasks.typecheck]
+description = "Run mypy type checking"
+run = "uv run mypy src/"
+
+[tasks.test]
+description = "Run pytest unit tests"
+run = "uv run pytest tests/unit -v -m unit"
+
+[tasks.test-all]
+description = "Run all tests including integration"
+run = "uv run pytest tests/ -v"
+
+[tasks.pre-commit-install]
+description = "Install pre-commit hooks"
+run = "uv run pre-commit install"
+
+[tasks.pre-commit-run]
+description = "Run all pre-commit hooks"
+run = "uv run pre-commit run --all-files"

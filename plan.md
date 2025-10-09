@@ -2,68 +2,91 @@
 
 ## 🚀 Quick Start: What's Changed
 
-This plan has been **optimized for 80/20 productivity** - delivering maximum value with minimum time:
+This plan has been **optimized for 80/20 productivity** - delivering maximum value with
+minimum time:
 
 ### Key Optimizations
+
 1. ⭐ **NEW Ticket 1.5**: CI/CD quality gates moved to Day 1 (was Ticket 12)
-2. ⭐ **NEW Ticket 4.5**: Fixture database enables parallel development
-3. ⚡ **Parallel Workstreams**: Runtime API and data pipeline work simultaneously
-4. 🎯 **40% faster**: 6-7 days total (was 10-12 days)
-5. 🎉 **60% faster to demo**: Working search in 2-3 days (was 5-7 days)
+1. ⭐ **NEW Ticket 4.5**: Fixture database enables parallel development
+1. ⚡ **Parallel Workstreams**: Runtime API and data pipeline work simultaneously
+1. 🎯 **40% faster**: 6-7 days total (was 10-12 days)
+1. 🎉 **60% faster to demo**: Working search in 2-3 days (was 5-7 days)
 
 ### What You Get
+
 - **Day 1**: Project setup + CI quality gates enforcing code standards
 - **Day 2-3**: Working `qer.search()` function (Workstream A complete)
 - **Day 4-5**: Production data pipeline (Workstream B complete)
 - **Day 6-7**: E2E testing, packaging, release automation
 
 ### For Teams
+
 - **Solo dev**: Follow Workstream A → B sequentially for fastest feedback
 - **2-person team**: One on runtime (A), one on pipeline (B) - true parallelism
 - **3+ team**: Split Phase 2 definitions, then allocate to workstreams
 
----
+______________________________________________________________________
 
 ## Architecture Summary
+
 - **Structure**: Arkalos pattern (app/ runtime, scripts/ internal tools)
 - **Search**: SQLite + FTS5 (keywords) + sqlite-vec (semantic) + RRF fusion
 - **Distribution**: Code via PyPI, data via GitHub Releases
 - **Legal**: Mandatory disclaimers on all APIs
-- **Tech Stack**: Python 3.11+, uv, Pydantic v2, sentence-transformers, sqlite-vec, Gemini Flash
+- **Tech Stack**: Python 3.11+, uv, Pydantic v2, sentence-transformers, sqlite-vec,
+  Gemini Flash
 
 ## ⚡ Parallel Development Strategy
 
-**Critical Path Optimization**: This plan enables two independent workstreams that work in parallel:
-- **Workstream A (Runtime Library)**: Delivers a working `search()` API in 2-3 days using fixture data
-- **Workstream B (Indexing Pipeline)**: Builds production data ingestion (can start after core definitions)
+**Critical Path Optimization**: This plan enables two independent workstreams that work
+in parallel:
 
-**Key Enabler**: **Ticket 4.5** creates a fixture database that unblocks the runtime team to work independently of the data pipeline team. Quality gates (CI/CD linting, formatting, type checking) are established on Day 1 via **Ticket 1.5**.
+- **Workstream A (Runtime Library)**: Delivers a working `search()` API in 2-3 days
+  using fixture data
+- **Workstream B (Indexing Pipeline)**: Builds production data ingestion (can start
+  after core definitions)
 
-**Result**: Working demo in 2-3 days (vs 5-7 days), parallel team productivity, faster feedback loops.
+**Key Enabler**: **Ticket 4.5** creates a fixture database that unblocks the runtime
+team to work independently of the data pipeline team. Quality gates (CI/CD linting,
+formatting, type checking) are established on Day 1 via **Ticket 1.5**.
 
----
+**Result**: Working demo in 2-3 days (vs 5-7 days), parallel team productivity, faster
+feedback loops.
+
+______________________________________________________________________
 
 ## ✨ Key Architecture Decisions
 
 ### Parsing Strategy: Gemini Flash over Custom HTML/PDF Parser
-**Decision**: Use Gemini Flash 2.0 for document parsing instead of automated web scraping + brittle regex/BeautifulSoup parsing.
+
+**Decision**: Use Gemini Flash 2.0 for document parsing instead of automated web
+scraping + brittle regex/BeautifulSoup parsing.
 
 **Rationale**:
-1. **Less Brittle**: LLM understands semantic structure vs regex patterns that break with website changes
-2. **No Scraping Maintenance**: Maintainer manually downloads CRA docs - eliminates web scraping breakage
-3. **Better Semantics**: LLM extracts citations, metadata, and chunks with understanding of legal document structure
-4. **Cost-Effective**: ~$1.59 for all 50 documents (negligible compared to maintenance cost)
-5. **Validated Output**: Multi-layer validation (Pydantic + regex + content grounding) catches hallucinations
-6. **Flexible**: Works with HTML or PDF without format-specific parsing code
+
+1. **Less Brittle**: LLM understands semantic structure vs regex patterns that break
+   with website changes
+1. **No Scraping Maintenance**: Maintainer manually downloads CRA docs - eliminates web
+   scraping breakage
+1. **Better Semantics**: LLM extracts citations, metadata, and chunks with understanding
+   of legal document structure
+1. **Cost-Effective**: ~$1.59 for all 50 documents (negligible compared to maintenance
+   cost)
+1. **Validated Output**: Multi-layer validation (Pydantic + regex + content grounding)
+   catches hallucinations
+1. **Flexible**: Works with HTML or PDF without format-specific parsing code
 
 **Workflow**:
+
 1. Maintainer manually downloads CRA HTML/PDF → `data/raw/`
-2. Pre-processor extracts clean text → `data/preprocessed/`
-3. Gemini Flash parses text → structured JSON chunks → `data/processed/chunks.jsonl`
-4. Index builder creates embeddings → SQLite database
-5. Validation pipeline ensures quality
+1. Pre-processor extracts clean text → `data/preprocessed/`
+1. Gemini Flash parses text → structured JSON chunks → `data/processed/chunks.jsonl`
+1. Index builder creates embeddings → SQLite database
+1. Validation pipeline ensures quality
 
 **Trade-offs**:
+
 - ✅ Eliminates parser brittleness (biggest maintenance pain)
 - ✅ Better semantic understanding
 - ✅ Simpler codebase (prompt engineering vs complex parsing logic)
@@ -71,13 +94,15 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
 - ⚠️ Potential for LLM hallucinations (mitigated by validation)
 - ⚠️ Small cost per rebuild (~$1.59 for 50 docs)
 
----
+______________________________________________________________________
 
 ## TICKET 1: Project Foundation & Build System
 
-**Scope**: Initialize project structure, dependency management, linting, type checking, pre-commit hooks
+**Scope**: Initialize project structure, dependency management, linting, type checking,
+pre-commit hooks
 
 ### Acceptance Criteria
+
 - [ ] Project initialized with `uv init --lib quickexpense-rag`
 - [ ] `pyproject.toml` configured:
   ```toml
@@ -158,16 +183,17 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
   uv run mypy app/
   ```
 
-**Dependency**: None
-**Enables**: All other tickets
+**Dependency**: None **Enables**: All other tickets
 
----
+______________________________________________________________________
 
 ## TICKET 1.5: CI/CD Quality Gates ⭐ NEW
 
-**Scope**: Establish automated quality gates on Day 1 (linting, formatting, type checking, testing)
+**Scope**: Establish automated quality gates on Day 1 (linting, formatting, type
+checking, testing)
 
 ### Acceptance Criteria
+
 - [ ] `.github/workflows/ci.yml` created with core quality jobs:
   ```yaml
   name: CI
@@ -210,17 +236,19 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
   - How to run linting/formatting
   - How to bypass hooks if needed (--no-verify)
 
-**Dependency**: TICKET 1
-**Enables**: Quality gates for all subsequent development
-**Rationale**: Moving CI setup to Day 1 prevents tech debt accumulation and ensures code quality from the start. The release automation workflows (build-database.yml, release.yml) remain in TICKET 12 as they're only needed for publishing artifacts.
+**Dependency**: TICKET 1 **Enables**: Quality gates for all subsequent development
+**Rationale**: Moving CI setup to Day 1 prevents tech debt accumulation and ensures code
+quality from the start. The release automation workflows (build-database.yml,
+release.yml) remain in TICKET 12 as they're only needed for publishing artifacts.
 
----
+______________________________________________________________________
 
 ## TICKET 2: Database Schema & Versioning
 
 **Scope**: Define canonical database schema, versioning strategy, migration plan
 
 ### Acceptance Criteria
+
 - [ ] `app/rag/data/schema.py` defines complete schema:
   ```python
   SCHEMA_VERSION = "1.0"
@@ -282,9 +310,12 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
   """
   ```
 - [ ] Versioning strategy documented:
-  - Schema version stored in `metadata` table: `INSERT INTO metadata VALUES ('schema_version', '1.0')`
-  - Data version stored in `metadata` table: `INSERT INTO metadata VALUES ('data_version', '2024.12')`
-  - Library checks compatibility on init: `assert db_version.startswith(LIB_VERSION_MAJOR)`
+  - Schema version stored in `metadata` table:
+    `INSERT INTO metadata VALUES ('schema_version', '1.0')`
+  - Data version stored in `metadata` table:
+    `INSERT INTO metadata VALUES ('data_version', '2024.12')`
+  - Library checks compatibility on init:
+    `assert db_version.startswith(LIB_VERSION_MAJOR)`
 - [ ] `app/rag/data/migrations.py` created (empty for v1, future-proofing)
 - [ ] Unit test verifies:
   - Schema SQL executes without errors
@@ -292,16 +323,16 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
   - Metadata table populated correctly
   - Foreign key constraints enforced
 
-**Dependency**: TICKET 1
-**Enables**: TICKET 5, TICKET 9A-C (indexing pipeline)
+**Dependency**: TICKET 1 **Enables**: TICKET 5, TICKET 9A-C (indexing pipeline)
 
----
+______________________________________________________________________
 
 ## TICKET 3: Configuration & Exception Hierarchy
 
 **Scope**: User-configurable settings, custom exceptions, logging setup
 
 ### Acceptance Criteria
+
 - [ ] `config/settings.py` using pydantic-settings:
   ```python
   from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -376,16 +407,17 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
   - Default values applied correctly
   - All exceptions are catchable and have clear messages
 
-**Dependency**: TICKET 1
-**Enables**: All subsequent tickets (all use config and exceptions)
+**Dependency**: TICKET 1 **Enables**: All subsequent tickets (all use config and
+exceptions)
 
----
+______________________________________________________________________
 
 ## TICKET 4: Pydantic Models with Legal Safeguards
 
 **Scope**: Type-safe data models for all API boundaries
 
 ### Acceptance Criteria
+
 - [ ] `app/rag/search/enums.py`:
   ```python
   from enum import Enum
@@ -463,16 +495,17 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
   - All models are immutable (frozen=True)
   - `mypy` passes on all model files
 
-**Dependency**: TICKET 1, TICKET 3
-**Enables**: TICKET 5, TICKET 6, TICKET 9A-C
+**Dependency**: TICKET 1, TICKET 3 **Enables**: TICKET 5, TICKET 6, TICKET 9A-C
 
----
+______________________________________________________________________
 
 ## TICKET 4.5: Fixture Database for Parallel Development ⭐ NEW
 
-**Scope**: Create a small, version-controlled SQLite database with hand-crafted test data to unblock runtime library development
+**Scope**: Create a small, version-controlled SQLite database with hand-crafted test
+data to unblock runtime library development
 
 ### Acceptance Criteria
+
 - [ ] `tests/fixtures/test_database.db` created with schema from TICKET 2:
   - 10-20 hand-crafted rows representing diverse CRA rules
   - Pre-computed embeddings (384-dim vectors) for each row
@@ -512,17 +545,21 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
   - How to regenerate if schema changes
   - Known limitations (small dataset, hand-crafted)
 
-**Dependency**: TICKET 2 (Schema), TICKET 3 (Config)
-**Enables**: TICKET 5, 6, 7, 8 (entire runtime library can now be developed and tested independently)
-**Rationale**: This is the critical enabler for parallel development. The fixture database allows the runtime team (Workstream A) to build and test the search API while the indexing team (Workstream B) works on the production data pipeline. Both teams target the same schema contract but work independently.
+**Dependency**: TICKET 2 (Schema), TICKET 3 (Config) **Enables**: TICKET 5, 6, 7, 8
+(entire runtime library can now be developed and tested independently) **Rationale**:
+This is the critical enabler for parallel development. The fixture database allows the
+runtime team (Workstream A) to build and test the search API while the indexing team
+(Workstream B) works on the production data pipeline. Both teams target the same schema
+contract but work independently.
 
----
+______________________________________________________________________
 
 ## TICKET 5: Embedding Service
 
 **Scope**: Text-to-vector encoding with BGE model, singleton pattern, batch processing
 
 ### Acceptance Criteria
+
 - [ ] `app/rag/embeddings/encoder.py`:
   ```python
   from sentence_transformers import SentenceTransformer
@@ -577,16 +614,18 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
   - Batch encoding matches sequential encoding
 - [ ] Performance test: 100 texts embedded in < 2 seconds on CPU
 
-**Dependency**: TICKET 1, TICKET 3
-**Enables**: TICKET 7 (Hybrid Search), TICKET 9C (Index Builder)
+**Dependency**: TICKET 1, TICKET 3 **Enables**: TICKET 7 (Hybrid Search), TICKET 9C
+(Index Builder)
 
----
+______________________________________________________________________
 
 ## TICKET 6: Data Manager (Download, Cache, Verify)
 
-**Scope**: Download database from GitHub, verify integrity, manage cache, handle offline mode
+**Scope**: Download database from GitHub, verify integrity, manage cache, handle offline
+mode
 
 ### Acceptance Criteria
+
 - [ ] `app/rag/data/manager.py`:
   ```python
   class DataManager:
@@ -609,13 +648,20 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
       def get_metadata(self, db_path: Path) -> dict:
           """Read metadata table from database."""
   ```
-- [ ] **Given** clean environment, **when** `get_database_path()` called, **then** database downloaded to cache directory
-- [ ] **Given** downloaded database, **when** opened, **then** SHA256 verified against manifest
-- [ ] **Given** cached database, **when** `download_database(force=True)` called, **then** new version downloaded and old replaced
-- [ ] **Given** DB version 1.x and library expects 2.x, **when** accessed, **then** `DataVersionMismatchError` raised
-- [ ] **Given** no network and cached DB exists, **when** `get_database_path()` called, **then** returns cached path (offline mode)
-- [ ] **Given** no network and no cached DB, **when** `get_database_path()` called, **then** `NetworkError` raised with clear message
-- [ ] **Given** corrupted download, **when** checksum verified, **then** `ChecksumMismatchError` raised and file deleted
+- [ ] **Given** clean environment, **when** `get_database_path()` called, **then**
+  database downloaded to cache directory
+- [ ] **Given** downloaded database, **when** opened, **then** SHA256 verified against
+  manifest
+- [ ] **Given** cached database, **when** `download_database(force=True)` called,
+  **then** new version downloaded and old replaced
+- [ ] **Given** DB version 1.x and library expects 2.x, **when** accessed, **then**
+  `DataVersionMismatchError` raised
+- [ ] **Given** no network and cached DB exists, **when** `get_database_path()` called,
+  **then** returns cached path (offline mode)
+- [ ] **Given** no network and no cached DB, **when** `get_database_path()` called,
+  **then** `NetworkError` raised with clear message
+- [ ] **Given** corrupted download, **when** checksum verified, **then**
+  `ChecksumMismatchError` raised and file deleted
 - [ ] Network retries: 3 attempts with exponential backoff (1s, 2s, 4s)
 - [ ] Unit tests with mocked httpx:
   - Successful download flow
@@ -624,16 +670,17 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
   - Version mismatch detection
 - [ ] Integration test: Download 10KB test database from mock server
 
-**Dependency**: TICKET 1, TICKET 2, TICKET 3
-**Enables**: TICKET 8 (Public API)
+**Dependency**: TICKET 1, TICKET 2, TICKET 3 **Enables**: TICKET 8 (Public API)
 
----
+______________________________________________________________________
 
 ## TICKET 7: Hybrid Search Engine (FTS5 + Vector + RRF)
 
-**Scope**: Core search logic combining keyword and semantic search with metadata filtering
+**Scope**: Core search logic combining keyword and semantic search with metadata
+filtering
 
 ### Acceptance Criteria
+
 - [ ] `app/rag/search/hybrid.py`:
   ```python
   class HybridSearchEngine:
@@ -675,13 +722,20 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
           scores[id] = scores.get(id, 0) + 1 / (k + rank + 1)
       return sorted(scores.items(), key=lambda x: x[1], reverse=True)
   ```
-- [ ] **Given** query with province=BC, **when** search executed, **then** only BC results returned
-- [ ] **Given** query "T2125 form", **when** keyword search run, **then** exact term match returned
-- [ ] **Given** query "restaurant meal", **when** vector search run, **then** semantically similar "dining expense" returned
-- [ ] **Given** keyword results [A, B] and vector results [B, C], **when** RRF applied, **then** B ranked first (appears in both)
-- [ ] **Given** no keyword matches but semantic matches exist, **when** search executed, **then** vector results returned
-- [ ] **Given** filters matching zero rows, **when** search executed, **then** empty list returned gracefully
-- [ ] **Given** 100MB database, **when** 100 searches executed, **then** p99 latency < 250ms
+- [ ] **Given** query with province=BC, **when** search executed, **then** only BC
+  results returned
+- [ ] **Given** query "T2125 form", **when** keyword search run, **then** exact term
+  match returned
+- [ ] **Given** query "restaurant meal", **when** vector search run, **then**
+  semantically similar "dining expense" returned
+- [ ] **Given** keyword results [A, B] and vector results [B, C], **when** RRF applied,
+  **then** B ranked first (appears in both)
+- [ ] **Given** no keyword matches but semantic matches exist, **when** search executed,
+  **then** vector results returned
+- [ ] **Given** filters matching zero rows, **when** search executed, **then** empty
+  list returned gracefully
+- [ ] **Given** 100MB database, **when** 100 searches executed, **then** p99 latency \<
+  250ms
 - [ ] Unit tests with test database:
   - Metadata filtering isolates provinces
   - FTS5 finds exact keywords
@@ -690,16 +744,18 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
   - Edge cases: no results, single result, 100+ results
 - [ ] Integration test: Real query on fixture database
 
-**Dependency**: TICKET 2, TICKET 3, TICKET 4, TICKET 5
-**Enables**: TICKET 8 (Public API)
+**Dependency**: TICKET 2, TICKET 3, TICKET 4, TICKET 5 **Enables**: TICKET 8 (Public
+API)
 
----
+______________________________________________________________________
 
 ## TICKET 8: Public API
 
-**Scope**: User-facing functions with legal disclaimers, initialization, search interface
+**Scope**: User-facing functions with legal disclaimers, initialization, search
+interface
 
 ### Acceptance Criteria
+
 - [ ] `app/api.py`:
   ```python
   def init(force_update: bool = False) -> None:
@@ -764,10 +820,14 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
   __version__ = "0.1.0"
   __all__ = ["init", "search", "get_version", "SearchResult", "ExpenseQuery"]
   ```
-- [ ] **Given** library imported, **when** `search()` called without `init()`, **then** `DatabaseNotInitializedError` raised with message "Call init() first"
-- [ ] **Given** `init()` called, **when** `search(query="restaurant in BC")` executed, **then** returns list of SearchResult objects
-- [ ] **Given** invalid province "ZZ", **when** `search()` called, **then** ValidationError raised
-- [ ] **Given** top_k=100 (out of range), **when** `search()` called, **then** ValidationError raised
+- [ ] **Given** library imported, **when** `search()` called without `init()`, **then**
+  `DatabaseNotInitializedError` raised with message "Call init() first"
+- [ ] **Given** `init()` called, **when** `search(query="restaurant in BC")` executed,
+  **then** returns list of SearchResult objects
+- [ ] **Given** invalid province "ZZ", **when** `search()` called, **then**
+  ValidationError raised
+- [ ] **Given** top_k=100 (out of range), **when** `search()` called, **then**
+  ValidationError raised
 - [ ] All function docstrings include legal disclaimer
 - [ ] Unit tests verify:
   - Init without network and no cache raises NetworkError
@@ -789,19 +849,22 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
   assert results[0].source_url.startswith("https://")
   ```
 
-**Dependency**: TICKET 3, TICKET 4, TICKET 6, TICKET 7
-**Enables**: User Story 1 (ML engineer API)
+**Dependency**: TICKET 3, TICKET 4, TICKET 6, TICKET 7 **Enables**: User Story 1 (ML
+engineer API)
 
----
+______________________________________________________________________
 
 ## TICKET 9A: Document Pre-processor
 
 **Scope**: Convert manually downloaded HTML/PDF files to clean text for LLM parsing
 
 ### Acceptance Criteria
+
 - [ ] **Manual Download Process** documented in `docs/maintainer_guide.md`:
+
   - Target URLs:
-    - Main index: https://www.canada.ca/en/revenue-agency/services/tax/technical-information/income-tax/income-tax-folios.html
+    - Main index:
+      https://www.canada.ca/en/revenue-agency/services/tax/technical-information/income-tax/income-tax-folios.html
     - Focus on Series 1 (Individuals), Series 3 (Business), Series 4 (Enterprises)
     - Filter for expense-related folios only
   - Save to `data/raw/` with descriptive names (e.g., `S3-F2-C1.html`, `S3-F2-C1.pdf`)
@@ -818,6 +881,7 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
     ```
 
 - [ ] `scripts/preprocessor/text_extractor.py`:
+
   ```python
   class TextExtractor:
       def extract_from_html(self, html_path: Path) -> str:
@@ -838,6 +902,7 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
   ```
 
 - [ ] Output structure:
+
   ```
   data/preprocessed/
     S1-F1-C1.txt
@@ -846,6 +911,7 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
   ```
 
 - [ ] Unit tests:
+
   - HTML extraction removes markup but preserves structure
   - PDF extraction handles multi-page documents
   - Both formats produce clean, parseable text
@@ -853,17 +919,18 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
 
 - [ ] Integration test: Preprocess 1 real HTML and 1 real PDF file
 
-**Dependency**: TICKET 1, TICKET 3
-**Enables**: TICKET 9B (Gemini Parser)
+**Dependency**: TICKET 1, TICKET 3 **Enables**: TICKET 9B (Gemini Parser)
 
----
+______________________________________________________________________
 
 ## TICKET 9B: Gemini Flash Parser
 
 **Scope**: Use Gemini Flash to parse documents into structured chunks with citations
 
 ### Acceptance Criteria
+
 - [ ] `scripts/parser/schema.py` - Pydantic models for parsed output:
+
   ```python
   from typing import List, Literal, Optional, Union
   from pydantic import BaseModel, Field
@@ -908,6 +975,7 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
   ```
 
 - [ ] `scripts/parser/gemini_parser.py`:
+
   ```python
   class GeminiParser:
       def __init__(self, api_key: str, model: str = "gemini-2.5-flash"):
@@ -939,6 +1007,7 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
   ```
 
 - [ ] Prompt engineering:
+
   - **Role**: "You are an expert CRA legal and tax document analyst"
   - **Instructions**:
     - Extract verbatim text (no summarization)
@@ -950,6 +1019,7 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
   - **JSON schema**: Full schema embedded in prompt
 
 - [ ] Validation layer (`scripts/parser/validator.py`):
+
   ```python
   class ParserValidator:
       def validate_parsed_document(self, parsed: ParsedDocument, source_text: str) -> dict:
@@ -962,6 +1032,7 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
   ```
 
 - [ ] Output: `data/processed/chunks.jsonl`
+
   ```json
   {
     "content": "A taxpayer's capital cost...",
@@ -978,6 +1049,7 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
   ```
 
 - [ ] Configuration in `config/settings.py`:
+
   ```python
   # Add to Settings class
   gemini_api_key: str = Field(..., env="GEMINI_API_KEY")
@@ -986,38 +1058,43 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
   ```
 
 - [ ] Unit tests:
+
   - Pydantic schema validation catches malformed JSON
   - Citation regex validation works
   - Content grounding detects hallucinations
   - Prompt construction includes all required elements
 
 - [ ] Integration test with real document:
+
   - Parse 1 preprocessed CRA document
   - Validate all chunks have unique citation_ids
   - Verify metadata extracted correctly
   - Check cost: ~$0.03 per document
 
 - [ ] Error handling:
+
   - Retry on API errors (3 attempts with backoff)
   - Log warnings for failed validations
   - Continue pipeline on non-critical errors
   - Store validation report for manual review
 
 - [ ] Cost tracking:
+
   - Log tokens used per document
   - Estimated cost: ~$1.59 for 50 documents
   - Budget alert if cost exceeds threshold
 
-**Dependency**: TICKET 2, TICKET 4, TICKET 9A
-**Enables**: TICKET 9C (Index Builder)
+**Dependency**: TICKET 2, TICKET 4, TICKET 9A **Enables**: TICKET 9C (Index Builder)
 
----
+______________________________________________________________________
 
 ## TICKET 9C: Index Builder
 
-**Scope**: Convert Gemini-parsed chunks to embeddings, populate SQLite database, generate manifest
+**Scope**: Convert Gemini-parsed chunks to embeddings, populate SQLite database,
+generate manifest
 
 ### Acceptance Criteria
+
 - [ ] `scripts/indexer/build_index.py`:
   ```python
   class IndexBuilder:
@@ -1056,9 +1133,11 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
       "sha256": "abc123..."
     }
     ```
-- [ ] **Given** 1000 chunks, **when** index built, **then** completes in <5 minutes
-- [ ] **Given** duplicate citation_id, **when** inserted, **then** error raised with citation shown
-- [ ] **Given** embedding generation fails for one chunk, **when** building, **then** error logged and build continues (or fails, based on flag)
+- [ ] **Given** 1000 chunks, **when** index built, **then** completes in \<5 minutes
+- [ ] **Given** duplicate citation_id, **when** inserted, **then** error raised with
+  citation shown
+- [ ] **Given** embedding generation fails for one chunk, **when** building, **then**
+  error logged and build continues (or fails, based on flag)
 - [ ] Unit tests with 10 test chunks:
   - Database created with correct schema
   - All three tables populated
@@ -1070,16 +1149,18 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
   - Test search query returns results
   - Manifest SHA256 matches actual database file
 
-**Dependency**: TICKET 2, TICKET 4, TICKET 5, TICKET 9B
-**Enables**: User Story 2 (auditable indexing)
+**Dependency**: TICKET 2, TICKET 4, TICKET 5, TICKET 9B **Enables**: User Story 2
+(auditable indexing)
 
----
+______________________________________________________________________
 
 ## TICKET 9D: Maintainer CLI
 
-**Scope**: Command-line interface to orchestrate preprocessing, parsing, building, validation
+**Scope**: Command-line interface to orchestrate preprocessing, parsing, building,
+validation
 
 ### Acceptance Criteria
+
 - [ ] `scripts/cli.py` using typer:
   ```python
   app = typer.Typer()
@@ -1160,16 +1241,17 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
 - [ ] Integration test: Run pipeline on 3 test HTML files
 - [ ] Documentation: `scripts/README.md` with maintainer guide
 
-**Dependency**: TICKET 9A, TICKET 9B, TICKET 9C
-**Enables**: User Story 2 (maintainer workflow)
+**Dependency**: TICKET 9A, TICKET 9B, TICKET 9C **Enables**: User Story 2 (maintainer
+workflow)
 
----
+______________________________________________________________________
 
 ## TICKET 10: Test Infrastructure & E2E Suite
 
 **Scope**: Pytest configuration, fixtures, comprehensive test coverage
 
 ### Acceptance Criteria
+
 - [ ] `pyproject.toml` pytest config:
   ```toml
   [tool.pytest.ini_options]
@@ -1232,16 +1314,16 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
   - app/rag/search/hybrid.py: ≥95%
   - app/rag/data/manager.py: ≥90%
 
-**Dependency**: All previous tickets
-**Enables**: Quality assurance before release
+**Dependency**: All previous tickets **Enables**: Quality assurance before release
 
----
+______________________________________________________________________
 
 ## TICKET 11: PyPI Packaging
 
 **Scope**: Package configuration, README, license, build artifacts
 
 ### Acceptance Criteria
+
 - [ ] `pyproject.toml` project metadata:
   ```toml
   [project]
@@ -1349,18 +1431,19 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
   pip install --index-url https://test.pypi.org/simple/ quickexpense-rag
   ```
 
-**Dependency**: All implementation tickets
-**Enables**: User Story 3 (PyPI publishing)
+**Dependency**: All implementation tickets **Enables**: User Story 3 (PyPI publishing)
 
----
+______________________________________________________________________
 
 ## TICKET 12: Release Automation
 
 **Scope**: GitHub Actions for PyPI releases and database artifact publishing
 
-**Note**: CI quality gates (linting, formatting, type checking, testing) are now in TICKET 1.5 and should already be in place.
+**Note**: CI quality gates (linting, formatting, type checking, testing) are now in
+TICKET 1.5 and should already be in place.
 
 ### Acceptance Criteria
+
 - [ ] `.github/workflows/release.yml`:
   ```yaml
   name: Release
@@ -1434,10 +1517,10 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
 - [ ] Documentation: `docs/maintainer_guide.md` with release process
 
 **Dependency**: TICKET 11 (Packaging), TICKET 9D (Maintainer CLI for database builds)
-**Enables**: Automated releases to PyPI and GitHub Releases
-**Note**: CI quality gates from TICKET 1.5 are prerequisites and should already be passing
+**Enables**: Automated releases to PyPI and GitHub Releases **Note**: CI quality gates
+from TICKET 1.5 are prerequisites and should already be passing
 
----
+______________________________________________________________________
 
 ## Dependency Graph
 
@@ -1478,15 +1561,19 @@ Phase 4: Integration & Release (Days 6-7)
 ```
 
 **Key Changes**:
+
 - ⭐ **Ticket 4.5** (Fixture Database) unblocks Workstream A to develop independently
 - ⭐ **Ticket 1.5** (CI Gates) moved to Day 1 for immediate quality enforcement
-- **Parallel Development**: Runtime (A) and Pipeline (B) work simultaneously after Phase 2
+- **Parallel Development**: Runtime (A) and Pipeline (B) work simultaneously after Phase
+  2
 - **Fast Feedback**: Working demo achievable in 2-3 days (after Ticket 8)
 
 ## User Story Coverage
 
 ### ✅ User Story 1: ML Engineer API
+
 **Covered by**: TICKET 8 (Public API), TICKET 4 (Models), TICKET 7 (Search)
+
 ```python
 import quickexpense_rag as qer
 qer.init()
@@ -1499,7 +1586,9 @@ results = qer.search(
 ```
 
 ### ✅ User Story 2: Maintainer Indexing
+
 **Covered by**: TICKET 9A-D (Preprocessor, Gemini Parser, Builder, CLI)
+
 ```bash
 # Step 1: Manual download to data/raw/
 # Step 2-5: Automated pipeline
@@ -1510,7 +1599,9 @@ uv run python scripts/cli.py pipeline --output-db data/cra_rules_v2024.12.db
 ```
 
 ### ✅ User Story 3: PyPI Publishing
+
 **Covered by**: TICKET 11 (Packaging), TICKET 12 (CI/CD)
+
 ```bash
 git tag v0.1.0
 git push --tags
@@ -1522,34 +1613,46 @@ git push --tags
 ### 🔥 Critical Risks
 
 1. **Gemini API Availability**: Network or API outages during indexing
-   - **Mitigation**: Retry logic with exponential backoff, cache parsed results, offline fallback to manual parsing
 
-2. **LLM Hallucination**: Gemini might generate incorrect citations or content
-   - **Mitigation**: Multi-layer validation (Pydantic schema + regex + content grounding), manual spot-checking, validation reports
+   - **Mitigation**: Retry logic with exponential backoff, cache parsed results, offline
+     fallback to manual parsing
 
-3. **Parsing Cost**: Re-parsing all documents on schema changes
-   - **Mitigation**: Cost is negligible (~$1.59 for 50 docs), version parsed outputs, incremental re-parsing
+1. **LLM Hallucination**: Gemini might generate incorrect citations or content
 
-4. **Data Integrity**: Malicious database injection
+   - **Mitigation**: Multi-layer validation (Pydantic schema + regex + content
+     grounding), manual spot-checking, validation reports
+
+1. **Parsing Cost**: Re-parsing all documents on schema changes
+
+   - **Mitigation**: Cost is negligible (~$1.59 for 50 docs), version parsed outputs,
+     incremental re-parsing
+
+1. **Data Integrity**: Malicious database injection
+
    - **Mitigation**: SHA256 checksum verification, signed manifests, validation pipeline
 
-5. **sqlite-vec Installation**: C extension compilation failures
+1. **sqlite-vec Installation**: C extension compilation failures
+
    - **Mitigation**: Pre-compiled wheels via cibuildwheel, clear fallback docs
 
-6. **Version Mismatch**: Old library + new database (or vice versa)
+1. **Version Mismatch**: Old library + new database (or vice versa)
+
    - **Mitigation**: Semantic versioning checks in DataManager
 
-7. **Legal Liability**: Users misuse as tax advice
+1. **Legal Liability**: Users misuse as tax advice
+
    - **Mitigation**: Prominent disclaimers everywhere, citation provenance
 
 ### ✅ Risks Eliminated
 
-- **Scraper Brittleness**: No automated scraping - maintainer manually downloads documents
+- **Scraper Brittleness**: No automated scraping - maintainer manually downloads
+  documents
 - **HTML/PDF Structure Changes**: LLM parsing is more robust than regex/BeautifulSoup
 
 ## Timeline Estimate
 
 ### Original Sequential Plan
+
 - **Phase 1 (Foundation)**: 1 day
 - **Phase 2 (Definitions)**: 1-2 days (parallel)
 - **Phase 3 (Runtime Library)**: 3-4 days (sequential)
@@ -1558,6 +1661,7 @@ git push --tags
 - **Total: 10-12 days** (2-2.5 weeks)
 
 ### ⚡ Optimized Parallel Plan
+
 - **Phase 1 (Foundation + CI Gates)**: 1 day
   - TICKET 1: Project Setup
   - TICKET 1.5: CI Quality Gates
@@ -1573,53 +1677,60 @@ git push --tags
 **Total: 6-7 days** (1-1.5 weeks)
 
 ### Productivity Gains
+
 - **40% faster** (7 days vs 12 days)
 - **Working demo in 2-3 days** vs 5-7 days (60% faster to first demo)
 - **Enables 2-person team**: One on runtime, one on pipeline
 - **Earlier quality gates**: CI from day 1 prevents rework
 
----
+______________________________________________________________________
 
 ## Next Steps
 
 ### Recommended Execution Order
 
 **Day 1: Foundation**
+
 1. TICKET 1: Initialize project, dependencies, directory structure
-2. TICKET 1.5: Setup CI/CD quality gates (linting, formatting, type checking)
-3. Verify: `uv run pre-commit run --all-files` passes
+1. TICKET 1.5: Setup CI/CD quality gates (linting, formatting, type checking)
+1. Verify: `uv run pre-commit run --all-files` passes
 
 **Day 1-2: Core Definitions** (can be parallelized among team)
+
 1. TICKET 2: Define database schema
-2. TICKET 3: Setup configuration and exceptions
-3. TICKET 4: Create Pydantic models
-4. TICKET 4.5: Create fixture database (10-20 hand-crafted rows)
-5. Verify: Fixture database passes schema validation
+1. TICKET 3: Setup configuration and exceptions
+1. TICKET 4: Create Pydantic models
+1. TICKET 4.5: Create fixture database (10-20 hand-crafted rows)
+1. Verify: Fixture database passes schema validation
 
 **Days 2-5: Split into Two Parallel Workstreams**
 
 **Workstream A (Runtime Team)**:
+
 1. TICKET 5: Embedding service
-2. TICKET 7: Hybrid search engine (test against fixture DB)
-3. TICKET 6: Data manager (simple version pointing to fixture)
-4. TICKET 8: Public API
-5. **🎉 Milestone: Demo `qer.search()` working!**
+1. TICKET 7: Hybrid search engine (test against fixture DB)
+1. TICKET 6: Data manager (simple version pointing to fixture)
+1. TICKET 8: Public API
+1. **🎉 Milestone: Demo `qer.search()` working!**
 
 **Workstream B (Pipeline Team)**:
+
 1. TICKET 9A: Document preprocessor
-2. TICKET 9B: Gemini parser
-3. TICKET 9C: Index builder
-4. TICKET 9D: Maintainer CLI
+1. TICKET 9B: Gemini parser
+1. TICKET 9C: Index builder
+1. TICKET 9D: Maintainer CLI
 
 **Days 6-7: Integration & Release**
+
 1. TICKET 6: Complete data manager (download/cache logic)
-2. TICKET 10: E2E testing with real database
-3. TICKET 11: PyPI packaging
-4. TICKET 12: Release automation
-5. Deploy to TestPyPI for validation
-6. Launch v0.1.0 to PyPI
+1. TICKET 10: E2E testing with real database
+1. TICKET 11: PyPI packaging
+1. TICKET 12: Release automation
+1. Deploy to TestPyPI for validation
+1. Launch v0.1.0 to PyPI
 
 ### Team Composition Recommendations
+
 - **Solo Developer**: Follow Workstream A first for fastest demo, then Workstream B
 - **2-Person Team**: One on Workstream A, one on Workstream B
 - **3+ Person Team**: Split Phase 2 work, then allocate to workstreams

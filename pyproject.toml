@@ -1,0 +1,132 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "quickexpense-rag"
+dynamic = ["version"]
+description = "Semantic search over Canadian Revenue Agency (CRA) business expense rules"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "QuickExpense Contributors"}
+]
+keywords = ["cra", "rag", "tax", "canada", "semantic-search", "expenses"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "sentence-transformers>=2.2",
+    "sqlite-vec>=0.1",
+    "httpx>=0.25",
+    "tqdm>=4.66",
+    "google-generativeai>=0.3",
+    "pdfplumber>=0.10",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "pytest-asyncio>=0.21",
+    "ruff>=0.1",
+    "mypy>=1.7",
+    "pre-commit>=3.5",
+]
+
+[project.urls]
+Homepage = "https://github.com/manonja/quickExpense-rag"
+Repository = "https://github.com/manonja/quickExpense-rag"
+Documentation = "https://github.com/manonja/quickExpense-rag/docs"
+
+[tool.hatch.version]
+path = "src/quickexpense_rag/__init__.py"
+
+[tool.hatchling.build.targets.wheel]
+packages = ["src/quickexpense_rag"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+src = ["src/quickexpense_rag", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "D",      # pydocstyle
+    "D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107",  # docstring rules
+    "S",      # bandit security
+    "B",      # bugbear
+    "F403",   # import *
+    "ANN",    # annotations
+    "G",      # logging format
+    "T20",    # print statements
+    "PT",     # pytest style
+    "SIM",    # simplify
+    "ARG",    # unused arguments
+    "I",      # isort
+    "C90",    # mccabe complexity
+    "PD",     # pandas-vet
+    "N",      # pep8-naming
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "PLE",    # pylint errors
+    "PLR",    # pylint refactor
+    "RUF",    # ruff-specific
+]
+ignore = ["D203", "D212"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "ANN"]
+
+[tool.ruff.format]
+docstring-code-format = true
+quote-style = "double"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "unit: Fast unit tests (<100ms each)",
+    "integration: Integration tests with I/O",
+    "slow: Tests taking >1 second",
+]
+addopts = "--strict-markers --tb=short"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pyright]
+include = ["src"]
+exclude = ["**/__pycache__", "build", "dist", ".venv", "venv"]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+reportMissingTypeStubs = false
+
+[tool.coverage.run]
+source = ["src/quickexpense_rag"]
+omit = ["*/tests/*", "*/test_*.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
