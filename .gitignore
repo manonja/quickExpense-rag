@@ -48,3 +48,6 @@ logs/
 # Environment variables
 .env
 .env.local
+
+# Claude Code local settings
+.claude/settings.local.json
