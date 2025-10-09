@@ -141,10 +141,63 @@ twine upload --repository testpypi dist/*
 ### Commit Strategy
 
 - **Small, atomic commits**: Each commit should represent one logical change
-- **Pass all checks**: Every commit must pass `ruff`, `mypy`, and all pre-commit hooks
+
+- **Pass all checks**: Every commit must pass all pre-commit hooks:
+
+  - `ruff` (linting with auto-fix)
+  - `ruff-format` (code formatting)
+  - `mypy` (type checking - strict mode)
+  - `pyright` (type checking - strict mode with selective third-party disables)
+  - `mdformat` (markdown formatting with GFM, tables, frontmatter)
+  - Standard hooks (trailing whitespace, EOF, YAML, large files, merge conflicts)
+
+- **Dual type checking**: Both mypy and pyright run on every commit; they catch
+  different classes of type errors
+
 - **Commit frequently**: Don't accumulate large changesets
-- **Meaningful messages**: Use conventional commits format (feat:, fix:, docs:,
-  refactor:, test:)
+
+- **Meaningful messages**: Use conventional commits format with detailed body:
+
+  ```
+  <type>: <short summary (50 chars)>
+
+  <detailed description explaining WHY, not WHAT>
+  - Use bullet points for multiple changes
+  - Focus on motivation and context
+  - Reference ticket numbers if applicable
+
+  Rationale:
+  - Explain technical decisions made
+  - Document trade-offs considered
+
+  🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  ```
+
+  **Types**: feat (feature), fix (bug fix), docs (documentation), refactor, test, build
+  (build system/dependencies), ci (CI/CD), perf (performance), style (formatting), chore
+  (maintenance)
+
+**Example**:
+
+```
+build: add pyright and mdformat to pre-commit hooks
+
+Enhance code quality gates with dual type checking and markdown linting:
+
+- Add pyright (strict mode) alongside mypy for comprehensive type safety
+- Add mdformat for consistent markdown formatting (GFM, tables, frontmatter)
+- Tighten pyright configuration for better bug detection
+
+Rationale:
+- Dual type checkers catch different classes of type issues
+- mdformat avoids Node.js dependency (vs markdownlint-cli2)
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
 
 ### 80/20 Principle
 
@@ -152,6 +205,44 @@ twine upload --repository testpypi dist/*
 - **Avoid premature optimization**: Get it working, then make it fast
 - **Simplicity over cleverness**: Clear code beats clever code
 - **YAGNI**: You Aren't Gonna Need It - don't build features speculatively
+
+### Autonomous Decision-Making Guidelines
+
+**Make decisions autonomously when**:
+
+- Technical trade-offs are clear and align with project principles (80/20, YAGNI,
+  simplicity)
+- Decision is reversible (tooling, formatting, configuration)
+- Choice follows established patterns in the project
+- Solution solves immediate blocker without architectural impact
+- Multiple approaches exist but one clearly matches project philosophy
+
+**Ask user before deciding when**:
+
+- Architectural changes affect public APIs or core abstractions
+- Trade-offs involve competing priorities (speed vs maintainability, simplicity vs
+  features)
+- Multiple valid approaches exist with different philosophies
+- Decision affects project scope, timeline, or dependencies
+- User's intent is ambiguous or could be interpreted multiple ways
+
+**Tool Selection Philosophy**:
+
+- **Prefer Python ecosystem**: Choose Python-based tools (mdformat, uvx) over tools
+  requiring Node.js, Ruby, or other language runtimes to minimize dependency complexity
+- **Prefer built-in/bundled tools**: Use tools already in the ecosystem (uvx, uv run)
+  over additional package managers
+- **Prefer mature, widely-adopted tools**: Choose tools with active maintenance and
+  large communities
+- **Consistency matters**: Match existing project patterns (uv for packages, ruff for
+  linting, pydantic for models)
+
+**Examples from this project**:
+
+- ✅ Chose mdformat (Python) over markdownlint-cli2 (Node.js) - follows ecosystem
+  preference
+- ✅ Tightened pyright config based on Zen feedback - clear improvement, reversible
+- ✅ Used uvx over npm for tool execution - matches project's uv-based tooling
 
 ### Modern Python 3.12+ Standards
 
@@ -161,6 +252,42 @@ twine upload --repository testpypi dist/*
 - **f-strings**: Always prefer f-strings over `.format()` or `%` formatting
 - **Generics**: Use modern generic syntax `list[str]` instead of `List[str]`
 - **dataclasses/Pydantic**: Prefer declarative data models over manual `__init__`
+
+## Code Review Workflow with Zen MCP
+
+### When to Use Zen Tools
+
+Zen MCP tools are powerful for systematic code analysis but should **only be used when
+the user requests it**. Do not use Zen tools proactively.
+
+**Available Zen tools**:
+
+- `mcp__zen__codereview` - Comprehensive code review with expert validation
+- `mcp__zen__precommit` - Git changes validation before commits
+- `mcp__zen__chat` - Collaborative thinking for architectural decisions
+- `mcp__zen__debug` - Systematic debugging and root cause analysis
+- `mcp__zen__thinkdeep` - Multi-stage investigation for complex problems
+
+### Handling Zen Recommendations
+
+When user requests Zen review and you receive recommendations:
+
+**Implement autonomously when**:
+
+- Changes are clearly improvements (tighter type checking, better configs)
+- No architectural trade-offs involved
+- Changes align with project standards in CLAUDE.md
+
+**Ask user first when**:
+
+- Recommendations require architectural changes
+- Trade-offs between different approaches exist
+- Recommendations conflict with explicit project requirements
+
+### Model Selection for Zen
+
+- Use `gemini-2.5-pro` or `gpt-5-pro` for code review (high-stakes analysis)
+- Check available models with `mcp__zen__listmodels` if needed
 
 ## Documentation Structure (Diataxis Framework)
 
@@ -232,7 +359,19 @@ A small, hand-crafted database with 10-20 rows for testing, covering:
 - Business types: sole_proprietorship, corporation, partnership
 - Expense types: meals, travel, vehicle, home_office
 
-This allows development and testing without requiring production data pipeline.
+**Purpose**: Enables development and testing without requiring production data pipeline
+or network access. The fixture database is version-controlled and committed alongside
+code.
+
+**Usage**:
+
+```bash
+# Tests automatically use fixture database
+uv run pytest tests/unit -v
+
+# Specify fixture explicitly if needed
+uv run pytest tests/ --db=tests/fixtures/test_database.db
+```
 
 ### Test Markers
 
@@ -275,6 +414,11 @@ Incompatible versions raise `DataVersionMismatchError` with clear upgrade instru
 1. **Use fixture DB for tests** - Don't require production data for development
 1. **Embedding model changes require full rebuild** - Vector dimensions are fixed at 384
 1. **Don't over-engineer** - Follow 80/20 principle, build what's needed now
+1. **Don't introduce unnecessary dependencies** - Prefer Python-based tools; avoid
+   Node.js, Ruby, or other language ecosystems unless essential for functionality
+1. **Don't weaken type checking without justification** - Both mypy and pyright should
+   remain strict; only disable specific third-party library checks with documented
+   rationale
 
 ## File Structure Conventions
 
