@@ -550,6 +550,135 @@ contract but work independently.
 
 ______________________________________________________________________
 
+## TICKET 4.6: Database Schema for Many-to-Many Expense Types ⭐ NEW
+
+**Scope**: Extend database schema to support multiple expense types per rule
+
+### Acceptance Criteria
+
+- [ ] `src/quickexpense_rag/data/schema.py` - **CRITICAL: Remove old column first to
+  avoid duplicate data**:
+  - **DELETE line 38**: `expense_type TEXT,` from `rules` table definition
+  - **DELETE line 77**:
+    `CREATE INDEX IF NOT EXISTS idx_expense_type ON rules(expense_type);`
+- [ ] `src/quickexpense_rag/data/schema.py` - Add new tables to CREATE_TABLES_SQL:
+  ```python
+  -- Controlled vocabulary for expense types
+  CREATE TABLE IF NOT EXISTS expense_types (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL
+  );
+
+  -- Many-to-many junction table
+  CREATE TABLE IF NOT EXISTS rule_expense_type_links (
+      rule_id INTEGER NOT NULL,
+      expense_type_id INTEGER NOT NULL,
+      PRIMARY KEY (rule_id, expense_type_id),
+      FOREIGN KEY (rule_id) REFERENCES rules(id) ON DELETE CASCADE,
+      FOREIGN KEY (expense_type_id) REFERENCES expense_types(id) ON DELETE CASCADE
+  );
+
+  -- Indexes for efficient joins
+  CREATE INDEX IF NOT EXISTS idx_link_rule ON rule_expense_type_links(rule_id);
+  CREATE INDEX IF NOT EXISTS idx_link_type ON rule_expense_type_links(expense_type_id);
+  ```
+- [ ] Populate `expense_types` table with canonical list:
+  ```sql
+  INSERT INTO expense_types (name) VALUES
+      ('meals'), ('travel'), ('vehicle'), ('home_office'),
+      ('advertising'), ('supplies'), ('professional_fees'), ...;
+  ```
+- [ ] Unit tests verify:
+  - All three tables created successfully
+  - Foreign key constraints enforced (cannot link to non-existent rule or type)
+  - Cascade deletes work (deleting rule removes links)
+  - Duplicate expense type names rejected (UNIQUE constraint)
+  - Junction table indexes exist and improve query performance
+- [ ] Schema version remains "1.0" (pre-release breaking change)
+
+**Dependency**: TICKET 2 (Base Schema) **Enables**: TICKET 4.7 (Models), TICKET 7
+(Search), TICKET 9B-C (Indexing) **Rationale**: CRA rules frequently apply to multiple
+expense categories. A many-to-many relationship provides accurate domain modeling,
+maintains fast indexed queries, and enforces data integrity through foreign keys.
+
+______________________________________________________________________
+
+## TICKET 4.7: Pydantic Models for Multi-Type Expenses ⭐ NEW
+
+**Scope**: Update data models to handle multiple expense types per rule
+
+### Acceptance Criteria
+
+- [ ] `app/rag/search/models.py` updated:
+  ```python
+  class ExpenseQuery(BaseModel):
+      model_config = ConfigDict(frozen=True, extra='forbid')
+
+      query: str = Field(..., min_length=3, description="Search query")
+      province: Province | None = None
+      business_type: BusinessType | None = None
+      expense_types: list[str] | None = Field(  # Changed from expense_type
+          None,
+          description="Filter by expense types (matches rules with ANY of these types)"
+      )
+      top_k: int = Field(5, ge=1, le=50)
+
+  class SearchResult(BaseModel):
+      model_config = ConfigDict(frozen=True)
+
+      content: str
+      citation_id: str
+      source_url: str
+      score: float = Field(..., ge=0.0, le=1.0)
+      province: Province | None
+      business_type: BusinessType | None
+      expense_types: list[str]  # Changed from expense_type: ExpenseType | None
+      retrieved_at: datetime
+
+      @computed_field
+      @property
+      def disclaimer(self) -> str:
+          return (
+              "⚠️ INFORMATIONAL ONLY - NOT TAX ADVICE\n"
+              "This information is for educational purposes only and does not "
+              "constitute tax advice. CRA rules are complex and change frequently. "
+              "Always consult a qualified tax professional or accountant. "
+              "The data may be incomplete, outdated, or incorrectly interpreted."
+          )
+  ```
+- [ ] `app/rag/search/enums.py` - Keep `ExpenseType` enum for reference:
+  ```python
+  class ExpenseType(str, Enum):
+      """Reference enum for common expense types. Not enforced in database."""
+      MEALS = "meals"
+      TRAVEL = "travel"
+      VEHICLE = "vehicle"
+      HOME_OFFICE = "home_office"
+      ADVERTISING = "advertising"
+      SUPPLIES = "supplies"
+      PROFESSIONAL_FEES = "professional_fees"
+      # ... add comprehensive list
+  ```
+- [ ] Update validation logic:
+  - `expense_types` can be empty list (no filtering)
+  - `expense_types` can be None (no filtering)
+  - Each string in list validated against canonical `expense_types` table at query time
+  - Clear error message if invalid type provided
+- [ ] Unit tests verify:
+  - `ExpenseQuery` with `expense_types=["meals", "travel"]` validates
+  - `ExpenseQuery` with empty list validates
+  - `SearchResult.expense_types` returns list (never None)
+  - Invalid type in list raises ValidationError
+  - Frozen models prevent mutation
+  - `mypy` passes on all model files
+
+**Dependency**: TICKET 4 (Base Models), TICKET 4.6 (Schema) **Enables**: TICKET 8
+(Public API signature change) **Rationale**: Models must reflect the many-to-many
+relationship in the database schema. Using `list[str]` provides flexibility while
+maintaining type safety.
+
+______________________________________________________________________
+
 ## TICKET 5: Embedding Service
 
 **Scope**: Text-to-vector encoding with BGE model, singleton pattern, batch processing
@@ -686,20 +815,34 @@ filtering
 
       def search(self, query: ExpenseQuery) -> list[SearchResult]:
           """Execute hybrid search."""
-          # 1. Build metadata filter WHERE clause
+          # 1. Build metadata filter JOIN and WHERE clauses
           # 2. FTS5 keyword search on filtered candidates
           # 3. Vector search on filtered candidates
           # 4. RRF fusion
-          # 5. Hydrate and return results
+          # 5. Hydrate and return results (with GROUP BY to deduplicate)
 
-      def _metadata_filter(self, query: ExpenseQuery) -> str:
-          """Build SQL WHERE clause from filters."""
+      def _metadata_filter(self, query: ExpenseQuery) -> tuple[str, str]:
+          """Build SQL JOIN and WHERE clauses from filters.
 
-      def _keyword_search(self, query_text: str, filter_sql: str, k: int) -> list[tuple]:
-          """FTS5 search returning (id, score)."""
+          Returns:
+              (join_clause, where_clause) for expense_types many-to-many filtering
+          """
+          # For expense_types, build:
+          # JOIN: "JOIN rule_expense_type_links link ON r.id = link.rule_id
+          #        JOIN expense_types et ON link.expense_type_id = et.id"
+          # WHERE: "et.name IN (?, ?, ...)"
 
-      def _vector_search(self, query_vec: np.ndarray, filter_sql: str, k: int) -> list[tuple]:
-          """Vector search returning (id, distance)."""
+      def _keyword_search(self, query_text: str, join_sql: str, where_sql: str, k: int) -> list[tuple]:
+          """FTS5 search returning (id, score).
+
+          Query includes JOIN for expense types and GROUP BY r.id to deduplicate.
+          """
+
+      def _vector_search(self, query_vec: np.ndarray, join_sql: str, where_sql: str, k: int) -> list[tuple]:
+          """Vector search returning (id, distance).
+
+          Query includes JOIN for expense types and GROUP BY r.id to deduplicate.
+          """
 
       def _rrf_fusion(self, fts_results: list, vec_results: list) -> list[tuple]:
           """Reciprocal Rank Fusion: score = 1/(k + rank)."""
@@ -720,6 +863,10 @@ filtering
   ```
 - [ ] **Given** query with province=BC, **when** search executed, **then** only BC
   results returned
+- [ ] **Given** query with expense_types=["meals", "travel"], **when** search executed,
+  **then** rules tagged with EITHER "meals" OR "travel" returned
+- [ ] **Given** rule tagged with ["meals", "travel"], **when** searching for
+  expense_types=["meals"], **then** rule is included in results
 - [ ] **Given** query "T2125 form", **when** keyword search run, **then** exact term
   match returned
 - [ ] **Given** query "restaurant meal", **when** vector search run, **then**
@@ -734,14 +881,16 @@ filtering
   250ms
 - [ ] Unit tests with test database:
   - Metadata filtering isolates provinces
+  - Expense type filtering with JOIN: matches ANY of provided types
+  - GROUP BY deduplicates rules matching multiple types
   - FTS5 finds exact keywords
   - Vector search finds semantic matches
   - RRF correctly merges rankings
   - Edge cases: no results, single result, 100+ results
 - [ ] Integration test: Real query on fixture database
 
-**Dependency**: TICKET 2, TICKET 3, TICKET 4, TICKET 5 **Enables**: TICKET 8 (Public
-API)
+**Dependency**: TICKET 2, TICKET 3, TICKET 4, TICKET 4.6, TICKET 4.7, TICKET 5
+**Enables**: TICKET 8 (Public API)
 
 ______________________________________________________________________
 
@@ -776,7 +925,7 @@ interface
       query: str,
       province: str | None = None,
       business_type: str | None = None,
-      expense_type: str | None = None,
+      expense_types: list[str] | None = None,
       top_k: int = 5
   ) -> list[SearchResult]:
       """
@@ -788,7 +937,7 @@ interface
           query: Natural language expense description
           province: Filter by province (e.g., "BC", "ON")
           business_type: Filter by business type
-          expense_type: Filter by expense category
+          expense_types: Filter by expense categories (matches rules with ANY of these types)
           top_k: Number of results to return (1-50)
 
       Returns:
@@ -824,10 +973,12 @@ interface
   ValidationError raised
 - [ ] **Given** top_k=100 (out of range), **when** `search()` called, **then**
   ValidationError raised
+- [ ] **Given** expense_types=["unknown_type"], **when** `search()` called, **then**
+  ValidationError raised
 - [ ] All function docstrings include legal disclaimer
 - [ ] Unit tests verify:
   - Init without network and no cache raises NetworkError
-  - Search returns correctly typed results
+  - Search returns correctly typed results with expense_types as list
   - All exceptions have clear, actionable messages
   - get_version() returns correct dict structure
 - [ ] Integration test (User Story 1):
@@ -837,16 +988,19 @@ interface
   results = qer.search(
       query="restaurant expense while traveling for training",
       province="BC",
-      business_type="sole_proprietorship"
+      business_type="sole_proprietorship",
+      expense_types=["meals", "travel"]
   )
   assert len(results) > 0
   assert results[0].disclaimer.startswith("⚠️")
   assert results[0].citation_id is not None
   assert results[0].source_url.startswith("https://")
+  assert isinstance(results[0].expense_types, list)
+  assert len(results[0].expense_types) > 0
   ```
 
-**Dependency**: TICKET 3, TICKET 4, TICKET 6, TICKET 7 **Enables**: User Story 1 (ML
-engineer API)
+**Dependency**: TICKET 3, TICKET 4, TICKET 4.6, TICKET 4.7, TICKET 6, TICKET 7
+**Enables**: User Story 1 (ML engineer API)
 
 ______________________________________________________________________
 
@@ -1009,9 +1163,13 @@ ______________________________________________________________________
     - Extract verbatim text (no summarization)
     - Identify document ID and metadata
     - Extract citation IDs matching pattern: `S\d+-F\d+-C\d+-p\d+\.?\d*`
+    - **Extract ALL applicable expense types** from canonical list (not just one)
+    - Include canonical expense type list in prompt: \["meals", "travel", "vehicle",
+      "home_office", "advertising", "supplies", "professional_fees", ...\]
+    - Return expense types as JSON array of strings
     - Preserve hierarchical structure
     - Handle nested lists, tables, footnotes
-  - **Few-shot examples**: Include 2-3 examples showing expected JSON output
+  - **Few-shot examples**: Include 2-3 examples showing multiple expense types per chunk
   - **JSON schema**: Full schema embedded in prompt
 
 - [ ] Validation layer (`scripts/parser/validator.py`):
@@ -1024,7 +1182,9 @@ ______________________________________________________________________
           # 2. Citation format validation (regex)
           # 3. Content grounding (chunk text in source text)
           # 4. Structural sanity (section levels, no empty sections)
-          # 5. Statistics (chunk count, citation coverage)
+          # 5. Expense type validation (against canonical list from expense_types table)
+          # 6. Statistics (chunk count, citation coverage, expense type distribution)
+          # 7. Log unknown expense types for manual review (don't fail build)
   ```
 
 - [ ] Output: `data/processed/chunks.jsonl`
@@ -1102,19 +1262,25 @@ generate manifest
       ) -> IndexManifest:
           """Build searchable database from Gemini-parsed chunks."""
           # 1. Load chunks from JSONL (Gemini parser output)
-          # 2. Initialize database with schema
-          # 3. Generate embeddings (batch process with progress bar)
-          # 4. Insert into rules, rules_fts, rules_vec tables
-          # 5. Verify integrity (no missing embeddings)
-          # 6. Compute database SHA256
-          # 7. Write manifest JSON
+          # 2. Initialize database with schema (from TICKET 4.6)
+          # 3. Populate expense_types table with canonical list
+          # 4. Generate embeddings (batch process with progress bar)
+          # 5. Insert into rules table (without expense_type column)
+          # 6. Insert into rule_expense_type_links for each expense type per rule
+          # 7. Insert into rules_fts and rules_vec tables
+          # 8. Verify integrity (no missing embeddings, all links have valid FKs)
+          # 9. Compute database SHA256
+          # 10. Write manifest JSON
   ```
 - [ ] Features:
+  - Populate expense_types table before processing chunks
+  - For each chunk, insert rule then create links in rule_expense_type_links
   - Batch embedding generation (32 chunks at a time)
   - Progress bar for long operations
   - Transaction safety (rollback on error)
   - Duplicate detection (by citation_id)
-  - Integrity checks: all chunks have embeddings, FTS index populated
+  - Integrity checks: all chunks have embeddings, FTS index populated, all expense type
+    links valid
 - [ ] Output:
   - `data/cra_rules_v2024.12.db` (versioned by year-month)
   - `data/manifest.json`:
@@ -1135,18 +1301,23 @@ generate manifest
 - [ ] **Given** embedding generation fails for one chunk, **when** building, **then**
   error logged and build continues (or fails, based on flag)
 - [ ] Unit tests with 10 test chunks:
-  - Database created with correct schema
-  - All three tables populated
+  - Database created with correct schema (including expense_types and
+    rule_expense_type_links)
+  - expense_types table populated with canonical list
+  - All tables populated (rules, rules_fts, rules_vec, rule_expense_type_links)
+  - Chunk with multiple expense types creates multiple links
   - FTS triggers work (update rules → FTS updated)
   - Vector embeddings stored correctly
+  - Foreign key constraints enforced (invalid expense type rejected)
   - Manifest JSON valid and complete
 - [ ] Integration test: Full build from 50 chunks
   - Verify chunk count matches
   - Test search query returns results
+  - Test rule with multiple expense types found by searching for any one type
   - Manifest SHA256 matches actual database file
 
-**Dependency**: TICKET 2, TICKET 4, TICKET 5, TICKET 9B **Enables**: User Story 2
-(auditable indexing)
+**Dependency**: TICKET 2, TICKET 4, TICKET 4.6, TICKET 5, TICKET 9B **Enables**: User
+Story 2 (auditable indexing)
 
 ______________________________________________________________________
 
@@ -1288,11 +1459,14 @@ ______________________________________________________________________
   - `tests/unit/test_search.py`
 - [ ] Integration tests:
   - `tests/integration/test_search_scenarios.py`:
-    - BC sole prop restaurant meal
-    - Vehicle expense with mileage
-    - Home office deduction
+    - BC sole prop restaurant meal (test expense_types=["meals"])
+    - Vehicle expense with mileage (test expense_types=["vehicle", "travel"])
+    - Home office deduction (test expense_types=["home_office"])
+    - Multi-type query (expense_types=["meals", "travel"]) matches rules with ANY type
+    - Rule with multiple types appears in search for any single type
   - `tests/integration/test_full_pipeline.py`:
     - Scrape → parse → build → search
+    - Verify chunks with multiple expense types create correct junction table entries
 - [ ] Performance tests:
   - Search latency < 250ms (p99)
   - Embedding 100 texts < 2s
@@ -1530,6 +1704,8 @@ Phase 2: Core Definitions (Days 1-2, Parallel)
 ├─ TICKET 3 (Config & Exceptions) ← 1
 ├─ TICKET 4 (Pydantic Models) ← 1, 3
 ├─ TICKET 4.5 (Fixture Database) ⭐ ← 2, 3
+├─ TICKET 4.6 (Many-to-Many Schema) ⭐ NEW ← 2
+├─ TICKET 4.7 (Multi-Type Models) ⭐ NEW ← 4, 4.6
 │
 ┌─────────────────────────────────────────────────────────────────────┐
 │ PARALLEL WORKSTREAMS (Days 2-5)                                     │
@@ -1539,14 +1715,15 @@ Phase 2: Core Definitions (Days 1-2, Parallel)
 │                                                                      │
 │ TICKET 5 (Embeddings) ← 1, 3         TICKET 9A (Preprocessor) ← 1, 3│
 │     ↓                                     ↓                          │
-│ TICKET 7 (Hybrid Search) ← 2,3,4,4.5,5   TICKET 9B (Gemini Parser)  │
-│     ↓                                         ← 2, 4, 9A             │
-│ TICKET 6 (Data Manager - Simple) ← 2,3       ↓                      │
-│     ↓                                     TICKET 9C (Index Builder)  │
-│ TICKET 8 (Public API) ← 3,4,6,7              ← 2, 4, 5, 9B          │
-│     ↓                                         ↓                      │
-│ 🎉 MILESTONE: Working demo!              TICKET 9D (Maintainer CLI)  │
-│                                               ← 9A, 9B, 9C           │
+│ TICKET 7 (Hybrid Search)             TICKET 9B (Gemini Parser)      │
+│     ← 2,3,4,4.5,4.6,4.7,5                 ← 2, 4, 4.6, 9A           │
+│     ↓                                     ↓                          │
+│ TICKET 6 (Data Manager - Simple) ← 2,3   TICKET 9C (Index Builder)  │
+│     ↓                                         ← 2, 4, 4.6, 5, 9B    │
+│ TICKET 8 (Public API)                    ↓                          │
+│     ← 3,4,4.6,4.7,6,7                TICKET 9D (Maintainer CLI)      │
+│     ↓                                     ← 9A, 9B, 9C               │
+│ 🎉 MILESTONE: Working demo!                                          │
 └─────────────────────────────────────────────────────────────────────┘
                          ↓
 Phase 4: Integration & Release (Days 6-7)
@@ -1559,6 +1736,7 @@ Phase 4: Integration & Release (Days 6-7)
 **Key Changes**:
 
 - ⭐ **Ticket 4.5** (Fixture Database) unblocks Workstream A to develop independently
+- ⭐ **Ticket 4.6 & 4.7** (Many-to-Many Expense Types) enable accurate domain modeling
 - ⭐ **Ticket 1.5** (CI Gates) moved to Day 1 for immediate quality enforcement
 - **Parallel Development**: Runtime (A) and Pipeline (B) work simultaneously after Phase
   2
@@ -1568,7 +1746,8 @@ Phase 4: Integration & Release (Days 6-7)
 
 ### ✅ User Story 1: ML Engineer API
 
-**Covered by**: TICKET 8 (Public API), TICKET 4 (Models), TICKET 7 (Search)
+**Covered by**: TICKET 8 (Public API), TICKET 4 (Models), TICKET 4.6 (Schema), TICKET
+4.7 (Models), TICKET 7 (Search)
 
 ```python
 import quickexpense_rag as qer
@@ -1576,9 +1755,11 @@ qer.init()
 results = qer.search(
     query="restaurant expense while traveling for training",
     province="BC",
-    business_type="sole_proprietorship"
+    business_type="sole_proprietorship",
+    expense_types=["meals", "travel"]
 )
-# Returns SearchResult objects with citations and disclaimers
+# Returns SearchResult objects with citations, disclaimers, and expense_types as list
+assert isinstance(results[0].expense_types, list)
 ```
 
 ### ✅ User Story 2: Maintainer Indexing
