@@ -46,16 +46,16 @@ class TestEnumValidation:
         error = exc_info.value.errors()[0]
         assert "business_type" in error["loc"]
 
-    def test_invalid_expense_type_raises_validation_error(self) -> None:
-        """Invalid expense type value should raise ValidationError."""
+    def test_invalid_expense_types_raises_validation_error(self) -> None:
+        """Invalid expense types value should raise ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
             ExpenseQuery(
                 query="test query",
-                expense_type="invalid_expense",  # type: ignore[arg-type]
+                expense_types="invalid_expense",  # type: ignore[arg-type]
             )
 
         error = exc_info.value.errors()[0]
-        assert "expense_type" in error["loc"]
+        assert "expense_types" in error["loc"]
 
 
 @pytest.mark.unit
@@ -103,15 +103,15 @@ class TestExpenseQueryValidation:
             query="restaurant meal expense",
             province=Province.BC,
             business_type=BusinessType.SOLE_PROPRIETORSHIP,
-            expense_type=ExpenseType.MEALS,
+            expense_types=["meals", "travel"],
             top_k=10,
         )
 
         assert query.query == "restaurant meal expense"
         assert query.province == Province.BC
         assert query.business_type == BusinessType.SOLE_PROPRIETORSHIP
-        assert query.expense_type == ExpenseType.MEALS
-        assert query.top_k == 10  # noqa: PLR2004
+        assert query.expense_types == ["meals", "travel"]
+        assert query.top_k == 10
 
     def test_query_with_none_filters_passes(self) -> None:
         """ExpenseQuery with None filters should be valid."""
@@ -120,8 +120,8 @@ class TestExpenseQueryValidation:
         assert query.query == "test query"
         assert query.province is None
         assert query.business_type is None
-        assert query.expense_type is None
-        assert query.top_k == 5  # Default value  # noqa: PLR2004
+        assert query.expense_types is None
+        assert query.top_k == 5  # Default value
 
 
 @pytest.mark.unit
@@ -138,7 +138,7 @@ class TestSearchResultValidation:
                 score=0.8,
                 province=None,
                 business_type=None,
-                expense_type=None,
+                expense_types=[],
                 retrieved_at=datetime.now(timezone.utc),
             )
 
@@ -167,7 +167,7 @@ class TestSearchResultValidation:
                 score=0.5,
                 province=None,
                 business_type=None,
-                expense_type=None,
+                expense_types=[],
                 retrieved_at=datetime.now(timezone.utc),
             )
 
@@ -190,7 +190,7 @@ class TestSearchResultValidation:
                 score=0.5,
                 province=None,
                 business_type=None,
-                expense_type=None,
+                expense_types=[],
                 retrieved_at=datetime.now(timezone.utc),
             )
             assert result.citation_id == citation
@@ -205,7 +205,7 @@ class TestSearchResultValidation:
                 score=0.5,
                 province=None,
                 business_type=None,
-                expense_type=None,
+                expense_types=[],
                 retrieved_at=datetime.now(timezone.utc),
             )
 
@@ -222,7 +222,7 @@ class TestSearchResultValidation:
                 score=0.5,
                 province=None,
                 business_type=None,
-                expense_type=None,
+                expense_types=[],
                 retrieved_at=datetime.now(timezone.utc),
             )
 
@@ -245,7 +245,7 @@ class TestSearchResultValidation:
             score=0.5,
             province=None,
             business_type=None,
-            expense_type=None,
+            expense_types=[],
             retrieved_at=datetime.now(timezone.utc),
         )
         assert str(result.source_url) == valid_url
@@ -267,7 +267,7 @@ class TestSearchResultValidation:
                 score=0.5,
                 province=None,
                 business_type=None,
-                expense_type=None,
+                expense_types=[],
                 retrieved_at=datetime.now(timezone.utc),
             )
         errors = exc_info.value.errors()
@@ -283,7 +283,7 @@ class TestSearchResultValidation:
                 score=1.5,
                 province=None,
                 business_type=None,
-                expense_type=None,
+                expense_types=[],
                 retrieved_at=datetime.now(timezone.utc),
             )
 
@@ -300,13 +300,13 @@ class TestSearchResultValidation:
             score=0.85,
             province=Province.BC,
             business_type=BusinessType.CORPORATION,
-            expense_type=ExpenseType.MEALS,
+            expense_types=["meals"],
             retrieved_at=now,
         )
 
         assert result.content == "Test content about meals"
         assert result.citation_id == "S3-F2-C1-p1.25"
-        assert result.score == 0.85  # noqa: PLR2004
+        assert result.score == 0.85
         assert result.province == Province.BC
         assert result.retrieved_at == now
 
@@ -324,7 +324,7 @@ class TestSearchResultDisclaimer:
             score=0.5,
             province=None,
             business_type=None,
-            expense_type=None,
+            expense_types=[],
             retrieved_at=datetime.now(timezone.utc),
         )
 
@@ -341,7 +341,7 @@ class TestSearchResultDisclaimer:
             score=0.5,
             province=None,
             business_type=None,
-            expense_type=None,
+            expense_types=[],
             retrieved_at=datetime.now(timezone.utc),
         )
 
@@ -358,7 +358,7 @@ class TestSearchResultDisclaimer:
             score=0.5,
             province=None,
             business_type=None,
-            expense_type=None,
+            expense_types=[],
             retrieved_at=datetime.now(timezone.utc),
         )
 
@@ -390,7 +390,7 @@ class TestImmutability:
             score=0.5,
             province=None,
             business_type=None,
-            expense_type=None,
+            expense_types=[],
             retrieved_at=datetime.now(timezone.utc),
         )
 
@@ -526,8 +526,8 @@ class TestIndexManifestValidation:
 
         assert manifest.version == "2024.12"
         assert manifest.schema_version == "1.0"
-        assert len(manifest.source_files) == 2  # noqa: PLR2004
-        assert manifest.chunk_count == 1234  # noqa: PLR2004
+        assert len(manifest.source_files) == 2
+        assert manifest.chunk_count == 1234
         assert manifest.created_at == now
 
 
@@ -549,6 +549,6 @@ class TestSourceFile:
             SourceFile(path="/file2.txt", hash="hash2"),
         )
 
-        assert len(sources) == 2  # noqa: PLR2004
+        assert len(sources) == 2
         assert sources[0].path == "/file1.txt"
         assert sources[1].hash == "hash2"

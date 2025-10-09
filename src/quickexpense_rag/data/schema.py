@@ -35,7 +35,6 @@ CREATE TABLE IF NOT EXISTS rules (
     source_hash TEXT NOT NULL,
     province TEXT,
     business_type TEXT,
-    expense_type TEXT,
     metadata_json TEXT,
     retrieved_at TEXT NOT NULL,  -- ISO 8601
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP  -- ISO 8601
@@ -74,8 +73,28 @@ CREATE VIRTUAL TABLE IF NOT EXISTS rules_vec USING vec0(
 -- Justified for read-heavy workload despite write-time overhead.
 CREATE INDEX IF NOT EXISTS idx_province ON rules(province);
 CREATE INDEX IF NOT EXISTS idx_business_type ON rules(business_type);
-CREATE INDEX IF NOT EXISTS idx_expense_type ON rules(expense_type);
 CREATE INDEX IF NOT EXISTS idx_citation ON rules(citation_id);
+
+-- Controlled vocabulary table for expense types.
+-- Enforces consistency and enables efficient many-to-many relationships.
+CREATE TABLE IF NOT EXISTS expense_types (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL
+);
+
+-- Many-to-many junction table linking rules to expense types.
+-- A single rule can apply to multiple expense categories.
+CREATE TABLE IF NOT EXISTS rule_expense_type_links (
+    rule_id INTEGER NOT NULL,
+    expense_type_id INTEGER NOT NULL,
+    PRIMARY KEY (rule_id, expense_type_id),
+    FOREIGN KEY (rule_id) REFERENCES rules(id) ON DELETE CASCADE,
+    FOREIGN KEY (expense_type_id) REFERENCES expense_types(id) ON DELETE CASCADE
+);
+
+-- Indexes for efficient many-to-many joins.
+CREATE INDEX IF NOT EXISTS idx_link_rule ON rule_expense_type_links(rule_id);
+CREATE INDEX IF NOT EXISTS idx_link_type ON rule_expense_type_links(expense_type_id);
 """
 
 

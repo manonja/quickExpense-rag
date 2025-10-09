@@ -50,3 +50,17 @@ class ExpenseType(str, Enum):
     SUPPLIES = "supplies"
     UTILITIES = "utilities"
     RENT = "rent"
+
+    @classmethod
+    def all_values(cls) -> list[str]:
+        """
+        Return all expense type values as a list of strings.
+
+        This method serves as the single source of truth for the canonical
+        list of expense types, used to populate the expense_types table.
+
+        Returns:
+            List of all expense type string values
+
+        """
+        return [e.value for e in cls]

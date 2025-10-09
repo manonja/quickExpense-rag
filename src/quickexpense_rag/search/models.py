@@ -14,7 +14,7 @@ from pydantic import (
     field_validator,
 )
 
-from quickexpense_rag.search.enums import BusinessType, ExpenseType, Province
+from quickexpense_rag.search.enums import BusinessType, Province
 
 # Regex for CRA citation IDs, e.g., "S3-F2-C1-p1.25"
 CITATION_ID_PATTERN = r"S\d+-F\d+-C\d+-p\d+\.?\d*"
@@ -35,8 +35,9 @@ class ExpenseQuery(BaseModel):
     business_type: BusinessType | None = Field(
         None, description="Filter by business type."
     )
-    expense_type: ExpenseType | None = Field(
-        None, description="Filter by expense category."
+    expense_types: list[str] | None = Field(
+        None,
+        description="Filter by expense types (matches rules with ANY of these types).",
     )
     top_k: int = Field(5, ge=1, le=50, description="Number of results to return.")
 
@@ -58,7 +59,7 @@ class SearchResult(BaseModel):
     score: float = Field(..., ge=0.0, le=1.0, description="The search relevance score.")
     province: Province | None
     business_type: BusinessType | None
-    expense_type: ExpenseType | None
+    expense_types: list[str]
     retrieved_at: datetime = Field(
         ..., description="The timestamp when the source document was retrieved."
     )
