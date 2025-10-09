@@ -73,6 +73,13 @@ def create_fixture_database(output_path: Path) -> None:
 
     # Connect and initialize schema
     conn = sqlite3.connect(output_path)
+
+    # Load sqlite-vec extension
+    conn.enable_load_extension(True)
+    import sqlite_vec
+    sqlite_vec.load(conn)
+    conn.enable_load_extension(False)
+
     conn.executescript(CREATE_TABLES_SQL)
 
     # Define synthetic test data
