@@ -1,0 +1,2 @@
+# uv.lock should use binary merge and be marked as generated
+uv.lock merge=binary linguist-language=YAML linguist-generated=true
