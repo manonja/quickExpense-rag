@@ -383,8 +383,8 @@ uv run pytest tests/ --db=tests/fixtures/test_database.db
 
 Settings use `pydantic-settings` with environment variable support:
 
-- Prefix: `QUICKEXPENSE_`
-- Example: `QUICKEXPENSE_CACHE_DIR=/custom/path`
+- Prefix: `QUICKEXPENSE_RAG_`
+- Example: `QUICKEXPENSE_RAG_CACHE_DIR=/custom/path`
 - `.env` file supported (use `.env.example` as template)
 
 **Available settings**:

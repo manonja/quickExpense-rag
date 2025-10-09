@@ -340,7 +340,7 @@ ______________________________________________________________________
   class Settings(BaseSettings):
       model_config = SettingsConfigDict(
           env_file=".env",
-          env_prefix="QUICKEXPENSE_",
+          env_prefix="QUICKEXPENSE_RAG_",
           case_sensitive=False
       )
 
@@ -360,10 +360,6 @@ ______________________________________________________________________
 
       # Network settings
       request_timeout: int = 30
-      download_retries: int = 3
-
-      # Logging
-      log_level: str = "INFO"
 
       # Gemini settings (for indexing pipeline only, not runtime)
       gemini_api_key: str = Field(default="", env="GEMINI_API_KEY")
