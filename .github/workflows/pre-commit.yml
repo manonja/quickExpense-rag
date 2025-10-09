@@ -1,0 +1,50 @@
+name: Pre-commit Checks
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  pre-commit:
+    name: Run pre-commit hooks
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: |
+          uv sync --all-extras
+
+      - name: Run pre-commit hooks
+        id: pre-commit
+        run: |
+          uv run pre-commit run --all-files --show-diff-on-failure 2>&1 | tee pre-commit.log
+        continue-on-error: true
+
+      - name: Upload pre-commit artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pre-commit-artifacts
+          path: |
+            pre-commit.log
+            .pre-commit-cache/
+          retention-days: 7
+
+      - name: Fail job if pre-commit failed
+        if: steps.pre-commit.outcome == 'failure'
+        run: exit 1

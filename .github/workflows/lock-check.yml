@@ -1,0 +1,51 @@
+name: Lock File Check
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  lock-check:
+    name: Verify uv.lock is up to date
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Check if uv.lock is up to date
+        id: lock-check
+        run: |
+          echo "Checking if uv.lock is synchronized with pyproject.toml..."
+          uv lock --check 2>&1 | tee uv-lock-check.log
+        continue-on-error: true
+
+      - name: Upload lock check artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lock-check-artifacts
+          path: |
+            uv-lock-check.log
+            uv.lock
+            pyproject.toml
+          retention-days: 7
+
+      - name: Fail job if lock check failed
+        if: steps.lock-check.outcome == 'failure'
+        run: |
+          echo "❌ uv.lock is out of sync with pyproject.toml"
+          echo "Run 'uv lock' locally to update the lock file"
+          exit 1
