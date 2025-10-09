@@ -13,7 +13,7 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
 
 ### What You Get
 - **Day 1**: Project setup + CI quality gates enforcing code standards
-- **Day 2-3**: Working `qe.search()` function (Workstream A complete)
+- **Day 2-3**: Working `qer.search()` function (Workstream A complete)
 - **Day 4-5**: Production data pipeline (Workstream B complete)
 - **Day 6-7**: E2E testing, packaging, release automation
 
@@ -776,9 +776,9 @@ This plan has been **optimized for 80/20 productivity** - delivering maximum val
   - get_version() returns correct dict structure
 - [ ] Integration test (User Story 1):
   ```python
-  import quickexpense_rag as qe
-  qe.init()
-  results = qe.search(
+  import quickexpense_rag as qer
+  qer.init()
+  results = qer.search(
       query="restaurant expense while traveling for training",
       province="BC",
       business_type="sole_proprietorship"
@@ -1488,9 +1488,9 @@ Phase 4: Integration & Release (Days 6-7)
 ### ✅ User Story 1: ML Engineer API
 **Covered by**: TICKET 8 (Public API), TICKET 4 (Models), TICKET 7 (Search)
 ```python
-import quickexpense_rag as qe
-qe.init()
-results = qe.search(
+import quickexpense_rag as qer
+qer.init()
+results = qer.search(
     query="restaurant expense while traveling for training",
     province="BC",
     business_type="sole_proprietorship"
@@ -1603,7 +1603,7 @@ git push --tags
 2. TICKET 7: Hybrid search engine (test against fixture DB)
 3. TICKET 6: Data manager (simple version pointing to fixture)
 4. TICKET 8: Public API
-5. **🎉 Milestone: Demo `qe.search()` working!**
+5. **🎉 Milestone: Demo `qer.search()` working!**
 
 **Workstream B (Pipeline Team)**:
 1. TICKET 9A: Document preprocessor
