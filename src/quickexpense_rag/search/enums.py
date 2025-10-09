@@ -22,7 +22,11 @@ class Province(str, Enum):
 
 
 class BusinessType(str, Enum):
-    """Types of business structures."""
+    """
+    High-level CRA business structures.
+
+    Note: This list is not exhaustive and focuses on common for-profit entities.
+    """
 
     SOLE_PROPRIETORSHIP = "sole_proprietorship"
     CORPORATION = "corporation"
@@ -30,7 +34,11 @@ class BusinessType(str, Enum):
 
 
 class ExpenseType(str, Enum):
-    """Categories of business expenses."""
+    """
+    High-level business expense categories for metadata filtering.
+
+    Note: The semantic search query handles specific nuances.
+    """
 
     MEALS = "meals"
     TRAVEL = "travel"
