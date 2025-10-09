@@ -28,6 +28,7 @@ dependencies = [
     "httpx>=0.25",
     "tqdm>=4.66",
     "numpy>=1.24",
+    "sentence-transformers>=2.2",
 ]
 
 [project.optional-dependencies]

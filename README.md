@@ -56,6 +56,26 @@ for result in results:
 
 ### Setup
 
+#### macOS (Intel x86_64) / Linux
+
+Due to PyTorch platform-specific builds, **Intel x86_64 macOS users must use Docker**:
+
+```bash
+# Clone repository
+git clone https://github.com/manonja/quickExpense-rag.git
+cd quickExpense-rag
+
+# Build and run with Docker
+docker build -t quickexpense-rag:dev .
+docker run -it --rm -v $(pwd)/src:/app/src -v $(pwd)/tests:/app/tests quickexpense-rag:dev
+
+# Or use docker-compose
+docker-compose up -d
+docker-compose exec dev bash
+```
+
+#### macOS (Apple Silicon) / Native Linux
+
 ```bash
 # Install uv
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -68,6 +88,20 @@ uv run pre-commit install
 ```
 
 ### Commands
+
+#### Inside Docker (Intel macOS)
+
+```bash
+# Inside container
+uv run pytest tests/integration -v
+uv run pytest tests/unit -v -m unit
+uvx ruff check src/
+uvx ruff format src/
+uv run mypy src/
+uv run pre-commit run --all-files
+```
+
+#### Native (Apple Silicon / Linux)
 
 ```bash
 # Run tests

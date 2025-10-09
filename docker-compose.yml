@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      # Mount source code for live development
+      - ./src:/app/src
+      - ./tests:/app/tests
+      # Persist uv cache
+      - uv-cache:/root/.cache/uv
+    working_dir: /app
+    stdin_open: true
+    tty: true
+    command: /bin/bash
+
+volumes:
+  uv-cache:
