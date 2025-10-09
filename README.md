@@ -4,11 +4,15 @@ Semantic search over Canadian Revenue Agency (CRA) business expense rules.
 
 ## ⚠️ LEGAL DISCLAIMER
 
-**THIS IS NOT TAX ADVICE.** This library provides informational content only and does not constitute professional tax advice. CRA rules are complex, change frequently, and require professional interpretation. Always consult a qualified tax professional or accountant.
+**THIS IS NOT TAX ADVICE.** This library provides informational content only and does
+not constitute professional tax advice. CRA rules are complex, change frequently, and
+require professional interpretation. Always consult a qualified tax professional or
+accountant.
 
 ## What is this?
 
-A Python library for semantic search over Canadian Revenue Agency (CRA) business expense rules. Built for ML engineers building expense classification agents.
+A Python library for semantic search over Canadian Revenue Agency (CRA) business expense
+rules. Built for ML engineers building expense classification agents.
 
 ## Features
 
@@ -16,7 +20,7 @@ A Python library for semantic search over Canadian Revenue Agency (CRA) business
 - 🎯 Filter by province, business type, expense category
 - 📚 Returns authoritative CRA citations with source URLs
 - 🔒 No API keys or network calls after setup
-- 📦 Lightweight package (<5MB)
+- 📦 Lightweight package (\<5MB)
 
 ## Installation
 

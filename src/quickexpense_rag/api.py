@@ -5,8 +5,6 @@ This module provides the main user-facing functions for initializing
 the library and searching CRA expense rules.
 """
 
-from typing import Any
-
 from quickexpense_rag.exceptions import DatabaseNotInitializedError
 from quickexpense_rag.search.models import SearchResult
 
