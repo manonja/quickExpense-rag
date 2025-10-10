@@ -5,8 +5,9 @@ for embedding documents and queries using BGE models.
 """
 
 import logging
-from typing import Any
 
+import numpy as np
+import numpy.typing as npt
 import torch
 from sentence_transformers import SentenceTransformer
 
@@ -59,6 +60,30 @@ class _EmbeddingService:
             raise ModelLoadingError(
                 f"Failed to load model '{model_name}': {e}"
             ) from e
+
+    def embed_documents(self, texts: list[str]) -> npt.NDArray[np.float32]:
+        """Embed documents for indexing.
+
+        Args:
+            texts: List of text strings to embed
+
+        Returns:
+            Numpy array of shape (n_texts, 384) with L2-normalized embeddings
+
+        Raises:
+            ValueError: If texts is empty
+
+        """
+        if not texts:
+            raise ValueError("texts cannot be empty")
+
+        return self.model.encode(
+            texts,
+            batch_size=self.batch_size,
+            normalize_embeddings=True,
+            show_progress_bar=False,
+            convert_to_numpy=True,
+        ).astype(np.float32)
 
 
 # Module-level singleton with production defaults
