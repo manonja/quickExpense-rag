@@ -1,17 +1,19 @@
 # TICKET 5: Embedding Service Implementation Plan (TDD Approach)
 
-## Status: IN PROGRESS (Cycles 1-3 Complete)
+## Status: IN PROGRESS (Cycles 1-4 Complete)
 
 ## Overview
 Implement BGE embedding service using **Test-Driven Development**, constructor injection (scikit-learn style), real integration tests, and atomic commits.
 
-## Completed Work (9 commits)
+## Completed Work (12 commits)
 - ✅ Cycle 1: Basic Structure + Singleton Test (2 commits)
 - ✅ Cycle 2: Model Initialization with Constructor Injection (2 commits)
 - ✅ Cycle 3: Document Embedding (2 commits)
+- ✅ Cycle 4: Query Embedding with Instruction Prefix (2 commits)
 - ✅ Docker Setup: PyTorch 2.8.0 + CUDA 12.9 multi-stage build (1 commit)
 - ✅ ModelLoadingError exception added (included in Cycle 2)
 - ✅ Dependencies: sentence-transformers added to pyproject.toml (included in Docker commit)
+- ✅ Torch version constraint: <2.3 for Intel macOS compatibility (1 commit)
 
 ## Deep Reasoning: What Do We Actually Need to Test?
 
@@ -149,7 +151,7 @@ def embed_documents(self, texts: list[str]) -> NDArray[np.float32]:
 
 ---
 
-### Cycle 4: Query Embedding with Instruction Prefix (Red → Green → Refactor)
+### ✅ Cycle 4: Query Embedding with Instruction Prefix (COMPLETE)
 
 **🔴 RED - Write failing tests**:
 ```python
@@ -200,10 +202,11 @@ def embed_query(self, query: str) -> NDArray[np.float32]:
     return embedding.astype(np.float32)
 ```
 
-**🔵 REFACTOR**: Extract instruction prefix to class constant
+**🔵 REFACTOR**: Instruction prefix already extracted to QUERY_INSTRUCTION class constant
 
 **✅ COMMIT**: `test: add query embedding tests with prefix verification`
 **✅ COMMIT**: `feat: implement embed_query with instruction prefix`
+**✅ COMMIT**: `build: constrain torch to <2.3 for Intel macOS compatibility`
 
 ---
 
@@ -385,7 +388,6 @@ pre-commit run --all-files
 - `src/quickexpense_rag/exceptions.py` (ModelLoadingError)
 
 ## Remaining Work
-- ⏳ Cycle 4: Query Embedding with Instruction Prefix
 - ⏳ Cycle 5: Batch vs Sequential Equivalence
 - ⏳ Cycle 6: Semantic Similarity
 - ⏳ Cycle 7: Device Fallback (logic already implemented, need test)
@@ -395,7 +397,7 @@ pre-commit run --all-files
 
 ## Commit Strategy
 
-**Target: 12-15 atomic commits** following TDD cycles (9/12-15 complete):
+**Target: 12-15 atomic commits** following TDD cycles (12/12-15 complete):
 1. ✅ Test files and failing tests first
 2. ✅ Minimal implementation to pass tests
 3. ✅ Minimal implementation to pass tests
