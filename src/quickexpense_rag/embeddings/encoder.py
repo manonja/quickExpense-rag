@@ -1,4 +1,5 @@
-"""BGE embedding service with module-level singleton pattern.
+"""
+BGE embedding service with module-level singleton pattern.
 
 This module provides a lightweight wrapper around SentenceTransformer
 for embedding documents and queries using BGE models.
@@ -15,7 +16,8 @@ logger = logging.getLogger(__name__)
 
 
 class _EmbeddingService:
-    """Internal embedding service implementation.
+    """
+    Internal embedding service implementation.
 
     Not intended for direct instantiation. Use the module-level
     `embedding_service` singleton instead.
@@ -29,7 +31,8 @@ class _EmbeddingService:
         device: str = "cpu",
         batch_size: int = 32,
     ) -> None:
-        """Initialize the embedding service.
+        """
+        Initialize the embedding service.
 
         Args:
             model_name: HuggingFace model identifier for sentence-transformers
@@ -43,7 +46,7 @@ class _EmbeddingService:
         # Device validation with CUDA fallback
         if device.startswith("cuda") and not torch.cuda.is_available():
             logger.warning(
-                f"CUDA device '{device}' not available. Falling back to 'cpu'."
+                "CUDA device '%s' not available. Falling back to 'cpu'.", device
             )
             device = "cpu"
 
@@ -62,7 +65,8 @@ class _EmbeddingService:
             ) from e
 
     def embed_documents(self, texts: list[str]) -> npt.NDArray[np.float32]:
-        """Embed documents for indexing.
+        """
+        Embed documents for indexing.
 
         Args:
             texts: List of text strings to embed
@@ -84,6 +88,31 @@ class _EmbeddingService:
             show_progress_bar=False,
             convert_to_numpy=True,
         ).astype(np.float32)
+
+    def embed_query(self, query: str) -> npt.NDArray[np.float32]:
+        """
+        Embed query with instruction prefix for retrieval.
+
+        Args:
+            query: Query string to embed
+
+        Returns:
+            Numpy array of shape (384,) with L2-normalized embedding
+
+        Raises:
+            ValueError: If query is empty or whitespace-only
+
+        """
+        if not query.strip():
+            raise ValueError("query cannot be empty")
+
+        embedding: npt.NDArray[np.float32] = self.model.encode(
+            self.QUERY_INSTRUCTION + query,
+            normalize_embeddings=True,
+            show_progress_bar=False,
+            convert_to_numpy=True,
+        )
+        return embedding.astype(np.float32)
 
 
 # Module-level singleton with production defaults
