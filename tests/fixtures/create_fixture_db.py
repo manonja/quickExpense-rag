@@ -27,7 +27,6 @@ from quickexpense_rag.data.schema import (
     init_metadata,
     optimize_database,
 )
-from quickexpense_rag.search.enums import ExpenseType
 
 # Reproducible seed for deterministic embeddings
 RANDOM_SEED = 42
@@ -232,7 +231,19 @@ def create_fixture_database(output_path: Path) -> None:
     num_rows = len(test_rules)
 
     # Populate expense_types table with canonical list
-    expense_type_values = ExpenseType.all_values()
+    # Database-driven approach: expense types are defined here and stored in DB
+    expense_type_values = [
+        "meals",
+        "travel",
+        "vehicle",
+        "home_office",
+        "advertising",
+        "insurance",
+        "professional_fees",
+        "supplies",
+        "utilities",
+        "rent",
+    ]
     conn.executemany(
         "INSERT INTO expense_types (name) VALUES (?)",
         [(name,) for name in expense_type_values],

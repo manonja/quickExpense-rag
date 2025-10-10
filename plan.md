@@ -430,12 +430,8 @@ ______________________________________________________________________
       CORPORATION = "corporation"
       PARTNERSHIP = "partnership"
 
-  class ExpenseType(str, Enum):
-      MEALS = "meals"
-      TRAVEL = "travel"
-      VEHICLE = "vehicle"
-      HOME_OFFICE = "home_office"
-      # ... all expense types
+  # Note: ExpenseType enum removed - expense types are database-driven
+  # Stored in expense_types table and queried dynamically
   ```
 - [ ] `app/rag/search/models.py`:
   ```python
@@ -448,7 +444,7 @@ ______________________________________________________________________
       query: str = Field(..., min_length=3, description="Search query")
       province: Province | None = None
       business_type: BusinessType | None = None
-      expense_type: ExpenseType | None = None
+      expense_types: list[str] | None = None  # Database-driven, not enum
       top_k: int = Field(5, ge=1, le=50)
 
   class SearchResult(BaseModel):
@@ -460,7 +456,7 @@ ______________________________________________________________________
       score: float = Field(..., ge=0.0, le=1.0)
       province: Province | None
       business_type: BusinessType | None
-      expense_type: ExpenseType | None
+      expense_types: list[str]  # Database-driven, not enum
       retrieved_at: datetime
 
       @computed_field
@@ -632,7 +628,7 @@ ______________________________________________________________________
       score: float = Field(..., ge=0.0, le=1.0)
       province: Province | None
       business_type: BusinessType | None
-      expense_types: list[str]  # Changed from expense_type: ExpenseType | None
+      expense_types: list[str]  # Database-driven, not enum
       retrieved_at: datetime
 
       @computed_field
@@ -646,19 +642,11 @@ ______________________________________________________________________
               "The data may be incomplete, outdated, or incorrectly interpreted."
           )
   ```
-- [ ] `app/rag/search/enums.py` - Keep `ExpenseType` enum for reference:
-  ```python
-  class ExpenseType(str, Enum):
-      """Reference enum for common expense types. Not enforced in database."""
-      MEALS = "meals"
-      TRAVEL = "travel"
-      VEHICLE = "vehicle"
-      HOME_OFFICE = "home_office"
-      ADVERTISING = "advertising"
-      SUPPLIES = "supplies"
-      PROFESSIONAL_FEES = "professional_fees"
-      # ... add comprehensive list
-  ```
+- [x] `app/rag/search/enums.py` - ExpenseType enum REMOVED:
+  - Expense types are now fully database-driven
+  - Canonical list stored in `expense_types` table
+  - Populated during indexing from source documents
+  - No hardcoded enum - schema evolves with CRA content
 - [ ] Update validation logic:
   - `expense_types` can be empty list (no filtering)
   - `expense_types` can be None (no filtering)

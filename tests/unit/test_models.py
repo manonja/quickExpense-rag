@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 
 import pytest
 from pydantic import ValidationError
-from quickexpense_rag.search.enums import BusinessType, ExpenseType, Province
+from quickexpense_rag.search.enums import BusinessType, Province
 from quickexpense_rag.search.models import (
     ExpenseQuery,
     IndexManifest,
