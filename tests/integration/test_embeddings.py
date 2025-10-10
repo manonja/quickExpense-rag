@@ -99,3 +99,27 @@ def test_query_embedding_differs_from_document(test_service: _EmbeddingService) 
     similarity = np.dot(doc_emb, query_emb)
     assert similarity < 1.0  # Not identical
     assert similarity > 0.8  # But still similar
+
+
+def test_batch_encoding_matches_sequential(test_service: _EmbeddingService) -> None:
+    """
+    Verify batch processing gives same results as sequential.
+
+    This test is critical for ensuring consistency: users should get
+    identical embeddings whether they process texts one-by-one or in batches.
+    SentenceTransformer guarantees this behavior, but we validate it explicitly.
+    """
+    import numpy as np
+
+    texts = ["text one", "text two", "text three"]
+
+    # Batch encoding
+    batch_emb = test_service.embed_documents(texts)
+
+    # Sequential encoding
+    sequential_emb = np.vstack(
+        [test_service.embed_documents([t]) for t in texts]
+    )
+
+    # Should be numerically identical (within float tolerance)
+    np.testing.assert_allclose(batch_emb, sequential_emb, atol=1e-5)
