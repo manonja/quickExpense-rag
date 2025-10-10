@@ -21,7 +21,7 @@ from quickexpense_rag.exceptions import (
     ParsingError,
     QuickExpenseError,
 )
-from quickexpense_rag.search.enums import BusinessType, ExpenseType, Province
+from quickexpense_rag.search.enums import BusinessType, Province
 from quickexpense_rag.search.models import ExpenseQuery, SearchResult
 from quickexpense_rag.settings import settings
 
@@ -32,7 +32,6 @@ __all__ = [
     "DatabaseNotInitializedError",
     "EmbeddingError",
     "ExpenseQuery",
-    "ExpenseType",
     "NetworkError",
     "ParsingError",
     "Province",

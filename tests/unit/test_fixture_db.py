@@ -56,9 +56,7 @@ def test_fixture_db_embeddings_present(fixture_db_path: Path) -> None:
     assert row is not None, "No embeddings found"
 
     embedding = np.frombuffer(row[0], dtype=np.float32)
-    assert (
-        len(embedding) == 384
-    ), f"Expected 384 dimensions, got {len(embedding)}"
+    assert len(embedding) == 384, f"Expected 384 dimensions, got {len(embedding)}"
 
     conn.close()
 
@@ -143,15 +141,14 @@ def test_fixture_db_metadata_populated(fixture_db_path: Path) -> None:
     assert "embedding_model" in metadata, "Missing embedding_model in metadata"
 
     # Verify schema version format
-    assert metadata["schema_version"] == "1.0", (
-        f"Expected schema_version='1.0', " f"got '{metadata['schema_version']}'"
-    )
+    assert (
+        metadata["schema_version"] == "1.0"
+    ), f"Expected schema_version='1.0', got '{metadata['schema_version']}'"
 
     # Verify data version
-    assert metadata["data_version"] == "fixture-v1", (
-        f"Expected data_version='fixture-v1', "
-        f"got '{metadata['data_version']}'"
-    )
+    assert (
+        metadata["data_version"] == "fixture-v1"
+    ), f"Expected data_version='fixture-v1', got '{metadata['data_version']}'"
 
     conn.close()
 
@@ -161,13 +158,15 @@ def test_fixture_db_province_coverage(fixture_db_path: Path) -> None:
     """Verify fixture has coverage across provinces."""
     conn = sqlite3.connect(fixture_db_path)
 
-    cursor = conn.execute("SELECT DISTINCT province FROM rules WHERE province IS NOT NULL")
+    cursor = conn.execute(
+        "SELECT DISTINCT province FROM rules WHERE province IS NOT NULL"
+    )
     provinces = {row[0] for row in cursor.fetchall()}
 
     expected_provinces = {"BC", "AB", "ON", "QC"}
-    assert provinces >= expected_provinces, (
-        f"Missing provinces: {expected_provinces - provinces}"
-    )
+    assert (
+        provinces >= expected_provinces
+    ), f"Missing provinces: {expected_provinces - provinces}"
 
     conn.close()
 
@@ -183,26 +182,24 @@ def test_fixture_db_business_type_coverage(fixture_db_path: Path) -> None:
     business_types = {row[0] for row in cursor.fetchall()}
 
     expected_types = {"sole_proprietorship", "corporation", "partnership"}
-    assert business_types >= expected_types, (
-        f"Missing business types: {expected_types - business_types}"
-    )
+    assert (
+        business_types >= expected_types
+    ), f"Missing business types: {expected_types - business_types}"
 
     conn.close()
 
 
 @pytest.mark.unit
 def test_fixture_db_expense_type_coverage(fixture_db_path: Path) -> None:
-    """Verify fixture has coverage across expense types."""
+    """Verify fixture has coverage across expense types (many-to-many)."""
     conn = sqlite3.connect(fixture_db_path)
 
-    cursor = conn.execute(
-        "SELECT DISTINCT expense_type FROM rules WHERE expense_type IS NOT NULL"
-    )
+    cursor = conn.execute("SELECT DISTINCT name FROM expense_types")
     expense_types = {row[0] for row in cursor.fetchall()}
 
     expected_types = {"meals", "travel", "vehicle", "home_office"}
-    assert expense_types >= expected_types, (
-        f"Missing expense types: {expected_types - expense_types}"
-    )
+    assert (
+        expense_types >= expected_types
+    ), f"Missing expense types: {expected_types - expense_types}"
 
     conn.close()

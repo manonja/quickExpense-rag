@@ -35,14 +35,17 @@ def test_schema_creation(tmp_path: Path) -> None:
     assert "rules" in tables
     assert "rules_fts" in tables
     assert "rules_vec" in tables
+    assert "expense_types" in tables
+    assert "rule_expense_type_links" in tables
 
     # Verify indexes exist
     cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='index'")
     indexes = {row[0] for row in cursor.fetchall()}
     assert "idx_province" in indexes
     assert "idx_business_type" in indexes
-    assert "idx_expense_type" in indexes
     assert "idx_citation" in indexes
+    assert "idx_link_rule" in indexes
+    assert "idx_link_type" in indexes
 
     conn.close()
 
@@ -217,7 +220,6 @@ def test_rules_table_structure(tmp_path: Path) -> None:
         "source_hash",
         "province",
         "business_type",
-        "expense_type",
         "metadata_json",
         "retrieved_at",
         "created_at",
