@@ -1,19 +1,21 @@
 # TICKET 5: Embedding Service Implementation Plan (TDD Approach)
 
-## Status: IN PROGRESS (Cycles 1-4 Complete)
+## Status: IN PROGRESS (Cycles 1-5 Complete)
 
 ## Overview
 Implement BGE embedding service using **Test-Driven Development**, constructor injection (scikit-learn style), real integration tests, and atomic commits.
 
-## Completed Work (12 commits)
+## Completed Work (14 commits)
 - ✅ Cycle 1: Basic Structure + Singleton Test (2 commits)
 - ✅ Cycle 2: Model Initialization with Constructor Injection (2 commits)
 - ✅ Cycle 3: Document Embedding (2 commits)
 - ✅ Cycle 4: Query Embedding with Instruction Prefix (2 commits)
+- ✅ Cycle 5: Batch vs Sequential Equivalence (2 commits)
 - ✅ Docker Setup: PyTorch 2.8.0 + CUDA 12.9 multi-stage build (1 commit)
 - ✅ ModelLoadingError exception added (included in Cycle 2)
 - ✅ Dependencies: sentence-transformers added to pyproject.toml (included in Docker commit)
 - ✅ Torch version constraint: <2.3 for Intel macOS compatibility (1 commit)
+- ✅ NumPy version constraint: <2.0 for PyTorch 2.2 compatibility (1 commit)
 
 ## Deep Reasoning: What Do We Actually Need to Test?
 
@@ -210,7 +212,7 @@ def embed_query(self, query: str) -> NDArray[np.float32]:
 
 ---
 
-### Cycle 5: Batch vs Sequential Equivalence (Red → Green → Refactor)
+### ✅ Cycle 5: Batch vs Sequential Equivalence (COMPLETE)
 
 **🔴 RED - Write failing test**:
 ```python
@@ -388,7 +390,7 @@ pre-commit run --all-files
 - `src/quickexpense_rag/exceptions.py` (ModelLoadingError)
 
 ## Remaining Work
-- ⏳ Cycle 5: Batch vs Sequential Equivalence
+- ✅ Cycle 5: Batch vs Sequential Equivalence (COMPLETE)
 - ⏳ Cycle 6: Semantic Similarity
 - ⏳ Cycle 7: Device Fallback (logic already implemented, need test)
 - ⏳ Cycle 8: Performance Test
@@ -397,7 +399,7 @@ pre-commit run --all-files
 
 ## Commit Strategy
 
-**Target: 12-15 atomic commits** following TDD cycles (12/12-15 complete):
+**Target: 12-15 atomic commits** following TDD cycles (14/12-15 complete):
 1. ✅ Test files and failing tests first
 2. ✅ Minimal implementation to pass tests
 3. ✅ Minimal implementation to pass tests
