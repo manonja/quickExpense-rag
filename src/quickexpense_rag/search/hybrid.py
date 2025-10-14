@@ -359,19 +359,27 @@ class HybridSearchEngine:
 
     def search(self, query: ExpenseQuery) -> list[SearchResult]:
         """
-        Execute hybrid search with metadata filtering and FTS5 keyword search.
+        Execute hybrid search with RRF fusion of FTS5 and vector results.
 
-        Phase 3.2 implementation: Uses FTS5 for keyword ranking on candidates.
-        Vector search and RRF fusion will be added in later phases.
+        Complete implementation: Combines keyword and semantic search using
+        Reciprocal Rank Fusion (RRF) for optimal ranking.
+
+        Search pipeline:
+        1. Metadata filtering → candidate IDs
+        2. FTS5 keyword search on candidates
+        3. Vector semantic search on candidates
+        4. RRF fusion of rankings
+        5. Result hydration
 
         Args:
             query: Structured search query with filters.
 
         Returns:
-            List of search results ranked by FTS5 relevance (limited to top_k).
-            Note: Vector search not yet integrated (Phase 3.2 limitation).
+            List of search results ranked by RRF combined score (limited to top_k).
 
         """
+        from quickexpense_rag.settings import settings
+
         # Step 1: Get candidate IDs from metadata filtering
         candidate_ids = self._get_candidate_ids(query)
 
@@ -380,15 +388,31 @@ class HybridSearchEngine:
             return []
 
         # Step 3: Run FTS5 keyword search on candidates
-        # This ranks candidates by keyword relevance
         fts_results = self._keyword_search(
-            query_text=query.query, candidate_ids=candidate_ids, k=query.top_k
+            query_text=query.query,
+            candidate_ids=candidate_ids,
+            k=query.top_k * 2,  # Get more candidates for RRF fusion
         )
 
-        # Extract ranked IDs (already limited to top_k by _keyword_search)
-        ranked_ids = [rule_id for rule_id, _ in fts_results]
+        # Step 4: Run vector semantic search on candidates
+        vec_results = self._vector_search(
+            query_text=query.query,
+            candidate_ids=candidate_ids,
+            k=query.top_k * 2,  # Get more candidates for RRF fusion
+        )
 
-        # Step 4: Hydrate results (preserving FTS5 ranking order)
+        # Step 5: Apply Reciprocal Rank Fusion to merge rankings
+        fused_results = reciprocal_rank_fusion(
+            fts_results=fts_results, vec_results=vec_results, k=settings.rrf_k
+        )
+
+        # Step 6: Take top_k fused results
+        top_fused = fused_results[: query.top_k]
+
+        # Step 7: Extract ranked IDs
+        ranked_ids = [rule_id for rule_id, _ in top_fused]
+
+        # Step 8: Hydrate results (preserving RRF ranking order)
         results = self._hydrate_results(ranked_ids)
 
         return results
