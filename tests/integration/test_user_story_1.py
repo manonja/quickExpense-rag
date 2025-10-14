@@ -37,7 +37,7 @@ class TestUserStory1:
         shutil.copy(fixture_db, test_db_path)
 
         # Mock DataManager.get_database_path to return fixture path
-        def mock_get_database_path(self):
+        def mock_get_database_path(self):  # noqa: ARG001
             return test_db_path
 
         monkeypatch.setattr(
@@ -45,7 +45,7 @@ class TestUserStory1:
             mock_get_database_path
         )
 
-        yield test_db_path
+        return test_db_path
 
     def test_complete_user_story_1_workflow(self):
         """
@@ -54,7 +54,7 @@ class TestUserStory1:
         THEN: All assertions pass as per TICKET 8 acceptance criteria
         """
         # Reset module state
-        import quickexpense_rag.api as api
+        from quickexpense_rag import api
         api._search_engine = None
         api._db_path = None
 
@@ -115,7 +115,7 @@ class TestUserStory1:
         THEN: DatabaseNotInitializedError is raised
         """
         # Reset module state
-        import quickexpense_rag.api as api
+        from quickexpense_rag import api
         api._search_engine = None
 
         with pytest.raises(DatabaseNotInitializedError) as exc_info:

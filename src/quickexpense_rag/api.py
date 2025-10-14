@@ -28,7 +28,7 @@ _search_engine: HybridSearchEngine | None = None
 _db_path: Path | None = None
 
 
-def init(force_update: bool = False) -> None:
+def init(force_update: bool = False) -> None:  # noqa: ARG001
     """
     Initialize library and download database if needed.
 
@@ -79,7 +79,8 @@ def search(
         query: Natural language expense description.
         province: Filter by province (e.g., "BC", "ON").
         business_type: Filter by business type.
-        expense_types: Filter by expense categories (matches rules with ANY of these types).
+        expense_types: Filter by expense categories (matches rules with
+            ANY of these types).
         top_k: Number of results to return (1-50).
 
     Returns:
@@ -100,21 +101,21 @@ def search(
     if province is not None:
         try:
             province_enum = Province(province)
-        except ValueError:
+        except ValueError as e:
             valid_provinces = [p.value for p in Province]
             raise ValueError(
                 f"Invalid province '{province}'. Valid options: {valid_provinces}"
-            )
+            ) from e
 
     business_type_enum: BusinessType | None = None
     if business_type is not None:
         try:
             business_type_enum = BusinessType(business_type)
-        except ValueError:
+        except ValueError as e:
             valid_types = [bt.value for bt in BusinessType]
             raise ValueError(
                 f"Invalid business_type '{business_type}'. Valid options: {valid_types}"
-            )
+            ) from e
 
     # Construct ExpenseQuery (Pydantic will validate)
     query_obj = ExpenseQuery(

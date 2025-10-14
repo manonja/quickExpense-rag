@@ -4,7 +4,6 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-
 from quickexpense_rag import api
 from quickexpense_rag.exceptions import DatabaseNotInitializedError
 from quickexpense_rag.search.models import SearchResult
