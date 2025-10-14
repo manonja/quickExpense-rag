@@ -127,6 +127,54 @@ class HybridSearchEngine:
         finally:
             conn.close()
 
+    def _keyword_search(
+        self, query_text: str, candidate_ids: list[int], k: int
+    ) -> list[tuple[int, float]]:
+        """
+        Perform FTS5 keyword search on filtered candidates.
+
+        Searches the rules_fts virtual table for exact and fuzzy matches.
+        Uses SQLite FTS5 MATCH syntax with porter stemming.
+
+        Args:
+            query_text: Search query text for keyword matching.
+            candidate_ids: List of rule IDs to search within (pre-filtered).
+            k: Maximum number of results to return.
+
+        Returns:
+            List of (rule_id, score) tuples sorted by relevance (best first).
+            Empty list if no matches or empty candidates.
+            Note: FTS5 rank is negative (lower is better), we negate for consistency.
+
+        """
+        # Handle empty candidates
+        if not candidate_ids:
+            return []
+
+        # Build SQL query for FTS5 search
+        placeholders = ", ".join(["?"] * len(candidate_ids))
+        sql = f"""
+            SELECT rowid, -rank as score
+            FROM rules_fts
+            WHERE rowid IN ({placeholders})
+              AND content MATCH ?
+            ORDER BY rank
+            LIMIT ?
+        """
+
+        # Execute query
+        conn = sqlite3.connect(self.db_path)
+        try:
+            # Parameters: candidate_ids + query_text + k
+            params = candidate_ids + [query_text, k]
+            cursor = conn.execute(sql, params)
+            rows = cursor.fetchall()
+
+            # Return list of (id, score) tuples
+            return [(row[0], row[1]) for row in rows]
+        finally:
+            conn.close()
+
     def _hydrate_results(self, rule_ids: list[int]) -> list[SearchResult]:
         """
         Hydrate SearchResult objects from rule IDs.

@@ -197,3 +197,93 @@ class TestGetCandidateIds:
         # BC + meals: S1-F1-C1-p1, S1-F1-C1-p2, S2-F1-C1-p1
         assert len(candidate_ids) >= 2
         assert len(candidate_ids) == len(set(candidate_ids))
+
+
+class TestKeywordSearch:
+    """Test _keyword_search method for FTS5 full-text search (Phase 3.1)."""
+
+    @pytest.mark.integration
+    def test_keyword_search_empty_candidates(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Empty candidate list returns empty results."""
+        results = search_engine._keyword_search(
+            query_text="test", candidate_ids=[], k=5
+        )
+
+        assert results == []
+
+    @pytest.mark.integration
+    def test_keyword_search_with_match(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Query matching documents returns ranked results."""
+        # Get all candidate IDs
+        all_ids = search_engine._get_candidate_ids(ExpenseQuery(query="test"))
+
+        # Search for "test" (appears in all fixture rows)
+        results = search_engine._keyword_search(
+            query_text="test", candidate_ids=all_ids, k=5
+        )
+
+        # Should return results with scores
+        assert len(results) > 0
+        # Each result is (id, score)
+        for result in results:
+            assert isinstance(result, tuple)
+            assert len(result) == 2
+            assert isinstance(result[0], int)  # ID
+            assert isinstance(result[1], float)  # Score
+
+    @pytest.mark.integration
+    def test_keyword_search_exact_term(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Exact term matching works correctly."""
+        # Get all candidate IDs
+        all_ids = search_engine._get_candidate_ids(ExpenseQuery(query="test"))
+
+        # Search for "T2125" (only in S2-F1-C1-p1)
+        results = search_engine._keyword_search(
+            query_text="T2125", candidate_ids=all_ids, k=5
+        )
+
+        # Should return at least one result
+        assert len(results) >= 1
+        # Results should be sorted by rank (best first)
+        if len(results) > 1:
+            # FTS5 rank is negative (lower is better), so we negate for comparison
+            scores = [score for _, score in results]
+            # Scores should be in descending order (higher score = better match)
+            assert scores == sorted(scores, reverse=True)
+
+    @pytest.mark.integration
+    def test_keyword_search_no_match(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """No matching documents returns empty results."""
+        # Get all candidate IDs
+        all_ids = search_engine._get_candidate_ids(ExpenseQuery(query="test"))
+
+        # Search for term that doesn't exist
+        results = search_engine._keyword_search(
+            query_text="xyznonexistent", candidate_ids=all_ids, k=5
+        )
+
+        assert results == []
+
+    @pytest.mark.integration
+    def test_keyword_search_respects_k(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Keyword search returns at most k results."""
+        # Get all candidate IDs
+        all_ids = search_engine._get_candidate_ids(ExpenseQuery(query="test"))
+
+        # Search with k=3
+        results = search_engine._keyword_search(
+            query_text="test", candidate_ids=all_ids, k=3
+        )
+
+        # Should return at most 3 results
+        assert len(results) <= 3
