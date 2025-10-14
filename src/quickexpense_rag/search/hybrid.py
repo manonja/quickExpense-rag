@@ -127,26 +127,27 @@ class HybridSearchEngine:
         finally:
             conn.close()
 
-    def search(self, query: ExpenseQuery) -> list[SearchResult]:
+    def _hydrate_results(self, rule_ids: list[int]) -> list[SearchResult]:
         """
-        Execute hybrid search with metadata filtering.
+        Hydrate SearchResult objects from rule IDs.
 
-        Phase 1.3 implementation: Basic search with metadata filtering only.
-        FTS5, vector search, and RRF fusion will be added in later phases.
+        Fetches full rule data and aggregates expense_types using GROUP_CONCAT.
+        Preserves the order of input rule_ids (important for ranked results).
 
         Args:
-            query: Structured search query with filters.
+            rule_ids: List of rule IDs to hydrate (may be empty).
 
         Returns:
-            List of search results (limited to top_k).
-            Note: Results are not yet ranked by relevance (Phase 1.3 limitation).
+            List of SearchResult objects in the same order as rule_ids.
+            Returns empty list if rule_ids is empty.
 
         """
-        # Build filter clauses
-        join_clause, where_clause, params = self._build_filter_clauses(query)
+        if not rule_ids:
+            return []
 
-        # Build SQL query
-        sql = """
+        # Build SQL query with placeholders for rule IDs
+        placeholders = ", ".join(["?"] * len(rule_ids))
+        sql = f"""
             SELECT
                 r.id,
                 r.content,
@@ -159,27 +160,26 @@ class HybridSearchEngine:
             FROM rules r
             LEFT JOIN rule_expense_type_links retl ON r.id = retl.rule_id
             LEFT JOIN expense_types et ON retl.expense_type_id = et.id
+            WHERE r.id IN ({placeholders})
+            GROUP BY r.id
         """
-
-        # Add WHERE clause if filters exist
-        if where_clause:
-            sql += f" WHERE {where_clause}"
-
-        # Group by rule ID to aggregate expense types
-        sql += " GROUP BY r.id"
-
-        # Limit results to top_k
-        sql += f" LIMIT {query.top_k}"
 
         # Execute query
         conn = sqlite3.connect(self.db_path)
         try:
-            cursor = conn.execute(sql, params)
+            cursor = conn.execute(sql, rule_ids)
             rows = cursor.fetchall()
 
-            # Hydrate SearchResult objects
+            # Create a mapping from ID to row for preserving order
+            id_to_row = {row[0]: row for row in rows}
+
+            # Hydrate results in the same order as rule_ids
             results: list[SearchResult] = []
-            for row in rows:
+            for rule_id in rule_ids:
+                row = id_to_row.get(rule_id)
+                if row is None:
+                    continue  # Skip if rule was deleted
+
                 # Parse expense types (comma-separated string → list)
                 expense_types_str = row[7]  # GROUP_CONCAT result
                 expense_types = (
@@ -201,3 +201,34 @@ class HybridSearchEngine:
             return results
         finally:
             conn.close()
+
+    def search(self, query: ExpenseQuery) -> list[SearchResult]:
+        """
+        Execute hybrid search with metadata filtering.
+
+        Phase 2.3 implementation: Uses candidate ID approach for deduplication.
+        FTS5, vector search, and RRF fusion will be added in later phases.
+
+        Args:
+            query: Structured search query with filters.
+
+        Returns:
+            List of search results (limited to top_k).
+            Note: Results are not yet ranked by relevance (Phase 2.3 limitation).
+
+        """
+        # Step 1: Get candidate IDs from metadata filtering
+        candidate_ids = self._get_candidate_ids(query)
+
+        # Step 2: Short-circuit if no candidates
+        if not candidate_ids:
+            return []
+
+        # Step 3: Limit to top_k candidates
+        # (In later phases, this will happen after FTS5/vector ranking)
+        candidate_ids = candidate_ids[: query.top_k]
+
+        # Step 4: Hydrate results
+        results = self._hydrate_results(candidate_ids)
+
+        return results

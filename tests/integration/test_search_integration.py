@@ -96,3 +96,77 @@ class TestBasicSearch:
 
         # Should return at most 3 results
         assert len(results) <= 3
+
+
+class TestExpenseTypesFiltering:
+    """Integration tests for expense_types filtering (Phase 2.3)."""
+
+    @pytest.mark.integration
+    def test_search_expense_types_or_logic(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """expense_types filter matches ANY of the specified types (OR logic)."""
+        query = ExpenseQuery(query="test", expense_types=["meals", "vehicle"])
+
+        results = search_engine.search(query)
+
+        # Should return rules with EITHER meals OR vehicle
+        assert len(results) > 0
+
+        # Each result should have at least one matching expense type
+        for result in results:
+            matching_types = set(result.expense_types) & {"meals", "vehicle"}
+            assert len(matching_types) > 0, (
+                f"Result {result.citation_id} has expense_types {result.expense_types} "
+                f"but should match meals or vehicle"
+            )
+
+    @pytest.mark.integration
+    def test_search_expense_types_no_duplicates(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Rule with multiple matching types appears only once."""
+        query = ExpenseQuery(query="test", expense_types=["travel", "meals"])
+
+        results = search_engine.search(query)
+
+        # S1-F1-C1-p2 has BOTH travel and meals
+        # Should appear only once in results
+        citation_ids = [r.citation_id for r in results]
+        assert len(citation_ids) == len(set(citation_ids)), (
+            f"Duplicate citation IDs found: {citation_ids}"
+        )
+
+    @pytest.mark.integration
+    def test_search_expense_types_with_province(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """expense_types AND province filters combined."""
+        query = ExpenseQuery(
+            query="test", province=Province.BC, expense_types=["meals"]
+        )
+
+        results = search_engine.search(query)
+
+        # All results should be from BC
+        for result in results:
+            assert result.province == Province.BC
+
+        # All results should have meals
+        for result in results:
+            assert "meals" in result.expense_types
+
+        # Fixture DB has BC+meals: S1-F1-C1-p1, S1-F1-C1-p2, S2-F1-C1-p1
+        assert len(results) >= 2
+
+    @pytest.mark.integration
+    def test_search_expense_types_empty_result(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """No matches returns empty list."""
+        # Query for expense type that doesn't exist in fixture DB
+        query = ExpenseQuery(query="test", expense_types=["nonexistent_type"])
+
+        results = search_engine.search(query)
+
+        assert results == []
