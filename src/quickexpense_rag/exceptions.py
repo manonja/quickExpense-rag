@@ -52,3 +52,11 @@ class EmbeddingError(QuickExpenseError):
 
     Raised when text embedding generation encounters errors.
     """
+
+
+class ModelLoadingError(QuickExpenseError):
+    """
+    Model loading failed.
+
+    Raised when SentenceTransformer model fails to load.
+    """

@@ -27,7 +27,9 @@ dependencies = [
     "sqlite-vec>=0.1",
     "httpx>=0.25",
     "tqdm>=4.66",
-    "numpy>=1.24",
+    "numpy>=1.24,<2.0",
+    "sentence-transformers>=2.2",
+    "torch>=2.1,<2.3",
 ]
 
 [project.optional-dependencies]
