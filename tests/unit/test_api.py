@@ -197,3 +197,51 @@ class TestSearch:
 
         # Verify results returned
         assert results == mock_results
+
+
+class TestGetVersion:
+    """Test get_version() function."""
+
+    def test_get_version_returns_dict(self):
+        """
+        GIVEN: Library module loaded
+        WHEN: get_version() is called
+        THEN: Returns dict with library_version, data_version, schema_version
+        """
+        version_info = api.get_version()
+
+        # Verify structure
+        assert isinstance(version_info, dict)
+        assert "library_version" in version_info
+        assert "data_version" in version_info
+        assert "schema_version" in version_info
+
+        # Verify library_version matches __version__
+        from quickexpense_rag import __version__
+
+        assert version_info["library_version"] == __version__
+
+
+class TestLegalDisclaimers:
+    """Test that legal disclaimers are present in all docstrings."""
+
+    def test_init_has_legal_disclaimer(self):
+        """
+        GIVEN: init() function defined
+        WHEN: Docstring is checked
+        THEN: Contains prominent legal disclaimer
+        """
+        assert api.init.__doc__ is not None
+        assert "LEGAL DISCLAIMER" in api.init.__doc__
+        assert "not" in api.init.__doc__.lower()
+        assert "tax advice" in api.init.__doc__.lower()
+
+    def test_search_has_tax_advice_warning(self):
+        """
+        GIVEN: search() function defined
+        WHEN: Docstring is checked
+        THEN: Contains "NOT TAX ADVICE" warning
+        """
+        assert api.search.__doc__ is not None
+        assert "NOT TAX ADVICE" in api.search.__doc__
+        assert "informational" in api.search.__doc__.lower()
