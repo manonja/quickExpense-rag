@@ -13,12 +13,12 @@ The generated database is tracked with Git LFS to avoid repository bloat.
 """
 
 import sqlite3
-from pathlib import Path
-
-import numpy as np
 
 # Import schema from source (TICKET 2 dependency)
 import sys
+from pathlib import Path
+
+import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 from quickexpense_rag.data.schema import (
@@ -33,7 +33,9 @@ RANDOM_SEED = 42
 EMBEDDING_DIM = 384
 
 
-def generate_deterministic_embeddings(num_rows: int, seed: int = RANDOM_SEED) -> np.ndarray:
+def generate_deterministic_embeddings(
+    num_rows: int, seed: int = RANDOM_SEED
+) -> np.ndarray:
     """
     Generate deterministic embeddings using seeded random.
 
@@ -77,178 +79,216 @@ def create_fixture_database(output_path: Path) -> None:
     # Load sqlite-vec extension
     conn.enable_load_extension(True)
     import sqlite_vec
+
     sqlite_vec.load(conn)
     conn.enable_load_extension(False)
 
     conn.executescript(CREATE_TABLES_SQL)
 
-    # Define synthetic test data
-    # Coverage: 4 provinces, 3 business types, 4 expense types
+    # Define synthetic test data with many-to-many expense types
+    # Coverage: 4 provinces, 3 business types, multiple expense type combinations
     test_rules = [
-        # Province: BC
-        (
-            1,
-            "BC sole proprietorship meals deduction test case",
-            "TEST-BC-001",
-            "https://canada.ca/test/bc-meals",
-            "hash_bc_001",
-            "BC",
-            "sole_proprietorship",
-            "meals",
-            "{}",
-            "2024-01-01T00:00:00Z",
-        ),
-        (
-            2,
-            "BC corporation travel expense test case",
-            "TEST-BC-002",
-            "https://canada.ca/test/bc-travel",
-            "hash_bc_002",
-            "BC",
-            "corporation",
-            "travel",
-            "{}",
-            "2024-01-02T00:00:00Z",
-        ),
+        # Province: BC - Single and multiple expense types
+        {
+            "content": "BC sole proprietorship meals deduction test case",
+            "citation_id": "TEST-BC-001",
+            "source_url": "https://canada.ca/test/bc-meals",
+            "source_hash": "hash_bc_001",
+            "province": "BC",
+            "business_type": "sole_proprietorship",
+            "expense_types": ["meals"],
+            "metadata_json": "{}",
+            "retrieved_at": "2024-01-01T00:00:00Z",
+        },
+        {
+            "content": "BC corporation travel and meals expense test case",
+            "citation_id": "TEST-BC-002",
+            "source_url": "https://canada.ca/test/bc-travel-meals",
+            "source_hash": "hash_bc_002",
+            "province": "BC",
+            "business_type": "corporation",
+            "expense_types": ["travel", "meals"],  # Multiple types
+            "metadata_json": "{}",
+            "retrieved_at": "2024-01-02T00:00:00Z",
+        },
         # Province: AB
-        (
-            3,
-            "Alberta partnership vehicle expense test case",
-            "TEST-AB-001",
-            "https://canada.ca/test/ab-vehicle",
-            "hash_ab_001",
-            "AB",
-            "partnership",
-            "vehicle",
-            "{}",
-            "2024-01-03T00:00:00Z",
-        ),
-        (
-            4,
-            "Alberta sole proprietorship home office test case",
-            "TEST-AB-002",
-            "https://canada.ca/test/ab-home",
-            "hash_ab_002",
-            "AB",
-            "sole_proprietorship",
-            "home_office",
-            "{}",
-            "2024-01-04T00:00:00Z",
-        ),
+        {
+            "content": "Alberta partnership vehicle expense test case",
+            "citation_id": "TEST-AB-001",
+            "source_url": "https://canada.ca/test/ab-vehicle",
+            "source_hash": "hash_ab_001",
+            "province": "AB",
+            "business_type": "partnership",
+            "expense_types": ["vehicle", "travel"],  # Multiple types
+            "metadata_json": "{}",
+            "retrieved_at": "2024-01-03T00:00:00Z",
+        },
+        {
+            "content": "Alberta sole proprietorship home office test case",
+            "citation_id": "TEST-AB-002",
+            "source_url": "https://canada.ca/test/ab-home",
+            "source_hash": "hash_ab_002",
+            "province": "AB",
+            "business_type": "sole_proprietorship",
+            "expense_types": ["home_office"],
+            "metadata_json": "{}",
+            "retrieved_at": "2024-01-04T00:00:00Z",
+        },
         # Province: ON
-        (
-            5,
-            "Ontario corporation meals expense test case",
-            "TEST-ON-001",
-            "https://canada.ca/test/on-meals",
-            "hash_on_001",
-            "ON",
-            "corporation",
-            "meals",
-            "{}",
-            "2024-01-05T00:00:00Z",
-        ),
-        (
-            6,
-            "Ontario partnership travel deduction test case",
-            "TEST-ON-002",
-            "https://canada.ca/test/on-travel",
-            "hash_on_002",
-            "ON",
-            "partnership",
-            "travel",
-            "{}",
-            "2024-01-06T00:00:00Z",
-        ),
+        {
+            "content": "Ontario corporation meals expense test case",
+            "citation_id": "TEST-ON-001",
+            "source_url": "https://canada.ca/test/on-meals",
+            "source_hash": "hash_on_001",
+            "province": "ON",
+            "business_type": "corporation",
+            "expense_types": ["meals"],
+            "metadata_json": "{}",
+            "retrieved_at": "2024-01-05T00:00:00Z",
+        },
+        {
+            "content": "Ontario partnership travel deduction test case",
+            "citation_id": "TEST-ON-002",
+            "source_url": "https://canada.ca/test/on-travel",
+            "source_hash": "hash_on_002",
+            "province": "ON",
+            "business_type": "partnership",
+            "expense_types": ["travel"],
+            "metadata_json": "{}",
+            "retrieved_at": "2024-01-06T00:00:00Z",
+        },
         # Province: QC
-        (
-            7,
-            "Quebec sole proprietorship vehicle test case",
-            "TEST-QC-001",
-            "https://canada.ca/test/qc-vehicle",
-            "hash_qc_001",
-            "QC",
-            "sole_proprietorship",
-            "vehicle",
-            "{}",
-            "2024-01-07T00:00:00Z",
-        ),
-        (
-            8,
-            "Quebec corporation home office deduction test case",
-            "TEST-QC-002",
-            "https://canada.ca/test/qc-home",
-            "hash_qc_002",
-            "QC",
-            "corporation",
-            "home_office",
-            "{}",
-            "2024-01-08T00:00:00Z",
-        ),
+        {
+            "content": "Quebec sole proprietorship vehicle test case",
+            "citation_id": "TEST-QC-001",
+            "source_url": "https://canada.ca/test/qc-vehicle",
+            "source_hash": "hash_qc_001",
+            "province": "QC",
+            "business_type": "sole_proprietorship",
+            "expense_types": ["vehicle"],
+            "metadata_json": "{}",
+            "retrieved_at": "2024-01-07T00:00:00Z",
+        },
+        {
+            "content": "Quebec corporation home office and utilities deduction test case",
+            "citation_id": "TEST-QC-002",
+            "source_url": "https://canada.ca/test/qc-home",
+            "source_hash": "hash_qc_002",
+            "province": "QC",
+            "business_type": "corporation",
+            "expense_types": ["home_office", "utilities"],  # Multiple types
+            "metadata_json": "{}",
+            "retrieved_at": "2024-01-08T00:00:00Z",
+        },
         # Additional rows for keyword search testing
-        (
-            9,
-            "T2125 form keyword search test case for BC",
-            "TEST-KW-001",
-            "https://canada.ca/test/keyword-t2125",
-            "hash_kw_001",
-            "BC",
-            "sole_proprietorship",
-            "meals",
-            "{}",
-            "2024-01-09T00:00:00Z",
-        ),
-        (
-            10,
-            "Restaurant dining expense entertainment test case",
-            "TEST-KW-002",
-            "https://canada.ca/test/keyword-restaurant",
-            "hash_kw_002",
-            "ON",
-            "corporation",
-            "meals",
-            "{}",
-            "2024-01-10T00:00:00Z",
-        ),
+        {
+            "content": "T2125 form keyword search test case for BC",
+            "citation_id": "TEST-KW-001",
+            "source_url": "https://canada.ca/test/keyword-t2125",
+            "source_hash": "hash_kw_001",
+            "province": "BC",
+            "business_type": "sole_proprietorship",
+            "expense_types": ["meals"],
+            "metadata_json": "{}",
+            "retrieved_at": "2024-01-09T00:00:00Z",
+        },
+        {
+            "content": "Restaurant dining expense entertainment test case",
+            "citation_id": "TEST-KW-002",
+            "source_url": "https://canada.ca/test/keyword-restaurant",
+            "source_hash": "hash_kw_002",
+            "province": "ON",
+            "business_type": "corporation",
+            "expense_types": ["meals"],
+            "metadata_json": "{}",
+            "retrieved_at": "2024-01-10T00:00:00Z",
+        },
         # Edge cases
-        (
-            11,
-            "Test case with NULL province for filtering edge cases",
-            "TEST-EDGE-001",
-            "https://canada.ca/test/edge-null",
-            "hash_edge_001",
-            None,
-            "corporation",
-            "travel",
-            "{}",
-            "2024-01-11T00:00:00Z",
-        ),
-        (
-            12,
-            "Test case with NULL business type for filtering edge cases",
-            "TEST-EDGE-002",
-            "https://canada.ca/test/edge-null-biz",
-            "hash_edge_002",
-            "BC",
-            None,
-            "vehicle",
-            "{}",
-            "2024-01-12T00:00:00Z",
-        ),
+        {
+            "content": "Test case with NULL province for filtering edge cases",
+            "citation_id": "TEST-EDGE-001",
+            "source_url": "https://canada.ca/test/edge-null",
+            "source_hash": "hash_edge_001",
+            "province": None,
+            "business_type": "corporation",
+            "expense_types": ["travel"],
+            "metadata_json": "{}",
+            "retrieved_at": "2024-01-11T00:00:00Z",
+        },
+        {
+            "content": "Test case with NULL business type for filtering edge cases",
+            "citation_id": "TEST-EDGE-002",
+            "source_url": "https://canada.ca/test/edge-null-biz",
+            "source_hash": "hash_edge_002",
+            "province": "BC",
+            "business_type": None,
+            "expense_types": ["vehicle"],
+            "metadata_json": "{}",
+            "retrieved_at": "2024-01-12T00:00:00Z",
+        },
     ]
 
     num_rows = len(test_rules)
 
-    # Insert test data into rules table
+    # Populate expense_types table with canonical list
+    # Database-driven approach: expense types are defined here and stored in DB
+    expense_type_values = [
+        "meals",
+        "travel",
+        "vehicle",
+        "home_office",
+        "advertising",
+        "insurance",
+        "professional_fees",
+        "supplies",
+        "utilities",
+        "rent",
+    ]
     conn.executemany(
-        """
-        INSERT INTO rules (
-            id, content, citation_id, source_url, source_hash,
-            province, business_type, expense_type, metadata_json, retrieved_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        test_rules,
+        "INSERT INTO expense_types (name) VALUES (?)",
+        [(name,) for name in expense_type_values],
     )
+
+    # Create mapping from expense type name to ID
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name FROM expense_types")
+    expense_type_id_map = {name: id_ for id_, name in cursor.fetchall()}
+
+    # Insert rules and their expense type links
+    for rule in test_rules:
+        # Insert into rules table (without expense_type column)
+        cursor.execute(
+            """
+            INSERT INTO rules (
+                content, citation_id, source_url, source_hash,
+                province, business_type, metadata_json, retrieved_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                rule["content"],
+                rule["citation_id"],
+                rule["source_url"],
+                rule["source_hash"],
+                rule["province"],
+                rule["business_type"],
+                rule["metadata_json"],
+                rule["retrieved_at"],
+            ),
+        )
+
+        # Get the auto-generated rule ID
+        rule_id = cursor.lastrowid
+
+        # Insert links to expense_types for this rule
+        for expense_type_name in rule["expense_types"]:
+            expense_type_id = expense_type_id_map[expense_type_name]
+            cursor.execute(
+                """
+                INSERT INTO rule_expense_type_links (rule_id, expense_type_id)
+                VALUES (?, ?)
+                """,
+                (rule_id, expense_type_id),
+            )
 
     # Generate deterministic embeddings
     embeddings = generate_deterministic_embeddings(num_rows)

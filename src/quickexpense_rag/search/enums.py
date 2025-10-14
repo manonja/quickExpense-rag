@@ -31,22 +31,3 @@ class BusinessType(str, Enum):
     SOLE_PROPRIETORSHIP = "sole_proprietorship"
     CORPORATION = "corporation"
     PARTNERSHIP = "partnership"
-
-
-class ExpenseType(str, Enum):
-    """
-    High-level business expense categories for metadata filtering.
-
-    Note: The semantic search query handles specific nuances.
-    """
-
-    MEALS = "meals"
-    TRAVEL = "travel"
-    VEHICLE = "vehicle"
-    HOME_OFFICE = "home_office"
-    ADVERTISING = "advertising"
-    INSURANCE = "insurance"
-    PROFESSIONAL_FEES = "professional_fees"
-    SUPPLIES = "supplies"
-    UTILITIES = "utilities"
-    RENT = "rent"

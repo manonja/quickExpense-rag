@@ -66,6 +66,20 @@ class Settings(BaseSettings):
         default=30, description="Timeout in seconds for network requests."
     )
 
+    # Database verification settings (bundled with library)
+    database_sha256: str = Field(
+        default="",  # Will be updated when production database is built
+        description="Expected SHA256 checksum of the database file.",
+    )
+    database_version: str = Field(
+        default="2025.10",
+        description="Expected data version in YYYY.MM format.",
+    )
+    schema_version: str = Field(
+        default="1.0",
+        description="Expected schema version (major.minor).",
+    )
+
     @field_validator("db_download_url", mode="after")
     @classmethod
     def _validate_url(cls, value: str) -> str:

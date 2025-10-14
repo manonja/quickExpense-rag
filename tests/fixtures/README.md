@@ -80,10 +80,10 @@ git commit -m "chore: regenerate fixture database for schema vX.Y"
 The script will:
 
 1. Import the current schema from `src/quickexpense_rag/data/schema.py`
-2. Create a new database file
-3. Populate with synthetic test data
-4. Generate deterministic embeddings (seeded random, seed=42)
-5. Insert metadata and optimize
+1. Create a new database file
+1. Populate with synthetic test data
+1. Generate deterministic embeddings (seeded random, seed=42)
+1. Insert metadata and optimize
 
 ## Limitations
 
