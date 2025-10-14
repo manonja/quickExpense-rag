@@ -287,3 +287,76 @@ class TestKeywordSearch:
 
         # Should return at most 3 results
         assert len(results) <= 3
+
+
+class TestVectorSearch:
+    """Test _vector_search method for semantic search (Phase 4.1)."""
+
+    @pytest.mark.integration
+    def test_vector_search_empty_candidates(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Empty candidate list returns empty results."""
+        results = search_engine._vector_search(
+            query_text="test", candidate_ids=[], k=5
+        )
+
+        assert results == []
+
+    @pytest.mark.integration
+    def test_vector_search_with_match(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Query returns semantically similar documents."""
+        # Get all candidate IDs
+        all_ids = search_engine._get_candidate_ids(ExpenseQuery(query="test"))
+
+        # Search for semantic similarity
+        results = search_engine._vector_search(
+            query_text="business expense", candidate_ids=all_ids, k=5
+        )
+
+        # Should return results with distances
+        assert len(results) > 0
+        # Each result is (id, distance)
+        for result in results:
+            assert isinstance(result, tuple)
+            assert len(result) == 2
+            assert isinstance(result[0], int)  # ID
+            assert isinstance(result[1], float)  # Distance
+
+    @pytest.mark.integration
+    def test_vector_search_semantic_similarity(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Semantically similar queries find related documents."""
+        # Get all candidate IDs
+        all_ids = search_engine._get_candidate_ids(ExpenseQuery(query="test"))
+
+        # Search for "meal" (should find "meals" documents)
+        results = search_engine._vector_search(
+            query_text="dining restaurant meal", candidate_ids=all_ids, k=5
+        )
+
+        # Should return results
+        assert len(results) > 0
+
+        # Distances should be sorted (closest first)
+        distances = [distance for _, distance in results]
+        assert distances == sorted(distances)
+
+    @pytest.mark.integration
+    def test_vector_search_respects_k(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Vector search returns at most k results."""
+        # Get all candidate IDs
+        all_ids = search_engine._get_candidate_ids(ExpenseQuery(query="test"))
+
+        # Search with k=3
+        results = search_engine._vector_search(
+            query_text="expense", candidate_ids=all_ids, k=3
+        )
+
+        # Should return at most 3 results
+        assert len(results) <= 3

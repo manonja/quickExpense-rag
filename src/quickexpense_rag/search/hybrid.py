@@ -175,6 +175,70 @@ class HybridSearchEngine:
         finally:
             conn.close()
 
+    def _vector_search(
+        self, query_text: str, candidate_ids: list[int], k: int
+    ) -> list[tuple[int, float]]:
+        """
+        Perform vector semantic search on filtered candidates.
+
+        Embeds the query using BGE encoder and searches rules_vec table
+        for semantically similar documents using cosine similarity.
+
+        Args:
+            query_text: Search query text to embed.
+            candidate_ids: List of rule IDs to search within (pre-filtered).
+            k: Maximum number of results to return.
+
+        Returns:
+            List of (rule_id, distance) tuples sorted by similarity (closest first).
+            Empty list if no matches or empty candidates.
+            Note: Lower distance = more similar (cosine distance).
+
+        """
+        # Handle empty candidates
+        if not candidate_ids:
+            return []
+
+        # Embed query using BGE encoder
+        query_vector = self.encoder.embed_query(query_text)
+
+        # Convert to bytes for sqlite-vec
+        query_vec_bytes = query_vector.tobytes()
+
+        # Build SQL query for vector search
+        # sqlite-vec uses vec_distance_cosine for cosine distance
+        placeholders = ", ".join(["?"] * len(candidate_ids))
+        sql = f"""
+            SELECT
+                rowid,
+                distance
+            FROM rules_vec
+            WHERE rowid IN ({placeholders})
+              AND embedding MATCH ?
+            ORDER BY distance
+            LIMIT ?
+        """
+
+        # Execute query
+        conn = sqlite3.connect(self.db_path)
+        try:
+            # Load sqlite-vec extension
+            conn.enable_load_extension(True)
+            import sqlite_vec
+
+            sqlite_vec.load(conn)
+            conn.enable_load_extension(False)
+
+            # Parameters: candidate_ids + query_vec_bytes + k
+            params = candidate_ids + [query_vec_bytes, k]
+            cursor = conn.execute(sql, params)
+            rows = cursor.fetchall()
+
+            # Return list of (id, distance) tuples
+            return [(row[0], row[1]) for row in rows]
+        finally:
+            conn.close()
+
     def _hydrate_results(self, rule_ids: list[int]) -> list[SearchResult]:
         """
         Hydrate SearchResult objects from rule IDs.
