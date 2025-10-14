@@ -91,8 +91,8 @@ def create_fixture_database(output_path: Path) -> None:
         # Province: BC - Single and multiple expense types
         {
             "content": "BC sole proprietorship meals deduction test case",
-            "citation_id": "TEST-BC-001",
-            "source_url": "https://canada.ca/test/bc-meals",
+            "citation_id": "S1-F1-C1-p1",
+            "source_url": "https://www.canada.ca/test/bc-meals",
             "source_hash": "hash_bc_001",
             "province": "BC",
             "business_type": "sole_proprietorship",
@@ -102,8 +102,8 @@ def create_fixture_database(output_path: Path) -> None:
         },
         {
             "content": "BC corporation travel and meals expense test case",
-            "citation_id": "TEST-BC-002",
-            "source_url": "https://canada.ca/test/bc-travel-meals",
+            "citation_id": "S1-F1-C1-p2",
+            "source_url": "https://www.canada.ca/test/bc-travel-meals",
             "source_hash": "hash_bc_002",
             "province": "BC",
             "business_type": "corporation",
@@ -114,8 +114,8 @@ def create_fixture_database(output_path: Path) -> None:
         # Province: AB
         {
             "content": "Alberta partnership vehicle expense test case",
-            "citation_id": "TEST-AB-001",
-            "source_url": "https://canada.ca/test/ab-vehicle",
+            "citation_id": "S1-F1-C2-p1",
+            "source_url": "https://www.canada.ca/test/ab-vehicle",
             "source_hash": "hash_ab_001",
             "province": "AB",
             "business_type": "partnership",
@@ -125,8 +125,8 @@ def create_fixture_database(output_path: Path) -> None:
         },
         {
             "content": "Alberta sole proprietorship home office test case",
-            "citation_id": "TEST-AB-002",
-            "source_url": "https://canada.ca/test/ab-home",
+            "citation_id": "S1-F1-C2-p2",
+            "source_url": "https://www.canada.ca/test/ab-home",
             "source_hash": "hash_ab_002",
             "province": "AB",
             "business_type": "sole_proprietorship",
@@ -137,8 +137,8 @@ def create_fixture_database(output_path: Path) -> None:
         # Province: ON
         {
             "content": "Ontario corporation meals expense test case",
-            "citation_id": "TEST-ON-001",
-            "source_url": "https://canada.ca/test/on-meals",
+            "citation_id": "S1-F1-C3-p1",
+            "source_url": "https://www.canada.ca/test/on-meals",
             "source_hash": "hash_on_001",
             "province": "ON",
             "business_type": "corporation",
@@ -148,8 +148,8 @@ def create_fixture_database(output_path: Path) -> None:
         },
         {
             "content": "Ontario partnership travel deduction test case",
-            "citation_id": "TEST-ON-002",
-            "source_url": "https://canada.ca/test/on-travel",
+            "citation_id": "S1-F1-C3-p2",
+            "source_url": "https://www.canada.ca/test/on-travel",
             "source_hash": "hash_on_002",
             "province": "ON",
             "business_type": "partnership",
@@ -160,8 +160,8 @@ def create_fixture_database(output_path: Path) -> None:
         # Province: QC
         {
             "content": "Quebec sole proprietorship vehicle test case",
-            "citation_id": "TEST-QC-001",
-            "source_url": "https://canada.ca/test/qc-vehicle",
+            "citation_id": "S1-F1-C4-p1",
+            "source_url": "https://www.canada.ca/test/qc-vehicle",
             "source_hash": "hash_qc_001",
             "province": "QC",
             "business_type": "sole_proprietorship",
@@ -171,8 +171,8 @@ def create_fixture_database(output_path: Path) -> None:
         },
         {
             "content": "Quebec corporation home office and utilities deduction test case",
-            "citation_id": "TEST-QC-002",
-            "source_url": "https://canada.ca/test/qc-home",
+            "citation_id": "S1-F1-C4-p2",
+            "source_url": "https://www.canada.ca/test/qc-home",
             "source_hash": "hash_qc_002",
             "province": "QC",
             "business_type": "corporation",
@@ -183,8 +183,8 @@ def create_fixture_database(output_path: Path) -> None:
         # Additional rows for keyword search testing
         {
             "content": "T2125 form keyword search test case for BC",
-            "citation_id": "TEST-KW-001",
-            "source_url": "https://canada.ca/test/keyword-t2125",
+            "citation_id": "S2-F1-C1-p1",
+            "source_url": "https://www.canada.ca/test/keyword-t2125",
             "source_hash": "hash_kw_001",
             "province": "BC",
             "business_type": "sole_proprietorship",
@@ -194,8 +194,8 @@ def create_fixture_database(output_path: Path) -> None:
         },
         {
             "content": "Restaurant dining expense entertainment test case",
-            "citation_id": "TEST-KW-002",
-            "source_url": "https://canada.ca/test/keyword-restaurant",
+            "citation_id": "S2-F1-C1-p2",
+            "source_url": "https://www.canada.ca/test/keyword-restaurant",
             "source_hash": "hash_kw_002",
             "province": "ON",
             "business_type": "corporation",
@@ -206,8 +206,8 @@ def create_fixture_database(output_path: Path) -> None:
         # Edge cases
         {
             "content": "Test case with NULL province for filtering edge cases",
-            "citation_id": "TEST-EDGE-001",
-            "source_url": "https://canada.ca/test/edge-null",
+            "citation_id": "S3-F1-C1-p1",
+            "source_url": "https://www.canada.ca/test/edge-null",
             "source_hash": "hash_edge_001",
             "province": None,
             "business_type": "corporation",
@@ -217,8 +217,8 @@ def create_fixture_database(output_path: Path) -> None:
         },
         {
             "content": "Test case with NULL business type for filtering edge cases",
-            "citation_id": "TEST-EDGE-002",
-            "source_url": "https://canada.ca/test/edge-null-biz",
+            "citation_id": "S3-F1-C1-p2",
+            "source_url": "https://www.canada.ca/test/edge-null-biz",
             "source_hash": "hash_edge_002",
             "province": "BC",
             "business_type": None,
