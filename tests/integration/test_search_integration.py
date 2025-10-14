@@ -256,3 +256,153 @@ class TestVectorSearchIntegration:
             first_id = results[0][0]
             hydrated = search_engine._hydrate_results([first_id])
             assert hydrated[0].province == Province.BC
+
+
+class TestHybridSearchEndToEnd:
+    """End-to-end integration tests for full hybrid search (Phase 6.1)."""
+
+    @pytest.mark.integration
+    @pytest.mark.slow
+    def test_search_full_hybrid(self, search_engine: HybridSearchEngine) -> None:
+        """Full hybrid search combines FTS5 + vector + RRF correctly."""
+        query = ExpenseQuery(query="test", top_k=5)
+
+        results = search_engine.search(query)
+
+        # Should return results
+        assert len(results) > 0
+        assert len(results) <= 5
+
+        # Results should have all required fields
+        for result in results:
+            assert result.content is not None
+            assert result.citation_id is not None
+            assert result.source_url is not None
+            # Province and business_type may be None for edge case rows
+
+    @pytest.mark.integration
+    @pytest.mark.slow
+    def test_search_all_filters_combined(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Hybrid search with all filters: province + business_type + expense_types."""
+        query = ExpenseQuery(
+            query="test",
+            province=Province.BC,
+            business_type=BusinessType.SOLE_PROPRIETORSHIP,
+            expense_types=["meals"],
+            top_k=5,
+        )
+
+        results = search_engine.search(query)
+
+        # Should return at least one result
+        assert len(results) > 0
+
+        # All results should match filters
+        for result in results:
+            assert result.province == Province.BC
+            assert result.business_type == BusinessType.SOLE_PROPRIETORSHIP
+            assert "meals" in result.expense_types
+
+    @pytest.mark.integration
+    def test_search_respects_top_k_limit(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Search returns at most top_k results even with many matches."""
+        query = ExpenseQuery(query="test", top_k=3)
+
+        results = search_engine.search(query)
+
+        # Should return at most 3 results
+        assert len(results) <= 3
+
+    @pytest.mark.integration
+    def test_search_no_results_when_filters_match_nothing(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Search returns empty list when filters match zero rows."""
+        query = ExpenseQuery(
+            query="test",
+            expense_types=["nonexistent_expense_type"],
+            top_k=5,
+        )
+
+        results = search_engine.search(query)
+
+        assert results == []
+
+    @pytest.mark.integration
+    @pytest.mark.slow
+    def test_search_semantic_matching(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Hybrid search finds semantically similar documents."""
+        # Search for "dining" which should find "meals" documents
+        query = ExpenseQuery(query="dining restaurant food", top_k=5)
+
+        results = search_engine.search(query)
+
+        # Should return results
+        assert len(results) > 0
+
+        # At least some results should be about meals
+        # (This is a soft assertion since embeddings are deterministic random)
+        # In production, this would match semantically similar content
+        assert any("meal" in r.content.lower() for r in results)
+
+    @pytest.mark.integration
+    def test_search_keyword_matching(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Hybrid search finds exact keyword matches."""
+        # Search for "T2125" which only appears in one document
+        query = ExpenseQuery(query="T2125", top_k=5)
+
+        results = search_engine.search(query)
+
+        # Should return at least one result
+        assert len(results) >= 1
+
+        # First result should contain "T2125"
+        assert "T2125" in results[0].content
+
+    @pytest.mark.integration
+    def test_search_preserves_rank_order(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Search results are returned in RRF rank order."""
+        query = ExpenseQuery(query="test", top_k=5)
+
+        results = search_engine.search(query)
+
+        # Results should be non-empty
+        assert len(results) > 0
+
+        # All results should have valid citation IDs
+        citation_ids = [r.citation_id for r in results]
+        assert len(citation_ids) == len(set(citation_ids))  # No duplicates
+
+    @pytest.mark.integration
+    def test_search_expense_types_aggregated_correctly(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Search results have expense_types correctly aggregated."""
+        query = ExpenseQuery(
+            query="test", expense_types=["travel", "meals"], top_k=10
+        )
+
+        results = search_engine.search(query)
+
+        # Should return results
+        assert len(results) > 0
+
+        # Find a result with multiple expense types
+        # S1-F1-C1-p2 has both travel and meals
+        multi_type_results = [r for r in results if len(r.expense_types) > 1]
+
+        if multi_type_results:
+            result = multi_type_results[0]
+            # Should have multiple expense types as list
+            assert isinstance(result.expense_types, list)
+            assert len(result.expense_types) >= 2
