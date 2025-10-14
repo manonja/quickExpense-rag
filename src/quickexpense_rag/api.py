@@ -5,8 +5,14 @@ This module provides the main user-facing functions for initializing
 the library and searching CRA expense rules.
 """
 
+from pathlib import Path
+
 from quickexpense_rag.exceptions import DatabaseNotInitializedError
 from quickexpense_rag.search.models import SearchResult
+
+# Module-level state for search engine (initialized once via init())
+_search_engine: "HybridSearchEngine | None" = None
+_db_path: Path | None = None
 
 
 def init(force_update: bool = False) -> None:
@@ -31,11 +37,11 @@ def init(force_update: bool = False) -> None:
 
 
 def search(
-    _query: str,
-    _province: str | None = None,
-    _business_type: str | None = None,
-    _expense_type: str | None = None,
-    _top_k: int = 5,
+    query: str,
+    province: str | None = None,
+    business_type: str | None = None,
+    expense_types: list[str] | None = None,
+    top_k: int = 5,
 ) -> list[SearchResult]:
     """
     Search CRA expense rules.
@@ -46,7 +52,7 @@ def search(
         query: Natural language expense description.
         province: Filter by province (e.g., "BC", "ON").
         business_type: Filter by business type.
-        expense_type: Filter by expense category.
+        expense_types: Filter by expense categories (matches rules with ANY of these types).
         top_k: Number of results to return (1-50).
 
     Returns:
@@ -57,10 +63,13 @@ def search(
         ValidationError: If invalid parameters provided.
 
     """
-    raise DatabaseNotInitializedError(
-        "Database not initialized. Call init() first. "
-        "This will be implemented in TICKET 8."
-    )
+    if _search_engine is None:
+        raise DatabaseNotInitializedError(
+            "Database not initialized. Please call init() before using search()."
+        )
+
+    # TODO: Construct ExpenseQuery and call search engine
+    raise NotImplementedError("Search implementation pending")
 
 
 def get_version() -> dict[str, str]:
