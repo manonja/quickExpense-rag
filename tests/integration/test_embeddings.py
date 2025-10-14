@@ -123,3 +123,30 @@ def test_batch_encoding_matches_sequential(test_service: _EmbeddingService) -> N
 
     # Should be numerically identical (within float tolerance)
     np.testing.assert_allclose(batch_emb, sequential_emb, atol=1e-5)
+
+
+def test_similar_texts_have_high_similarity(test_service: _EmbeddingService) -> None:
+    """
+    Verify semantically similar texts have high cosine similarity.
+
+    This test validates that the embedding model actually works correctly
+    by checking that semantically related words produce similar embeddings
+    while unrelated words produce dissimilar embeddings.
+    """
+    import numpy as np
+
+    text1 = "cat"
+    text2 = "kitten"
+    text3 = "airplane"
+
+    emb1 = test_service.embed_documents([text1])[0]
+    emb2 = test_service.embed_documents([text2])[0]
+    emb3 = test_service.embed_documents([text3])[0]
+
+    # Cat and kitten should be similar
+    similarity_similar = np.dot(emb1, emb2)
+    assert similarity_similar > 0.5
+
+    # Cat and airplane should be dissimilar
+    similarity_dissimilar = np.dot(emb1, emb3)
+    assert similarity_dissimilar < similarity_similar
