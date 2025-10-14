@@ -7,6 +7,7 @@ import pytest
 
 from quickexpense_rag import api
 from quickexpense_rag.exceptions import DatabaseNotInitializedError
+from quickexpense_rag.search.models import SearchResult
 
 
 class TestSearchWithoutInit:
@@ -104,3 +105,95 @@ class TestInit:
 
         # Verify get_database_path was called (force_update handling is in DataManager)
         mock_dm.get_database_path.assert_called_once()
+
+
+class TestSearch:
+    """Test search() function behavior."""
+
+    def test_search_validation_invalid_province(self):
+        """
+        GIVEN: Library is initialized
+        WHEN: search() is called with invalid province
+        THEN: ValueError is raised with helpful message showing valid options
+        """
+        # Setup mock search engine to verify it's initialized
+        api._search_engine = Mock()
+
+        with pytest.raises(ValueError) as exc_info:
+            api.search(
+                query="test query",
+                province="INVALID",  # Invalid province code
+                business_type="sole_proprietorship",
+                expense_types=["meals"],
+            )
+
+        # Verify error mentions the invalid field and shows valid options
+        error_str = str(exc_info.value)
+        assert "province" in error_str.lower()
+        assert "INVALID" in error_str
+        assert "valid options" in error_str.lower()
+
+    def test_search_validation_query_too_short(self):
+        """
+        GIVEN: Library is initialized
+        WHEN: search() is called with query < 3 characters
+        THEN: ValidationError is raised
+        """
+        api._search_engine = Mock()
+
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            api.search(query="ab")  # Only 2 characters
+
+    def test_search_validation_top_k_out_of_range(self):
+        """
+        GIVEN: Library is initialized
+        WHEN: search() is called with top_k > 50
+        THEN: ValidationError is raised
+        """
+        api._search_engine = Mock()
+
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            api.search(query="test query", top_k=100)  # Max is 50
+
+    @patch("quickexpense_rag.api._search_engine")
+    def test_search_happy_path(self, mock_engine):
+        """
+        GIVEN: Library is initialized with valid parameters
+        WHEN: search() is called
+        THEN: ExpenseQuery is constructed and search engine is called
+        """
+        # Setup mock
+        mock_results = [Mock(spec=SearchResult)]
+        mock_engine_instance = Mock()
+        mock_engine_instance.search.return_value = mock_results
+        api._search_engine = mock_engine_instance
+
+        # Call search
+        results = api.search(
+            query="restaurant meal expense",
+            province="BC",
+            business_type="sole_proprietorship",
+            expense_types=["meals", "travel"],
+            top_k=10,
+        )
+
+        # Verify search engine was called
+        mock_engine_instance.search.assert_called_once()
+
+        # Verify ExpenseQuery was constructed correctly
+        call_args = mock_engine_instance.search.call_args
+        query_obj = call_args.args[0]
+
+        # Check query object properties
+        assert query_obj.query == "restaurant meal expense"
+        assert str(query_obj.province) == "Province.BC"  # Enum representation
+        assert str(query_obj.business_type) == "BusinessType.SOLE_PROPRIETORSHIP"
+        assert query_obj.expense_types == ["meals", "travel"]
+        assert query_obj.top_k == 10
+
+        # Verify results returned
+        assert results == mock_results

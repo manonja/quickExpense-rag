@@ -10,11 +10,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from pydantic import ValidationError
+
 from quickexpense_rag.data.manager import DataManager
 from quickexpense_rag.embeddings.encoder import _EmbeddingService
 from quickexpense_rag.exceptions import DatabaseNotInitializedError
+from quickexpense_rag.search.enums import BusinessType, Province
 from quickexpense_rag.search.hybrid import HybridSearchEngine
-from quickexpense_rag.search.models import SearchResult
+from quickexpense_rag.search.models import ExpenseQuery, SearchResult
 from quickexpense_rag.settings import settings
 
 if TYPE_CHECKING:
@@ -92,8 +95,38 @@ def search(
             "Database not initialized. Please call init() before using search()."
         )
 
-    # TODO: Construct ExpenseQuery and call search engine
-    raise NotImplementedError("Search implementation pending")
+    # Convert string parameters to enums if provided
+    province_enum: Province | None = None
+    if province is not None:
+        try:
+            province_enum = Province(province)
+        except ValueError:
+            valid_provinces = [p.value for p in Province]
+            raise ValueError(
+                f"Invalid province '{province}'. Valid options: {valid_provinces}"
+            )
+
+    business_type_enum: BusinessType | None = None
+    if business_type is not None:
+        try:
+            business_type_enum = BusinessType(business_type)
+        except ValueError:
+            valid_types = [bt.value for bt in BusinessType]
+            raise ValueError(
+                f"Invalid business_type '{business_type}'. Valid options: {valid_types}"
+            )
+
+    # Construct ExpenseQuery (Pydantic will validate)
+    query_obj = ExpenseQuery(
+        query=query,
+        province=province_enum,
+        business_type=business_type_enum,
+        expense_types=expense_types,
+        top_k=top_k,
+    )
+
+    # Execute search
+    return _search_engine.search(query_obj)
 
 
 def get_version() -> dict[str, str]:
