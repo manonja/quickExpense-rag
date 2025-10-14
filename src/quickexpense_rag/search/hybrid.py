@@ -86,12 +86,73 @@ class HybridSearchEngine:
         """
         Execute hybrid search with metadata filtering.
 
+        Phase 1.3 implementation: Basic search with metadata filtering only.
+        FTS5, vector search, and RRF fusion will be added in later phases.
+
         Args:
             query: Structured search query with filters.
 
         Returns:
-            List of search results ranked by RRF fusion score.
+            List of search results (limited to top_k).
+            Note: Results are not yet ranked by relevance (Phase 1.3 limitation).
 
         """
-        # Will be implemented in subsequent steps
-        raise NotImplementedError("search() will be implemented in Phase 1.3")
+        # Build filter clauses
+        join_clause, where_clause, params = self._build_filter_clauses(query)
+
+        # Build SQL query
+        sql = """
+            SELECT
+                r.id,
+                r.content,
+                r.citation_id,
+                r.source_url,
+                r.province,
+                r.business_type,
+                r.retrieved_at,
+                GROUP_CONCAT(et.name) as expense_type_names
+            FROM rules r
+            LEFT JOIN rule_expense_type_links retl ON r.id = retl.rule_id
+            LEFT JOIN expense_types et ON retl.expense_type_id = et.id
+        """
+
+        # Add WHERE clause if filters exist
+        if where_clause:
+            sql += f" WHERE {where_clause}"
+
+        # Group by rule ID to aggregate expense types
+        sql += " GROUP BY r.id"
+
+        # Limit results to top_k
+        sql += f" LIMIT {query.top_k}"
+
+        # Execute query
+        conn = sqlite3.connect(self.db_path)
+        try:
+            cursor = conn.execute(sql, params)
+            rows = cursor.fetchall()
+
+            # Hydrate SearchResult objects
+            results: list[SearchResult] = []
+            for row in rows:
+                # Parse expense types (comma-separated string → list)
+                expense_types_str = row[7]  # GROUP_CONCAT result
+                expense_types = (
+                    expense_types_str.split(",") if expense_types_str else []
+                )
+
+                result = SearchResult(
+                    content=row[1],
+                    citation_id=row[2],
+                    source_url=row[3],
+                    score=1.0,  # Placeholder score (will be replaced by RRF in Phase 5)
+                    province=row[4],
+                    business_type=row[5],
+                    expense_types=expense_types,
+                    retrieved_at=row[6],
+                )
+                results.append(result)
+
+            return results
+        finally:
+            conn.close()
