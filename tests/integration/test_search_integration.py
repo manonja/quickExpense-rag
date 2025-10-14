@@ -170,3 +170,38 @@ class TestExpenseTypesFiltering:
         results = search_engine.search(query)
 
         assert results == []
+
+
+class TestKeywordSearchIntegration:
+    """Integration tests for FTS5 keyword search in search() (Phase 3.2)."""
+
+    @pytest.mark.integration
+    def test_search_keyword_only(self, search_engine: HybridSearchEngine) -> None:
+        """Search uses FTS5 ranking for keyword queries."""
+        # Search for specific term
+        query = ExpenseQuery(query="T2125", top_k=5)
+
+        results = search_engine.search(query)
+
+        # Should find the document with "T2125"
+        assert len(results) >= 1
+
+        # First result should contain "T2125"
+        assert "T2125" in results[0].content
+
+    @pytest.mark.integration
+    def test_search_keyword_with_filters(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Keyword search combined with metadata filters."""
+        # Search for "test" in BC only
+        query = ExpenseQuery(query="test", province=Province.BC, top_k=5)
+
+        results = search_engine.search(query)
+
+        # All results should be from BC
+        for result in results:
+            assert result.province == Province.BC
+
+        # Should have BC results
+        assert len(results) > 0

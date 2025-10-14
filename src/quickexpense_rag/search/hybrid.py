@@ -252,17 +252,17 @@ class HybridSearchEngine:
 
     def search(self, query: ExpenseQuery) -> list[SearchResult]:
         """
-        Execute hybrid search with metadata filtering.
+        Execute hybrid search with metadata filtering and FTS5 keyword search.
 
-        Phase 2.3 implementation: Uses candidate ID approach for deduplication.
-        FTS5, vector search, and RRF fusion will be added in later phases.
+        Phase 3.2 implementation: Uses FTS5 for keyword ranking on candidates.
+        Vector search and RRF fusion will be added in later phases.
 
         Args:
             query: Structured search query with filters.
 
         Returns:
-            List of search results (limited to top_k).
-            Note: Results are not yet ranked by relevance (Phase 2.3 limitation).
+            List of search results ranked by FTS5 relevance (limited to top_k).
+            Note: Vector search not yet integrated (Phase 3.2 limitation).
 
         """
         # Step 1: Get candidate IDs from metadata filtering
@@ -272,11 +272,16 @@ class HybridSearchEngine:
         if not candidate_ids:
             return []
 
-        # Step 3: Limit to top_k candidates
-        # (In later phases, this will happen after FTS5/vector ranking)
-        candidate_ids = candidate_ids[: query.top_k]
+        # Step 3: Run FTS5 keyword search on candidates
+        # This ranks candidates by keyword relevance
+        fts_results = self._keyword_search(
+            query_text=query.query, candidate_ids=candidate_ids, k=query.top_k
+        )
 
-        # Step 4: Hydrate results
-        results = self._hydrate_results(candidate_ids)
+        # Extract ranked IDs (already limited to top_k by _keyword_search)
+        ranked_ids = [rule_id for rule_id, _ in fts_results]
+
+        # Step 4: Hydrate results (preserving FTS5 ranking order)
+        results = self._hydrate_results(ranked_ids)
 
         return results
