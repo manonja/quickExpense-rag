@@ -205,3 +205,54 @@ class TestKeywordSearchIntegration:
 
         # Should have BC results
         assert len(results) > 0
+
+
+class TestVectorSearchIntegration:
+    """Integration tests for vector semantic search (Phase 4.2)."""
+
+    @pytest.mark.integration
+    @pytest.mark.slow
+    def test_vector_search_semantic_matching(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Vector search finds semantically similar documents."""
+        # Get all candidate IDs
+        all_ids = search_engine._get_candidate_ids(ExpenseQuery(query="test"))
+
+        # Search for semantically similar content
+        # "dining" should be similar to "meals" in embeddings
+        results = search_engine._vector_search(
+            query_text="dining restaurant food", candidate_ids=all_ids, k=5
+        )
+
+        # Should return results
+        assert len(results) > 0
+
+        # Results should be sorted by distance (closest first)
+        distances = [distance for _, distance in results]
+        assert distances == sorted(distances)
+
+    @pytest.mark.integration
+    @pytest.mark.slow
+    def test_vector_search_with_metadata_filters(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Vector search works with metadata filtering."""
+        # Get BC candidates only
+        bc_ids = search_engine._get_candidate_ids(
+            ExpenseQuery(query="test", province=Province.BC)
+        )
+
+        # Vector search on BC candidates
+        results = search_engine._vector_search(
+            query_text="business expense", candidate_ids=bc_ids, k=5
+        )
+
+        # Should return results from BC only
+        assert len(results) > 0
+
+        # Verify results are actually from BC by hydrating one
+        if results:
+            first_id = results[0][0]
+            hydrated = search_engine._hydrate_results([first_id])
+            assert hydrated[0].province == Province.BC
