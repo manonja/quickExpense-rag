@@ -5,13 +5,23 @@ This module provides the main user-facing functions for initializing
 the library and searching CRA expense rules.
 """
 
-from pathlib import Path
+from __future__ import annotations
 
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+from quickexpense_rag.data.manager import DataManager
+from quickexpense_rag.embeddings.encoder import _EmbeddingService
 from quickexpense_rag.exceptions import DatabaseNotInitializedError
+from quickexpense_rag.search.hybrid import HybridSearchEngine
 from quickexpense_rag.search.models import SearchResult
+from quickexpense_rag.settings import settings
+
+if TYPE_CHECKING:
+    pass
 
 # Module-level state for search engine (initialized once via init())
-_search_engine: "HybridSearchEngine | None" = None
+_search_engine: HybridSearchEngine | None = None
 _db_path: Path | None = None
 
 
@@ -33,7 +43,21 @@ def init(force_update: bool = False) -> None:
         DataVersionMismatchError: If DB version incompatible.
 
     """
-    raise NotImplementedError("init() will be implemented in TICKET 6")
+    global _search_engine, _db_path
+
+    # Step 1: Initialize DataManager and get database path
+    data_manager = DataManager(settings=settings)
+    db_path = data_manager.get_database_path()
+
+    # Step 2: Initialize embedding service (singleton)
+    encoder = _EmbeddingService()
+
+    # Step 3: Create HybridSearchEngine with database and encoder
+    search_engine = HybridSearchEngine(db_path=db_path, encoder=encoder)
+
+    # Step 4: Store in module state for reuse
+    _search_engine = search_engine
+    _db_path = db_path
 
 
 def search(
