@@ -12,6 +12,49 @@ from quickexpense_rag.embeddings.encoder import _EmbeddingService
 from quickexpense_rag.search.models import ExpenseQuery, SearchResult
 
 
+def reciprocal_rank_fusion(
+    fts_results: list[tuple[int, float]],
+    vec_results: list[tuple[int, float]],
+    k: int = 60,
+) -> list[tuple[int, float]]:
+    """
+    Merge FTS5 and vector search results using Reciprocal Rank Fusion.
+
+    RRF assigns each document a score based on its rank in each result list:
+    score = sum(1 / (k + rank + 1)) for each list where document appears.
+
+    Documents appearing in both lists get higher scores (sum of contributions).
+    The constant k (default 60) controls the relative importance of rank positions.
+
+    Args:
+        fts_results: List of (rule_id, score) from FTS5 keyword search.
+        vec_results: List of (rule_id, distance) from vector search.
+        k: RRF constant controlling rank sensitivity (default: 60).
+
+    Returns:
+        List of (rule_id, combined_score) sorted by score descending (best first).
+        Empty list if both inputs are empty.
+
+    References:
+        Cormack, G. V., Clarke, C. L., & Buettcher, S. (2009).
+        Reciprocal rank fusion outperforms condorcet and individual rank learning methods.
+        SIGIR 2009.
+
+    """
+    scores: dict[int, float] = {}
+
+    # Add scores from FTS5 results
+    for rank, (rule_id, _) in enumerate(fts_results):
+        scores[rule_id] = scores.get(rule_id, 0.0) + 1 / (k + rank + 1)
+
+    # Add scores from vector results
+    for rank, (rule_id, _) in enumerate(vec_results):
+        scores[rule_id] = scores.get(rule_id, 0.0) + 1 / (k + rank + 1)
+
+    # Sort by combined score (descending)
+    return sorted(scores.items(), key=lambda x: x[1], reverse=True)
+
+
 class HybridSearchEngine:
     """
     Hybrid search combining FTS5 keyword and vector semantic search.
