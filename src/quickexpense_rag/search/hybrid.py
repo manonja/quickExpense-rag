@@ -93,6 +93,40 @@ class HybridSearchEngine:
 
         return join_clause, where_clause, params
 
+    def _get_candidate_ids(self, query: ExpenseQuery) -> list[int]:
+        """
+        Get candidate rule IDs matching metadata filters with deduplication.
+
+        Uses DISTINCT to ensure rules with multiple matching expense types
+        appear only once in the results (deduplication).
+
+        Args:
+            query: Search query with optional metadata filters.
+
+        Returns:
+            List of unique rule IDs matching the filters.
+            Empty list if no matches found.
+
+        """
+        # Build filter clauses
+        join_clause, where_clause, params = self._build_filter_clauses(query)
+
+        # Build SQL query with DISTINCT for deduplication
+        sql = f"SELECT DISTINCT r.id FROM rules r {join_clause}"
+
+        # Add WHERE clause if filters exist
+        if where_clause:
+            sql += f" WHERE {where_clause}"
+
+        # Execute query
+        conn = sqlite3.connect(self.db_path)
+        try:
+            cursor = conn.execute(sql, params)
+            rows = cursor.fetchall()
+            return [row[0] for row in rows]
+        finally:
+            conn.close()
+
     def search(self, query: ExpenseQuery) -> list[SearchResult]:
         """
         Execute hybrid search with metadata filtering.

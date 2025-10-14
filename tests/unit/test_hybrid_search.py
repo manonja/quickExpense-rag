@@ -135,3 +135,65 @@ class TestBuildFilterClauses:
         assert where_clause.count("AND") >= 2
         # Parameters in correct order
         assert params == ["BC", "sole_proprietorship", "meals", "vehicle"]
+
+
+class TestGetCandidateIds:
+    """Test _get_candidate_ids method for filtering with deduplication."""
+
+    @pytest.mark.integration
+    def test_get_candidate_ids_no_filters(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """No filters returns all rule IDs from fixture database."""
+        query = ExpenseQuery(query="test")
+
+        candidate_ids = search_engine._get_candidate_ids(query)
+
+        # Fixture DB has 12 rows
+        assert len(candidate_ids) == 12
+        # All IDs should be unique (DISTINCT works)
+        assert len(candidate_ids) == len(set(candidate_ids))
+
+    @pytest.mark.integration
+    def test_get_candidate_ids_with_expense_types(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """expense_types filter returns only matching rules."""
+        query = ExpenseQuery(query="test", expense_types=["meals"])
+
+        candidate_ids = search_engine._get_candidate_ids(query)
+
+        # Fixture DB has meals in: S1-F1-C1-p1, S1-F1-C1-p2, S1-F1-C3-p1, S2-F1-C1-p1, S2-F1-C1-p2
+        assert len(candidate_ids) >= 3  # At least a few meals entries
+        # All IDs should be unique
+        assert len(candidate_ids) == len(set(candidate_ids))
+
+    @pytest.mark.integration
+    def test_get_candidate_ids_deduplication(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Rule with multiple types appears only once in candidates."""
+        query = ExpenseQuery(query="test", expense_types=["travel", "meals"])
+
+        candidate_ids = search_engine._get_candidate_ids(query)
+
+        # S1-F1-C1-p2 has BOTH travel and meals
+        # Should appear only once in results
+        assert len(candidate_ids) == len(set(candidate_ids))
+
+        # Count total rows matching either type in fixture DB
+        # This tests deduplication: rule with both types counted once
+        assert len(candidate_ids) > 0
+
+    @pytest.mark.integration
+    def test_get_candidate_ids_with_province_and_expense_types(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Combined filters: province AND expense_types."""
+        query = ExpenseQuery(query="test", province=Province.BC, expense_types=["meals"])
+
+        candidate_ids = search_engine._get_candidate_ids(query)
+
+        # BC + meals: S1-F1-C1-p1, S1-F1-C1-p2, S2-F1-C1-p1
+        assert len(candidate_ids) >= 2
+        assert len(candidate_ids) == len(set(candidate_ids))
