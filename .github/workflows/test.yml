@@ -54,7 +54,7 @@ jobs:
       - name: Run tests with coverage
         id: pytest
         run: |
-          uv run pytest tests/ -v -m "not slow" \
+          uv run pytest tests/ -v \
             --cov=src/quickexpense_rag \
             --cov-report=xml \
             --cov-report=html \
