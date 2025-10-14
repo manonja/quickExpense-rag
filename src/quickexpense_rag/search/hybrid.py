@@ -11,12 +11,16 @@ from typing import Any
 from quickexpense_rag.embeddings.encoder import _EmbeddingService
 from quickexpense_rag.search.models import ExpenseQuery, SearchResult
 
+# Type aliases for ranked search results
+RankedResult = tuple[int, float]  # (rule_id, score/distance)
+RankedResults = list[RankedResult]
+
 
 def reciprocal_rank_fusion(
-    fts_results: list[tuple[int, float]],
-    vec_results: list[tuple[int, float]],
+    fts_results: RankedResults,
+    vec_results: RankedResults,
     k: int = 60,
-) -> list[tuple[int, float]]:
+) -> RankedResults:
     """
     Merge FTS5 and vector search results using Reciprocal Rank Fusion.
 
@@ -170,7 +174,7 @@ class HybridSearchEngine:
 
     def _keyword_search(
         self, query_text: str, candidate_ids: list[int], k: int
-    ) -> list[tuple[int, float]]:
+    ) -> RankedResults:
         """
         Perform FTS5 keyword search on filtered candidates.
 
@@ -218,7 +222,7 @@ class HybridSearchEngine:
 
     def _vector_search(
         self, query_text: str, candidate_ids: list[int], k: int
-    ) -> list[tuple[int, float]]:
+    ) -> RankedResults:
         """
         Perform vector semantic search on filtered candidates.
 
