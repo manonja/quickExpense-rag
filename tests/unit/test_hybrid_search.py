@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import pytest
-
 from quickexpense_rag.embeddings.encoder import embedding_service
 from quickexpense_rag.search.enums import BusinessType, Province
 from quickexpense_rag.search.hybrid import HybridSearchEngine
@@ -190,7 +189,9 @@ class TestGetCandidateIds:
         self, search_engine: HybridSearchEngine
     ) -> None:
         """Combined filters: province AND expense_types."""
-        query = ExpenseQuery(query="test", province=Province.BC, expense_types=["meals"])
+        query = ExpenseQuery(
+            query="test", province=Province.BC, expense_types=["meals"]
+        )
 
         candidate_ids = search_engine._get_candidate_ids(query)
 
@@ -214,9 +215,7 @@ class TestKeywordSearch:
         assert results == []
 
     @pytest.mark.integration
-    def test_keyword_search_with_match(
-        self, search_engine: HybridSearchEngine
-    ) -> None:
+    def test_keyword_search_with_match(self, search_engine: HybridSearchEngine) -> None:
         """Query matching documents returns ranked results."""
         # Get all candidate IDs
         all_ids = search_engine._get_candidate_ids(ExpenseQuery(query="test"))
@@ -236,9 +235,7 @@ class TestKeywordSearch:
             assert isinstance(result[1], float)  # Score
 
     @pytest.mark.integration
-    def test_keyword_search_exact_term(
-        self, search_engine: HybridSearchEngine
-    ) -> None:
+    def test_keyword_search_exact_term(self, search_engine: HybridSearchEngine) -> None:
         """Exact term matching works correctly."""
         # Get all candidate IDs
         all_ids = search_engine._get_candidate_ids(ExpenseQuery(query="test"))
@@ -258,9 +255,7 @@ class TestKeywordSearch:
             assert scores == sorted(scores, reverse=True)
 
     @pytest.mark.integration
-    def test_keyword_search_no_match(
-        self, search_engine: HybridSearchEngine
-    ) -> None:
+    def test_keyword_search_no_match(self, search_engine: HybridSearchEngine) -> None:
         """No matching documents returns empty results."""
         # Get all candidate IDs
         all_ids = search_engine._get_candidate_ids(ExpenseQuery(query="test"))
@@ -273,9 +268,7 @@ class TestKeywordSearch:
         assert results == []
 
     @pytest.mark.integration
-    def test_keyword_search_respects_k(
-        self, search_engine: HybridSearchEngine
-    ) -> None:
+    def test_keyword_search_respects_k(self, search_engine: HybridSearchEngine) -> None:
         """Keyword search returns at most k results."""
         # Get all candidate IDs
         all_ids = search_engine._get_candidate_ids(ExpenseQuery(query="test"))
@@ -297,16 +290,12 @@ class TestVectorSearch:
         self, search_engine: HybridSearchEngine
     ) -> None:
         """Empty candidate list returns empty results."""
-        results = search_engine._vector_search(
-            query_text="test", candidate_ids=[], k=5
-        )
+        results = search_engine._vector_search(query_text="test", candidate_ids=[], k=5)
 
         assert results == []
 
     @pytest.mark.integration
-    def test_vector_search_with_match(
-        self, search_engine: HybridSearchEngine
-    ) -> None:
+    def test_vector_search_with_match(self, search_engine: HybridSearchEngine) -> None:
         """Query returns semantically similar documents."""
         # Get all candidate IDs
         all_ids = search_engine._get_candidate_ids(ExpenseQuery(query="test"))
@@ -346,9 +335,7 @@ class TestVectorSearch:
         assert distances == sorted(distances)
 
     @pytest.mark.integration
-    def test_vector_search_respects_k(
-        self, search_engine: HybridSearchEngine
-    ) -> None:
+    def test_vector_search_respects_k(self, search_engine: HybridSearchEngine) -> None:
         """Vector search returns at most k results."""
         # Get all candidate IDs
         all_ids = search_engine._get_candidate_ids(ExpenseQuery(query="test"))

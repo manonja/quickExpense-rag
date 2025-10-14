@@ -1,7 +1,6 @@
 """Unit tests for Reciprocal Rank Fusion algorithm."""
 
 import pytest
-
 from quickexpense_rag.search.hybrid import reciprocal_rank_fusion
 
 
@@ -19,7 +18,9 @@ class TestReciprocalRankFusion:
         fts_results = [(1, 0.5), (2, 0.3)]
         vec_results: list[tuple[int, float]] = []
 
-        result = reciprocal_rank_fusion(fts_results=fts_results, vec_results=vec_results, k=60)
+        result = reciprocal_rank_fusion(
+            fts_results=fts_results, vec_results=vec_results, k=60
+        )
 
         # Should return IDs from FTS results, sorted by RRF score
         result_ids = [id_ for id_, _ in result]
@@ -30,7 +31,9 @@ class TestReciprocalRankFusion:
         fts_results = [(1, 0.5), (2, 0.3)]
         vec_results = [(3, 0.2), (4, 0.1)]
 
-        result = reciprocal_rank_fusion(fts_results=fts_results, vec_results=vec_results, k=60)
+        result = reciprocal_rank_fusion(
+            fts_results=fts_results, vec_results=vec_results, k=60
+        )
 
         # Should return all IDs
         result_ids = [id_ for id_, _ in result]
@@ -44,7 +47,9 @@ class TestReciprocalRankFusion:
         fts_results = [(1, 0.5), (2, 0.3)]
         vec_results = [(1, 0.2), (3, 0.1)]
 
-        result = reciprocal_rank_fusion(fts_results=fts_results, vec_results=vec_results, k=60)
+        result = reciprocal_rank_fusion(
+            fts_results=fts_results, vec_results=vec_results, k=60
+        )
 
         # ID 1 should be ranked first (appears in both)
         result_ids = [id_ for id_, _ in result]
@@ -57,13 +62,15 @@ class TestReciprocalRankFusion:
         vec_results = [(2, 0.2)]  # rank 0 in vector
 
         k = 60
-        result = reciprocal_rank_fusion(fts_results=fts_results, vec_results=vec_results, k=k)
+        result = reciprocal_rank_fusion(
+            fts_results=fts_results, vec_results=vec_results, k=k
+        )
 
         # ID 1: score from FTS only = 1/(60 + 0 + 1) = 1/61
         # ID 2: score from vector only = 1/(60 + 0 + 1) = 1/61
         expected_score = 1 / (k + 0 + 1)
 
-        for id_, score in result:
+        for _id, score in result:
             assert abs(score - expected_score) < 1e-6
 
     def test_rrf_combined_scoring(self) -> None:
@@ -72,7 +79,9 @@ class TestReciprocalRankFusion:
         vec_results = [(1, 0.2)]  # ID 1 at rank 0
 
         k = 60
-        result = reciprocal_rank_fusion(fts_results=fts_results, vec_results=vec_results, k=k)
+        result = reciprocal_rank_fusion(
+            fts_results=fts_results, vec_results=vec_results, k=k
+        )
 
         # ID 1: score = 1/(60+0+1) + 1/(60+0+1) = 2/61
         expected_score = 2 / (k + 0 + 1)
@@ -87,7 +96,9 @@ class TestReciprocalRankFusion:
         vec_results: list[tuple[int, float]] = []
 
         k = 60
-        result = reciprocal_rank_fusion(fts_results=fts_results, vec_results=vec_results, k=k)
+        result = reciprocal_rank_fusion(
+            fts_results=fts_results, vec_results=vec_results, k=k
+        )
 
         # ID 1: score = 1/(60+0+1) = 1/61 ≈ 0.0164
         # ID 2: score = 1/(60+1+1) = 1/62 ≈ 0.0161
@@ -101,7 +112,9 @@ class TestReciprocalRankFusion:
         fts_results = [(1, 0.5), (2, 0.3), (3, 0.1)]
         vec_results = [(3, 0.8), (2, 0.4), (4, 0.2)]
 
-        result = reciprocal_rank_fusion(fts_results=fts_results, vec_results=vec_results, k=60)
+        result = reciprocal_rank_fusion(
+            fts_results=fts_results, vec_results=vec_results, k=60
+        )
 
         # Scores should be in descending order
         scores = [score for _, score in result]
@@ -113,8 +126,12 @@ class TestReciprocalRankFusion:
         vec_results: list[tuple[int, float]] = []
 
         # k=10 should give higher score than k=60
-        result_k10 = reciprocal_rank_fusion(fts_results=fts_results, vec_results=vec_results, k=10)
-        result_k60 = reciprocal_rank_fusion(fts_results=fts_results, vec_results=vec_results, k=60)
+        result_k10 = reciprocal_rank_fusion(
+            fts_results=fts_results, vec_results=vec_results, k=10
+        )
+        result_k60 = reciprocal_rank_fusion(
+            fts_results=fts_results, vec_results=vec_results, k=60
+        )
 
         score_k10 = result_k10[0][1]
         score_k60 = result_k60[0][1]

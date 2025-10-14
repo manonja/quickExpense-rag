@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import pytest
-
 from quickexpense_rag.embeddings.encoder import embedding_service
 from quickexpense_rag.search.enums import BusinessType, Province
 from quickexpense_rag.search.hybrid import HybridSearchEngine
@@ -334,9 +333,7 @@ class TestHybridSearchEndToEnd:
 
     @pytest.mark.integration
     @pytest.mark.slow
-    def test_search_semantic_matching(
-        self, search_engine: HybridSearchEngine
-    ) -> None:
+    def test_search_semantic_matching(self, search_engine: HybridSearchEngine) -> None:
         """Hybrid search finds semantically similar documents."""
         # Search for "dining" which should find "meals" documents
         query = ExpenseQuery(query="dining restaurant food", top_k=5)
@@ -352,9 +349,7 @@ class TestHybridSearchEndToEnd:
         assert any("meal" in r.content.lower() for r in results)
 
     @pytest.mark.integration
-    def test_search_keyword_matching(
-        self, search_engine: HybridSearchEngine
-    ) -> None:
+    def test_search_keyword_matching(self, search_engine: HybridSearchEngine) -> None:
         """Hybrid search finds exact keyword matches."""
         # Search for "T2125" which only appears in one document
         query = ExpenseQuery(query="T2125", top_k=5)
@@ -388,9 +383,7 @@ class TestHybridSearchEndToEnd:
         self, search_engine: HybridSearchEngine
     ) -> None:
         """Search results have expense_types correctly aggregated."""
-        query = ExpenseQuery(
-            query="test", expense_types=["travel", "meals"], top_k=10
-        )
+        query = ExpenseQuery(query="test", expense_types=["travel", "meals"], top_k=10)
 
         results = search_engine.search(query)
 
@@ -413,7 +406,8 @@ class TestEdgeCases:
 
     @pytest.mark.integration
     def test_search_empty_query_text(
-        self, search_engine: HybridSearchEngine
+        self,
+        search_engine: HybridSearchEngine,  # noqa: ARG002
     ) -> None:
         """Empty query should be caught by validation (min_length=3)."""
         # ExpenseQuery validates min_length=3
@@ -440,9 +434,7 @@ class TestEdgeCases:
         assert "T2125" in results[0].content
 
     @pytest.mark.integration
-    def test_search_special_characters(
-        self, search_engine: HybridSearchEngine
-    ) -> None:
+    def test_search_special_characters(self, search_engine: HybridSearchEngine) -> None:
         """Search handles special characters correctly."""
         # FTS5 should handle quotes, apostrophes, etc.
         query = ExpenseQuery(query="test case", top_k=5)
@@ -453,9 +445,7 @@ class TestEdgeCases:
         assert len(results) > 0
 
     @pytest.mark.integration
-    def test_search_very_long_query(
-        self, search_engine: HybridSearchEngine
-    ) -> None:
+    def test_search_very_long_query(self, search_engine: HybridSearchEngine) -> None:
         """Search handles long query strings correctly."""
         # Create a long query with multiple terms
         long_query = " ".join(["business expense deduction"] * 10)
@@ -467,9 +457,7 @@ class TestEdgeCases:
         assert len(results) >= 0  # May or may not match
 
     @pytest.mark.integration
-    def test_search_unicode_characters(
-        self, search_engine: HybridSearchEngine
-    ) -> None:
+    def test_search_unicode_characters(self, search_engine: HybridSearchEngine) -> None:
         """Search handles Unicode characters gracefully."""
         # French characters (relevant for Quebec)
         query = ExpenseQuery(query="café résumé", top_k=5)

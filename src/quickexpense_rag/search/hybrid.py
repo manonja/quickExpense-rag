@@ -37,8 +37,8 @@ def reciprocal_rank_fusion(
 
     References:
         Cormack, G. V., Clarke, C. L., & Buettcher, S. (2009).
-        Reciprocal rank fusion outperforms condorcet and individual rank learning methods.
-        SIGIR 2009.
+        Reciprocal rank fusion outperforms condorcet and individual rank
+        learning methods. SIGIR 2009.
 
     """
     scores: dict[int, float] = {}
@@ -85,9 +85,7 @@ class HybridSearchEngine:
         self.db_path = db_path
         self.encoder = encoder
 
-    def _build_filter_clauses(
-        self, query: ExpenseQuery
-    ) -> tuple[str, str, list[Any]]:
+    def _build_filter_clauses(self, query: ExpenseQuery) -> tuple[str, str, list[Any]]:
         """
         Build SQL JOIN and WHERE clauses for metadata filtering.
 
@@ -155,7 +153,7 @@ class HybridSearchEngine:
         join_clause, where_clause, params = self._build_filter_clauses(query)
 
         # Build SQL query with DISTINCT for deduplication
-        sql = f"SELECT DISTINCT r.id FROM rules r {join_clause}"
+        sql = f"SELECT DISTINCT r.id FROM rules r {join_clause}"  # noqa: S608
 
         # Add WHERE clause if filters exist
         if where_clause:
@@ -203,13 +201,13 @@ class HybridSearchEngine:
               AND content MATCH ?
             ORDER BY rank
             LIMIT ?
-        """
+        """  # noqa: S608
 
         # Execute query
         conn = sqlite3.connect(self.db_path)
         try:
             # Parameters: candidate_ids + query_text + k
-            params = candidate_ids + [query_text, k]
+            params = [*candidate_ids, query_text, k]
             cursor = conn.execute(sql, params)
             rows = cursor.fetchall()
 
@@ -260,7 +258,7 @@ class HybridSearchEngine:
               AND embedding MATCH ?
             ORDER BY distance
             LIMIT ?
-        """
+        """  # noqa: S608
 
         # Execute query
         conn = sqlite3.connect(self.db_path)
@@ -273,7 +271,7 @@ class HybridSearchEngine:
             conn.enable_load_extension(False)
 
             # Parameters: candidate_ids + query_vec_bytes + k
-            params = candidate_ids + [query_vec_bytes, k]
+            params = [*candidate_ids, query_vec_bytes, k]
             cursor = conn.execute(sql, params)
             rows = cursor.fetchall()
 
@@ -317,7 +315,7 @@ class HybridSearchEngine:
             LEFT JOIN expense_types et ON retl.expense_type_id = et.id
             WHERE r.id IN ({placeholders})
             GROUP BY r.id
-        """
+        """  # noqa: S608
 
         # Execute query
         conn = sqlite3.connect(self.db_path)

@@ -46,9 +46,9 @@ def test_fixture_db_embeddings_present(fixture_db_path: Path) -> None:
     cursor = conn.execute("SELECT COUNT(*) FROM rules_vec")
     vec_count = cursor.fetchone()[0]
 
-    assert (
-        rules_count == vec_count
-    ), f"Mismatch: {rules_count} rules but {vec_count} embeddings"
+    assert rules_count == vec_count, (
+        f"Mismatch: {rules_count} rules but {vec_count} embeddings"
+    )
 
     # Verify embedding dimensions
     cursor = conn.execute("SELECT embedding FROM rules_vec LIMIT 1")
@@ -120,9 +120,9 @@ def test_fixture_db_vector_search_works(fixture_db_path: Path) -> None:
     # Verify results have valid rowid and distance
     for rowid, distance in results:
         assert isinstance(rowid, int), f"Expected int rowid, got {type(rowid)}"
-        assert isinstance(
-            distance, (int, float)
-        ), f"Expected numeric distance, got {type(distance)}"
+        assert isinstance(distance, (int, float)), (
+            f"Expected numeric distance, got {type(distance)}"
+        )
         assert distance >= 0, f"Distance should be non-negative, got {distance}"
 
     conn.close()
@@ -141,14 +141,14 @@ def test_fixture_db_metadata_populated(fixture_db_path: Path) -> None:
     assert "embedding_model" in metadata, "Missing embedding_model in metadata"
 
     # Verify schema version format
-    assert (
-        metadata["schema_version"] == "1.0"
-    ), f"Expected schema_version='1.0', got '{metadata['schema_version']}'"
+    assert metadata["schema_version"] == "1.0", (
+        f"Expected schema_version='1.0', got '{metadata['schema_version']}'"
+    )
 
     # Verify data version
-    assert (
-        metadata["data_version"] == "fixture-v1"
-    ), f"Expected data_version='fixture-v1', got '{metadata['data_version']}'"
+    assert metadata["data_version"] == "fixture-v1", (
+        f"Expected data_version='fixture-v1', got '{metadata['data_version']}'"
+    )
 
     conn.close()
 
@@ -164,9 +164,9 @@ def test_fixture_db_province_coverage(fixture_db_path: Path) -> None:
     provinces = {row[0] for row in cursor.fetchall()}
 
     expected_provinces = {"BC", "AB", "ON", "QC"}
-    assert (
-        provinces >= expected_provinces
-    ), f"Missing provinces: {expected_provinces - provinces}"
+    assert provinces >= expected_provinces, (
+        f"Missing provinces: {expected_provinces - provinces}"
+    )
 
     conn.close()
 
@@ -182,9 +182,9 @@ def test_fixture_db_business_type_coverage(fixture_db_path: Path) -> None:
     business_types = {row[0] for row in cursor.fetchall()}
 
     expected_types = {"sole_proprietorship", "corporation", "partnership"}
-    assert (
-        business_types >= expected_types
-    ), f"Missing business types: {expected_types - business_types}"
+    assert business_types >= expected_types, (
+        f"Missing business types: {expected_types - business_types}"
+    )
 
     conn.close()
 
@@ -198,8 +198,8 @@ def test_fixture_db_expense_type_coverage(fixture_db_path: Path) -> None:
     expense_types = {row[0] for row in cursor.fetchall()}
 
     expected_types = {"meals", "travel", "vehicle", "home_office"}
-    assert (
-        expense_types >= expected_types
-    ), f"Missing expense types: {expected_types - expense_types}"
+    assert expense_types >= expected_types, (
+        f"Missing expense types: {expected_types - expense_types}"
+    )
 
     conn.close()

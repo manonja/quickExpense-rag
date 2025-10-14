@@ -60,9 +60,7 @@ class _EmbeddingService:
         except Exception as e:
             from quickexpense_rag.exceptions import ModelLoadingError
 
-            raise ModelLoadingError(
-                f"Failed to load model '{model_name}': {e}"
-            ) from e
+            raise ModelLoadingError(f"Failed to load model '{model_name}': {e}") from e
 
     def embed_documents(self, texts: list[str]) -> npt.NDArray[np.float32]:
         """

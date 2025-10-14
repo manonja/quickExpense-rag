@@ -117,9 +117,7 @@ def test_batch_encoding_matches_sequential(test_service: _EmbeddingService) -> N
     batch_emb = test_service.embed_documents(texts)
 
     # Sequential encoding
-    sequential_emb = np.vstack(
-        [test_service.embed_documents([t]) for t in texts]
-    )
+    sequential_emb = np.vstack([test_service.embed_documents([t]) for t in texts])
 
     # Should be numerically identical (within float tolerance)
     np.testing.assert_allclose(batch_emb, sequential_emb, atol=1e-5)
