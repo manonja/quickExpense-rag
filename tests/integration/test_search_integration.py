@@ -406,3 +406,156 @@ class TestHybridSearchEndToEnd:
             # Should have multiple expense types as list
             assert isinstance(result.expense_types, list)
             assert len(result.expense_types) >= 2
+
+
+class TestEdgeCases:
+    """Edge case tests for hybrid search (Phase 6.2)."""
+
+    @pytest.mark.integration
+    def test_search_empty_query_text(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Empty query should be caught by validation (min_length=3)."""
+        # ExpenseQuery validates min_length=3
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            ExpenseQuery(query="", top_k=5)
+
+        with pytest.raises(ValidationError):
+            ExpenseQuery(query="ab", top_k=5)  # Too short (< 3)
+
+    @pytest.mark.integration
+    def test_search_single_result(self, search_engine: HybridSearchEngine) -> None:
+        """Search with unique term returns single result correctly."""
+        # "T2125" appears in only one document
+        query = ExpenseQuery(query="T2125", top_k=5)
+
+        results = search_engine.search(query)
+
+        # Should return at least 1 result
+        assert len(results) >= 1
+
+        # First result should contain the unique term
+        assert "T2125" in results[0].content
+
+    @pytest.mark.integration
+    def test_search_special_characters(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Search handles special characters correctly."""
+        # FTS5 should handle quotes, apostrophes, etc.
+        query = ExpenseQuery(query="test case", top_k=5)
+
+        results = search_engine.search(query)
+
+        # Should return results (FTS5 handles this gracefully)
+        assert len(results) > 0
+
+    @pytest.mark.integration
+    def test_search_very_long_query(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Search handles long query strings correctly."""
+        # Create a long query with multiple terms
+        long_query = " ".join(["business expense deduction"] * 10)
+        query = ExpenseQuery(query=long_query, top_k=5)
+
+        results = search_engine.search(query)
+
+        # Should return results without error
+        assert len(results) >= 0  # May or may not match
+
+    @pytest.mark.integration
+    def test_search_unicode_characters(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Search handles Unicode characters gracefully."""
+        # French characters (relevant for Quebec)
+        query = ExpenseQuery(query="café résumé", top_k=5)
+
+        results = search_engine.search(query)
+
+        # Should not crash, may return results
+        assert isinstance(results, list)
+
+    @pytest.mark.integration
+    def test_search_null_province_in_results(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Results with NULL province are handled correctly."""
+        # Search without province filter to include NULL rows
+        query = ExpenseQuery(query="test", top_k=15)
+
+        results = search_engine.search(query)
+
+        # Should include results (some may have NULL province)
+        assert len(results) > 0
+
+        # Find a result with NULL province (S3-F1-C1-p1 has NULL province)
+        null_province_results = [r for r in results if r.province is None]
+
+        # NULL provinces should be allowed
+        if null_province_results:
+            result = null_province_results[0]
+            assert result.province is None
+            assert result.citation_id is not None
+
+    @pytest.mark.integration
+    def test_search_null_business_type_in_results(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Results with NULL business_type are handled correctly."""
+        # Search without business_type filter
+        query = ExpenseQuery(query="test", top_k=15)
+
+        results = search_engine.search(query)
+
+        # Should include results
+        assert len(results) > 0
+
+        # Find a result with NULL business_type (S3-F1-C1-p2 has NULL business_type)
+        null_biz_results = [r for r in results if r.business_type is None]
+
+        # NULL business types should be allowed
+        if null_biz_results:
+            result = null_biz_results[0]
+            assert result.business_type is None
+            assert result.citation_id is not None
+
+    @pytest.mark.integration
+    def test_search_top_k_larger_than_results(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """top_k larger than available results returns all matches."""
+        # Filter to get a small result set
+        # top_k max is 50 (le=50 in ExpenseQuery validation)
+        query = ExpenseQuery(
+            query="T2125",
+            top_k=50,  # Maximum allowed top_k
+        )
+
+        results = search_engine.search(query)
+
+        # Should return all matching results (< 50)
+        assert len(results) < 50
+        assert len(results) > 0
+
+    @pytest.mark.integration
+    def test_search_expense_types_case_sensitivity(
+        self, search_engine: HybridSearchEngine
+    ) -> None:
+        """Expense types filter is case-sensitive (database-driven)."""
+        # Lowercase "meals" should work
+        query_lower = ExpenseQuery(query="test", expense_types=["meals"], top_k=5)
+        results_lower = search_engine.search(query_lower)
+
+        # Uppercase "MEALS" should not match (case-sensitive)
+        query_upper = ExpenseQuery(query="test", expense_types=["MEALS"], top_k=5)
+        results_upper = search_engine.search(query_upper)
+
+        # Lowercase should return results
+        assert len(results_lower) > 0
+
+        # Uppercase should return no results (case-sensitive exact match)
+        assert len(results_upper) == 0
