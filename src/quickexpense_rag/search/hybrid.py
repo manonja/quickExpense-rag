@@ -48,21 +48,22 @@ class HybridSearchEngine:
         """
         Build SQL JOIN and WHERE clauses for metadata filtering.
 
-        This method handles simple metadata filters (province, business_type).
-        Many-to-many expense_types filtering will be added in Phase 2.
+        Handles province, business_type, and expense_types filters.
+        expense_types uses many-to-many JOINs (OR logic: matches ANY type).
 
         Args:
             query: Search query with optional metadata filters.
 
         Returns:
             Tuple of (join_clause, where_clause, params):
-            - join_clause: SQL JOIN statements (empty for Phase 1)
+            - join_clause: SQL JOIN statements (for expense_types)
             - where_clause: SQL WHERE conditions (may be empty)
             - params: List of parameter values for SQL placeholders
 
         """
         where_conditions: list[str] = []
         params: list[Any] = []
+        join_clause = ""
 
         # Province filter
         if query.province is not None:
@@ -74,11 +75,21 @@ class HybridSearchEngine:
             where_conditions.append("r.business_type = ?")
             params.append(query.business_type.value)
 
+        # Expense types filter (many-to-many with OR logic)
+        if query.expense_types:
+            # Add JOINs to access expense_types table
+            join_clause = """
+                JOIN rule_expense_type_links retl ON r.id = retl.rule_id
+                JOIN expense_types et ON retl.expense_type_id = et.id
+            """
+
+            # Generate IN clause with placeholders
+            placeholders = ", ".join(["?"] * len(query.expense_types))
+            where_conditions.append(f"et.name IN ({placeholders})")
+            params.extend(query.expense_types)
+
         # Combine conditions with AND
         where_clause = " AND ".join(where_conditions) if where_conditions else ""
-
-        # No JOINs needed for simple filters (expense_types will add JOINs in Phase 2)
-        join_clause = ""
 
         return join_clause, where_clause, params
 
