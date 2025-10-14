@@ -264,11 +264,23 @@ class HybridSearchEngine:
         conn = sqlite3.connect(self.db_path)
         try:
             # Load sqlite-vec extension
-            conn.enable_load_extension(True)
+            # Some Python builds don't support enable_load_extension
+            try:
+                conn.enable_load_extension(True)
+            except AttributeError:
+                # Extension loading not supported in this build
+                # sqlite-vec must be statically compiled or pre-loaded
+                pass
+
             import sqlite_vec
 
             sqlite_vec.load(conn)
-            conn.enable_load_extension(False)
+
+            # Disable extension loading if it was enabled
+            try:
+                conn.enable_load_extension(False)
+            except AttributeError:
+                pass
 
             # Parameters: candidate_ids + query_vec_bytes + k
             params = [*candidate_ids, query_vec_bytes, k]

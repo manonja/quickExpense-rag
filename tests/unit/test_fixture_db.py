@@ -32,11 +32,17 @@ def test_fixture_db_embeddings_present(fixture_db_path: Path) -> None:
     conn = sqlite3.connect(fixture_db_path)
 
     # Load sqlite-vec extension
-    conn.enable_load_extension(True)
+    try:
+        conn.enable_load_extension(True)
+    except AttributeError:
+        pass
     import sqlite_vec
 
     sqlite_vec.load(conn)
-    conn.enable_load_extension(False)
+    try:
+        conn.enable_load_extension(False)
+    except AttributeError:
+        pass
 
     # Count rules
     cursor = conn.execute("SELECT COUNT(*) FROM rules")
@@ -91,11 +97,17 @@ def test_fixture_db_vector_search_works(fixture_db_path: Path) -> None:
     conn = sqlite3.connect(fixture_db_path)
 
     # Load sqlite-vec extension
-    conn.enable_load_extension(True)
+    try:
+        conn.enable_load_extension(True)
+    except AttributeError:
+        pass
     import sqlite_vec
 
     sqlite_vec.load(conn)
-    conn.enable_load_extension(False)
+    try:
+        conn.enable_load_extension(False)
+    except AttributeError:
+        pass
 
     # Create a random query vector
     query_vec = np.random.randn(384).astype(np.float32)

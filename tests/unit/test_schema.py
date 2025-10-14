@@ -16,9 +16,16 @@ from quickexpense_rag.data.schema import (
 def _create_test_connection(db_path: Path) -> sqlite3.Connection:
     """Create a test SQLite connection with sqlite-vec loaded."""
     conn = sqlite3.connect(db_path)
-    conn.enable_load_extension(True)
+    # Some Python builds don't support enable_load_extension
+    try:
+        conn.enable_load_extension(True)
+    except AttributeError:
+        pass
     sqlite_vec.load(conn)
-    conn.enable_load_extension(False)
+    try:
+        conn.enable_load_extension(False)
+    except AttributeError:
+        pass
     return conn
 
 
