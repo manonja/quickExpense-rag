@@ -6,6 +6,7 @@ Uses Reciprocal Rank Fusion (RRF) to merge rankings from both search methods.
 
 import sqlite3
 from pathlib import Path
+from typing import Any
 
 from quickexpense_rag.embeddings.encoder import _EmbeddingService
 from quickexpense_rag.search.models import ExpenseQuery, SearchResult
@@ -40,6 +41,46 @@ class HybridSearchEngine:
 
         self.db_path = db_path
         self.encoder = encoder
+
+    def _build_filter_clauses(
+        self, query: ExpenseQuery
+    ) -> tuple[str, str, list[Any]]:
+        """
+        Build SQL JOIN and WHERE clauses for metadata filtering.
+
+        This method handles simple metadata filters (province, business_type).
+        Many-to-many expense_types filtering will be added in Phase 2.
+
+        Args:
+            query: Search query with optional metadata filters.
+
+        Returns:
+            Tuple of (join_clause, where_clause, params):
+            - join_clause: SQL JOIN statements (empty for Phase 1)
+            - where_clause: SQL WHERE conditions (may be empty)
+            - params: List of parameter values for SQL placeholders
+
+        """
+        where_conditions: list[str] = []
+        params: list[Any] = []
+
+        # Province filter
+        if query.province is not None:
+            where_conditions.append("r.province = ?")
+            params.append(query.province.value)
+
+        # Business type filter
+        if query.business_type is not None:
+            where_conditions.append("r.business_type = ?")
+            params.append(query.business_type.value)
+
+        # Combine conditions with AND
+        where_clause = " AND ".join(where_conditions) if where_conditions else ""
+
+        # No JOINs needed for simple filters (expense_types will add JOINs in Phase 2)
+        join_clause = ""
+
+        return join_clause, where_clause, params
 
     def search(self, query: ExpenseQuery) -> list[SearchResult]:
         """
