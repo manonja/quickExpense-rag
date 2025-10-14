@@ -150,3 +150,35 @@ def test_similar_texts_have_high_similarity(test_service: _EmbeddingService) -> 
     # Cat and airplane should be dissimilar
     similarity_dissimilar = np.dot(emb1, emb3)
     assert similarity_dissimilar < similarity_similar
+
+
+def test_cuda_fallback_when_unavailable(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """
+    Verify graceful fallback to CPU when CUDA unavailable.
+
+    Tests that requesting CUDA on a CPU-only system:
+    1. Logs a warning about the fallback
+    2. Successfully falls back to CPU device
+    3. Still produces valid embeddings
+
+    This test will be skipped on systems where CUDA is available.
+    """
+    import torch
+
+    if torch.cuda.is_available():
+        pytest.skip("CUDA is available, cannot test fallback behavior")
+
+    # Request CUDA on CPU-only system
+    service = _EmbeddingService(
+        model_name="sentence-transformers/all-MiniLM-L6-v2",
+        device="cuda",
+    )
+
+    # Should log warning about fallback
+    assert "Falling back to 'cpu'" in caplog.text
+
+    # Should still work with CPU
+    emb = service.embed_documents(["test"])
+    assert emb.shape == (1, 384)
