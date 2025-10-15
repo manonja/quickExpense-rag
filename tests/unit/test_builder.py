@@ -409,3 +409,230 @@ class TestEmbedChunksInBatches:
 
         assert len(results) == 32
         assert mock_encoder.embed_documents.call_count == 1
+
+
+class TestInsertData:
+    """Tests for _insert_data method."""
+
+    @pytest.fixture
+    def in_memory_db_with_schema(self):
+        """Create in-memory SQLite database with full schema."""
+        conn = sqlite3.connect(":memory:")
+
+        # Create all required tables
+        conn.executescript("""
+            CREATE TABLE IF NOT EXISTS rules (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                content TEXT NOT NULL,
+                citation_id TEXT UNIQUE NOT NULL,
+                source_url TEXT NOT NULL,
+                source_hash TEXT NOT NULL,
+                province TEXT,
+                business_type TEXT,
+                metadata_json TEXT,
+                retrieved_at TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE VIRTUAL TABLE IF NOT EXISTS rules_fts USING fts5(
+                content,
+                content='rules',
+                content_rowid='id',
+                tokenize='porter unicode61'
+            );
+
+            -- Simplified for unit tests (vec0 extension not loaded)
+            CREATE TABLE IF NOT EXISTS rules_vec (
+                id INTEGER PRIMARY KEY,
+                embedding BLOB NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS expense_types (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS rule_expense_type_links (
+                rule_id INTEGER NOT NULL,
+                expense_type_id INTEGER NOT NULL,
+                PRIMARY KEY (rule_id, expense_type_id),
+                FOREIGN KEY (rule_id) REFERENCES rules(id) ON DELETE CASCADE,
+                FOREIGN KEY (expense_type_id) REFERENCES expense_types(id) ON DELETE CASCADE
+            );
+
+            -- Triggers to keep FTS in sync
+            CREATE TRIGGER IF NOT EXISTS rules_ai AFTER INSERT ON rules BEGIN
+                INSERT INTO rules_fts(rowid, content) VALUES (new.id, new.content);
+            END;
+
+            CREATE TRIGGER IF NOT EXISTS rules_ad AFTER DELETE ON rules BEGIN
+                DELETE FROM rules_fts WHERE rowid = old.id;
+            END;
+
+            CREATE TRIGGER IF NOT EXISTS rules_au AFTER UPDATE ON rules BEGIN
+                UPDATE rules_fts SET content = new.content WHERE rowid = new.id;
+            END;
+        """)
+
+        yield conn
+        conn.close()
+
+    def test_insert_data_three_statement_pattern(self, in_memory_db_with_schema, tmp_path):
+        """
+        GIVEN: List of (chunk, embedding) tuples
+        WHEN: _insert_data is called
+        THEN: rules, rules_vec, rule_expense_type_links all populated correctly
+        """
+        # Populate expense_types table first
+        in_memory_db_with_schema.execute("INSERT INTO expense_types (name) VALUES ('meals')")
+        in_memory_db_with_schema.execute("INSERT INTO expense_types (name) VALUES ('travel')")
+        expense_type_map = {"meals": 1, "travel": 2}
+
+        # Create embedded chunks
+        embedded_chunks = [
+            (
+                {
+                    "content": "Test content 1",
+                    "citation_id": "S1-F1-C1-p1.1",
+                    "source_url": "https://www.canada.ca/test1",
+                    "source_hash": "hash1",
+                    "expense_types": ["meals"],
+                    "province": ["BC"],
+                    "business_type": ["sole_proprietorship"],
+                },
+                np.random.rand(384).astype(np.float32),
+            ),
+            (
+                {
+                    "content": "Test content 2",
+                    "citation_id": "S1-F1-C1-p1.2",
+                    "source_url": "https://www.canada.ca/test2",
+                    "source_hash": "hash2",
+                    "expense_types": ["travel"],
+                    "province": ["ON"],
+                    "business_type": ["corporation"],
+                },
+                np.random.rand(384).astype(np.float32),
+            ),
+        ]
+
+        source_files = [
+            SourceFile(
+                path="test1.html", url="https://www.canada.ca/test1", hash="hash1"
+            ),
+            SourceFile(
+                path="test2.html", url="https://www.canada.ca/test2", hash="hash2"
+            ),
+        ]
+
+        builder = IndexBuilder(db_path=str(tmp_path / "test.db"), encoder=Mock())
+        builder._insert_data(
+            in_memory_db_with_schema, embedded_chunks, expense_type_map, source_files
+        )
+
+        # Verify rules table
+        cursor = in_memory_db_with_schema.execute("SELECT COUNT(*) FROM rules")
+        assert cursor.fetchone()[0] == 2
+
+        # Verify rules_vec table
+        cursor = in_memory_db_with_schema.execute("SELECT COUNT(*) FROM rules_vec")
+        assert cursor.fetchone()[0] == 2
+
+        # Verify rule_expense_type_links table
+        cursor = in_memory_db_with_schema.execute(
+            "SELECT COUNT(*) FROM rule_expense_type_links"
+        )
+        assert cursor.fetchone()[0] == 2
+
+    def test_insert_data_multiple_expense_types_creates_multiple_links(
+        self, in_memory_db_with_schema, tmp_path
+    ):
+        """
+        GIVEN: Chunk with expense_types=['meals', 'travel']
+        WHEN: _insert_data is called
+        THEN: Two rows created in rule_expense_type_links
+        """
+        # Populate expense_types
+        in_memory_db_with_schema.execute("INSERT INTO expense_types (name) VALUES ('meals')")
+        in_memory_db_with_schema.execute("INSERT INTO expense_types (name) VALUES ('travel')")
+        expense_type_map = {"meals": 1, "travel": 2}
+
+        # Chunk with multiple expense types
+        embedded_chunks = [
+            (
+                {
+                    "content": "Test content",
+                    "citation_id": "S1-F1-C1-p1.1",
+                    "source_url": "https://www.canada.ca/test",
+                    "source_hash": "hash1",
+                    "expense_types": ["meals", "travel"],  # Multiple types
+                    "province": ["BC"],
+                    "business_type": ["sole_proprietorship"],
+                },
+                np.random.rand(384).astype(np.float32),
+            )
+        ]
+
+        source_files = [
+            SourceFile(path="test.html", url="https://www.canada.ca/test", hash="hash1")
+        ]
+
+        builder = IndexBuilder(db_path=str(tmp_path / "test.db"), encoder=Mock())
+        builder._insert_data(
+            in_memory_db_with_schema, embedded_chunks, expense_type_map, source_files
+        )
+
+        # Verify 2 links created for the single rule
+        cursor = in_memory_db_with_schema.execute(
+            "SELECT COUNT(*) FROM rule_expense_type_links"
+        )
+        assert cursor.fetchone()[0] == 2
+
+        # Verify both expense types linked to rule id 1
+        cursor = in_memory_db_with_schema.execute(
+            "SELECT expense_type_id FROM rule_expense_type_links WHERE rule_id = 1 ORDER BY expense_type_id"
+        )
+        expense_type_ids = [row[0] for row in cursor.fetchall()]
+        assert expense_type_ids == [1, 2]
+
+    def test_fts_triggers_populate_rules_fts(self, in_memory_db_with_schema, tmp_path):
+        """
+        GIVEN: Rules inserted via _insert_data
+        WHEN: Query rules_fts table
+        THEN: FTS index contains searchable content (triggers worked)
+        """
+        # Populate expense_types
+        in_memory_db_with_schema.execute("INSERT INTO expense_types (name) VALUES ('meals')")
+        expense_type_map = {"meals": 1}
+
+        embedded_chunks = [
+            (
+                {
+                    "content": "Restaurant meal deduction rules",
+                    "citation_id": "S1-F1-C1-p1.1",
+                    "source_url": "https://www.canada.ca/test",
+                    "source_hash": "hash1",
+                    "expense_types": ["meals"],
+                    "province": ["BC"],
+                    "business_type": ["sole_proprietorship"],
+                },
+                np.random.rand(384).astype(np.float32),
+            )
+        ]
+
+        source_files = [
+            SourceFile(path="test.html", url="https://www.canada.ca/test", hash="hash1")
+        ]
+
+        builder = IndexBuilder(db_path=str(tmp_path / "test.db"), encoder=Mock())
+        builder._insert_data(
+            in_memory_db_with_schema, embedded_chunks, expense_type_map, source_files
+        )
+
+        # Search FTS index
+        cursor = in_memory_db_with_schema.execute(
+            "SELECT content FROM rules_fts WHERE rules_fts MATCH 'restaurant'"
+        )
+        results = cursor.fetchall()
+        assert len(results) == 1
+        assert "Restaurant meal" in results[0][0]
