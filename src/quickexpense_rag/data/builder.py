@@ -127,7 +127,67 @@ class IndexBuilder:
         Raises:
             ValueError: If duplicate citation_id detected
         """
-        raise NotImplementedError("Phase 1: Load & Flatten")
+        # Create document_id -> SourceFile mapping for fast lookup
+        source_map = {Path(sf.path).stem: sf for sf in source_files}
+
+        all_chunks = []
+        seen_citations: set[str] = set()
+
+        with open(jsonl_path) as f:
+            for line_num, line in enumerate(f, start=1):
+                line = line.strip()
+                if not line:
+                    continue
+
+                # Parse document
+                try:
+                    doc = ParsedDocument.model_validate_json(line)
+                except Exception as e:
+                    logger.error(f"Failed to parse line {line_num}: {e}")
+                    raise
+
+                # Get source file for this document
+                source_file = source_map.get(doc.document_id)
+                if not source_file:
+                    logger.warning(
+                        f"No source file found for document_id: {doc.document_id}"
+                    )
+                    # Use first source file as fallback
+                    source_file = source_files[0] if source_files else None
+                    if not source_file:
+                        raise ValueError("No source files provided")
+
+                # Flatten document to chunks
+                chunks = doc.to_flat_chunks(source_url=str(source_file.url))
+
+                # Add source_hash to each chunk and check for duplicates
+                for chunk in chunks:
+                    citation_id = chunk.get("citation_id")
+                    if not citation_id:
+                        logger.warning(f"Chunk missing citation_id in document {doc.document_id}")
+                        continue
+
+                    # Duplicate detection
+                    if citation_id in seen_citations:
+                        raise ValueError(
+                            f"Duplicate citation_id found: {citation_id}. "
+                            "Each citation_id must be unique across all documents."
+                        )
+                    seen_citations.add(citation_id)
+
+                    # Add source_hash
+                    chunk["source_hash"] = source_file.hash
+
+                    # Extract expense_types from nested metadata to top level (for easier access)
+                    metadata = chunk.get("metadata", {})
+                    chunk["expense_types"] = metadata.get("expense_type", [])
+                    chunk["province"] = metadata.get("province")
+                    chunk["business_type"] = metadata.get("business_type")
+
+                    all_chunks.append(chunk)
+
+        logger.info(f"Loaded {len(all_chunks)} chunks from {jsonl_path}")
+        return all_chunks
 
     def _populate_expense_types(
         self, conn: sqlite3.Connection, chunks: list[dict[str, Any]]
