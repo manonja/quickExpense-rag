@@ -636,3 +636,158 @@ class TestInsertData:
         results = cursor.fetchall()
         assert len(results) == 1
         assert "Restaurant meal" in results[0][0]
+
+
+class TestIntegrityChecks:
+    """Tests for _run_integrity_checks method."""
+
+    @pytest.fixture
+    def in_memory_db_with_data(self):
+        """Create in-memory database with schema and test data."""
+        conn = sqlite3.connect(":memory:")
+
+        # Create schema
+        conn.executescript("""
+            CREATE TABLE IF NOT EXISTS rules (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                content TEXT NOT NULL,
+                citation_id TEXT UNIQUE NOT NULL,
+                source_url TEXT NOT NULL,
+                source_hash TEXT NOT NULL
+            );
+
+            CREATE VIRTUAL TABLE IF NOT EXISTS rules_fts USING fts5(
+                content,
+                content='rules',
+                content_rowid='id'
+            );
+
+            CREATE TABLE IF NOT EXISTS rules_vec (
+                id INTEGER PRIMARY KEY,
+                embedding BLOB NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS expense_types (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS rule_expense_type_links (
+                rule_id INTEGER NOT NULL,
+                expense_type_id INTEGER NOT NULL,
+                PRIMARY KEY (rule_id, expense_type_id),
+                FOREIGN KEY (rule_id) REFERENCES rules(id) ON DELETE CASCADE,
+                FOREIGN KEY (expense_type_id) REFERENCES expense_types(id) ON DELETE CASCADE
+            );
+
+            -- FTS trigger
+            CREATE TRIGGER rules_ai AFTER INSERT ON rules BEGIN
+                INSERT INTO rules_fts(rowid, content) VALUES (new.id, new.content);
+            END;
+        """)
+
+        # Insert 10 test rules
+        for i in range(1, 11):
+            conn.execute(
+                "INSERT INTO rules (content, citation_id, source_url, source_hash) VALUES (?, ?, ?, ?)",
+                (f"Content {i}", f"S1-F1-C1-p{i}", "https://www.canada.ca/test", "hash"),
+            )
+            conn.execute(
+                "INSERT INTO rules_vec (id, embedding) VALUES (?, ?)",
+                (i, np.random.rand(384).astype(np.float32).tobytes()),
+            )
+
+        # Insert expense types and links
+        conn.execute("INSERT INTO expense_types (name) VALUES ('meals')")
+        conn.execute("INSERT INTO expense_types (name) VALUES ('travel')")
+        for i in range(1, 11):
+            conn.execute(
+                "INSERT INTO rule_expense_type_links (rule_id, expense_type_id) VALUES (?, ?)",
+                (i, 1),  # All rules linked to 'meals'
+            )
+
+        yield conn
+        conn.close()
+
+    def test_integrity_checks_all_tables_match_count(self, in_memory_db_with_data, tmp_path):
+        """
+        GIVEN: Database with 10 rules inserted
+        WHEN: _run_integrity_checks called with expected_count=10
+        THEN: Passes without error (all tables have 10 rows)
+        """
+        builder = IndexBuilder(db_path=str(tmp_path / "test.db"), encoder=Mock())
+
+        # Should not raise any exception
+        builder._run_integrity_checks(in_memory_db_with_data, expected_count=10)
+
+    def test_integrity_checks_fails_on_rules_count_mismatch(
+        self, in_memory_db_with_data, tmp_path
+    ):
+        """
+        GIVEN: Database with 10 rules but expected_count=8
+        WHEN: _run_integrity_checks called
+        THEN: Raises QuickExpenseError with clear message
+        """
+        builder = IndexBuilder(db_path=str(tmp_path / "test.db"), encoder=Mock())
+
+        with pytest.raises(QuickExpenseError) as exc_info:
+            builder._run_integrity_checks(in_memory_db_with_data, expected_count=8)
+
+        assert "rules" in str(exc_info.value).lower()
+        assert "10" in str(exc_info.value)  # Actual count
+        assert "8" in str(exc_info.value)   # Expected count
+
+    def test_integrity_checks_fails_on_vec_count_mismatch(self, in_memory_db_with_data, tmp_path):
+        """
+        GIVEN: Database with 10 rules but only 9 vectors
+        WHEN: _run_integrity_checks called with expected_count=10
+        THEN: Raises QuickExpenseError
+        """
+        # Delete one vector to create mismatch
+        in_memory_db_with_data.execute("DELETE FROM rules_vec WHERE id = 10")
+
+        builder = IndexBuilder(db_path=str(tmp_path / "test.db"), encoder=Mock())
+
+        with pytest.raises(QuickExpenseError) as exc_info:
+            builder._run_integrity_checks(in_memory_db_with_data, expected_count=10)
+
+        assert "rules_vec" in str(exc_info.value).lower()
+        assert "9" in str(exc_info.value)
+
+    def test_integrity_checks_detects_dangling_foreign_keys(
+        self, in_memory_db_with_data, tmp_path
+    ):
+        """
+        GIVEN: Database with dangling rule_id in rule_expense_type_links
+        WHEN: _run_integrity_checks called
+        THEN: Raises QuickExpenseError about dangling references
+        """
+        # Insert a link to non-existent rule
+        in_memory_db_with_data.execute("PRAGMA foreign_keys = OFF")
+        in_memory_db_with_data.execute(
+            "INSERT INTO rule_expense_type_links (rule_id, expense_type_id) VALUES (999, 1)"
+        )
+        in_memory_db_with_data.execute("PRAGMA foreign_keys = ON")
+
+        builder = IndexBuilder(db_path=str(tmp_path / "test.db"), encoder=Mock())
+
+        with pytest.raises(QuickExpenseError) as exc_info:
+            builder._run_integrity_checks(in_memory_db_with_data, expected_count=10)
+
+        assert "dangling" in str(exc_info.value).lower()
+
+    def test_integrity_checks_verifies_fts_sync(self, in_memory_db_with_data, tmp_path):
+        """
+        GIVEN: Database with 10 rules and FTS table
+        WHEN: _run_integrity_checks called
+        THEN: Verifies FTS table has matching count
+        """
+        builder = IndexBuilder(db_path=str(tmp_path / "test.db"), encoder=Mock())
+
+        # Should pass - FTS table auto-synced via triggers
+        builder._run_integrity_checks(in_memory_db_with_data, expected_count=10)
+
+        # Verify FTS actually has 10 rows
+        cursor = in_memory_db_with_data.execute("SELECT COUNT(*) FROM rules_fts")
+        count = cursor.fetchone()[0]
+        assert count == 10

@@ -374,7 +374,49 @@ class IndexBuilder:
         Raises:
             QuickExpenseError: If any integrity check fails
         """
-        raise NotImplementedError("Phase 5: Integrity Checks")
+        # Check row counts for core tables
+        tables = ["rules", "rules_vec", "rules_fts"]
+        for table in tables:
+            cursor = conn.execute(f"SELECT COUNT(*) FROM {table}")
+            count = cursor.fetchone()[0]
+            if count != expected_count:
+                raise QuickExpenseError(
+                    f"Integrity check failed: {table} has {count} rows, expected {expected_count}"
+                )
+
+        # Check for dangling foreign keys in junction table
+        cursor = conn.execute(
+            """
+            SELECT COUNT(*) FROM rule_expense_type_links l
+            LEFT JOIN rules r ON l.rule_id = r.id
+            WHERE r.id IS NULL
+            """
+        )
+        dangling_rules = cursor.fetchone()[0]
+        if dangling_rules > 0:
+            raise QuickExpenseError(
+                f"Integrity check failed: Found {dangling_rules} dangling rule_id references "
+                "in rule_expense_type_links"
+            )
+
+        cursor = conn.execute(
+            """
+            SELECT COUNT(*) FROM rule_expense_type_links l
+            LEFT JOIN expense_types e ON l.expense_type_id = e.id
+            WHERE e.id IS NULL
+            """
+        )
+        dangling_types = cursor.fetchone()[0]
+        if dangling_types > 0:
+            raise QuickExpenseError(
+                f"Integrity check failed: Found {dangling_types} dangling expense_type_id references "
+                "in rule_expense_type_links"
+            )
+
+        logger.info(
+            f"Integrity checks passed: {expected_count} rows in all tables, "
+            "no dangling foreign keys"
+        )
 
     def _create_manifest(
         self,
