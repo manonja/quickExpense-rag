@@ -18,6 +18,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from parser.gemini_parser import GeminiParser
 from preprocessor.models import DownloadMetadata, PreprocessManifest
 from preprocessor.text_extractor import TextExtractor
+from quickexpense_rag.data.builder import IndexBuilder
+from quickexpense_rag.embeddings.encoder import embedding_service
+from quickexpense_rag.search.models import SourceFile
 
 # Initialize Typer app and Rich console
 app = typer.Typer(help="QuickExpense RAG Preprocessing CLI")
@@ -284,6 +287,133 @@ def parse(
         console.print(f"  Input: ${input_cost:.4f}")
         console.print(f"  Output: ${output_cost:.4f}")
         console.print(f"  Total: ${total_cost:.4f}")
+
+
+@app.command()
+def build(
+    input_file: Path = typer.Option(  # noqa: B008
+        Path("data/processed/chunks.jsonl"),
+        "--input-file",
+        "-i",
+        help="Input JSONL file with ParsedDocument objects",
+    ),
+    manifest_file: Path = typer.Option(  # noqa: B008
+        Path("data/raw/manifest.json"),
+        "--manifest-file",
+        "-m",
+        help="Input manifest.json from preprocess step (for source file metadata)",
+    ),
+    output_db: Path = typer.Option(  # noqa: B008
+        Path("data/cra_rules.db"),
+        "--output-db",
+        "-o",
+        help="Output SQLite database path",
+    ),
+    output_manifest: Path = typer.Option(  # noqa: B008
+        Path("data/manifest.json"),
+        "--output-manifest",
+        help="Output manifest.json path",
+    ),
+    data_version: str = typer.Option(
+        "2024.12",
+        "--data-version",
+        "-v",
+        help="Data version string (YYYY.MM format)",
+    ),
+    continue_on_error: bool = typer.Option(
+        False,
+        "--continue-on-error",
+        help="Skip chunks with embedding errors instead of failing",
+    ),
+) -> None:
+    """
+    Build searchable SQLite database from parsed JSONL chunks.
+
+    Loads ParsedDocument chunks from JSONL, generates BGE embeddings,
+    and populates SQLite database with FTS5 and vector search indexes.
+
+    Example:
+        uv run python scripts/cli.py build --input-file data/processed/chunks.jsonl
+
+    """
+    console.print("[bold blue]QuickExpense RAG Index Building[/bold blue]")
+    console.print(f"Input: {input_file}")
+    console.print(f"Manifest: {manifest_file}")
+    console.print(f"Output DB: {output_db}")
+    console.print(f"Output Manifest: {output_manifest}")
+    console.print(f"Data Version: {data_version}\n")
+
+    # Verify input file exists
+    if not input_file.exists():
+        console.print(f"[red]Error: Input file not found: {input_file}[/red]")
+        raise typer.Exit(code=1)
+
+    # Verify manifest file exists
+    if not manifest_file.exists():
+        console.print(f"[red]Error: Manifest file not found: {manifest_file}[/red]")
+        raise typer.Exit(code=1)
+
+    # Create output directories
+    output_db.parent.mkdir(parents=True, exist_ok=True)
+    output_manifest.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        # Load source files from preprocess manifest
+        console.print("[cyan]Loading source file metadata...[/cyan]")
+        with manifest_file.open() as f:
+            manifest_data = json.load(f)
+
+        # Convert manifest documents to SourceFile models
+        source_files = []
+        for doc in manifest_data.get("documents", []):
+            source_files.append(
+                SourceFile(
+                    path=doc["filename"],
+                    url=doc["source_url"],
+                    hash=doc["sha256"],
+                )
+            )
+
+        if not source_files:
+            console.print("[yellow]Warning: No source files found in manifest[/yellow]")
+
+        console.print(f"Loaded {len(source_files)} source file records\n")
+
+        # Initialize IndexBuilder
+        console.print("[cyan]Initializing IndexBuilder...[/cyan]")
+        builder = IndexBuilder(db_path=str(output_db), encoder=embedding_service)
+
+        # Build index
+        console.print("[cyan]Building index (this may take a while)...[/cyan]\n")
+        builder.build_from_jsonl(
+            jsonl_path=str(input_file),
+            manifest_path=str(output_manifest),
+            source_files=source_files,
+            data_version=data_version,
+            continue_on_error=continue_on_error,
+        )
+
+        # Success summary
+        console.print("\n[bold green]Index Build Complete![/bold green]")
+        console.print(f"✅ Database: {output_db}")
+        console.print(f"✅ Manifest: {output_manifest}")
+
+        # Show database size
+        db_size_mb = output_db.stat().st_size / (1024 * 1024)
+        console.print(f"📊 Database size: {db_size_mb:.2f} MB")
+
+    except json.JSONDecodeError as e:
+        console.print(f"[red]Error: Invalid JSON in manifest file: {e}[/red]")
+        raise typer.Exit(code=1) from e
+
+    except ValueError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1) from e
+
+    except Exception as e:
+        console.print(f"[red]Build failed: {e}[/red]")
+        logger.exception("Build failed")
+        raise typer.Exit(code=1) from e
 
 
 if __name__ == "__main__":
