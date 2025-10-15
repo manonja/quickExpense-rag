@@ -1064,6 +1064,7 @@ wheels = [
 name = "quickexpense-rag"
 source = { editable = "." }
 dependencies = [
+    { name = "google-generativeai" },
     { name = "httpx" },
     { name = "numpy" },
     { name = "pydantic" },
@@ -1095,6 +1096,7 @@ indexing = [
 [package.metadata]
 requires-dist = [
     { name = "beautifulsoup4", marker = "extra == 'indexing'", specifier = ">=4.12" },
+    { name = "google-generativeai", specifier = ">=0.8.5" },
     { name = "google-generativeai", marker = "extra == 'indexing'", specifier = ">=0.3" },
     { name = "httpx", specifier = ">=0.25" },
     { name = "lxml", marker = "extra == 'indexing'", specifier = ">=5.0" },
