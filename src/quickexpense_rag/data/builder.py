@@ -319,7 +319,45 @@ class IndexBuilder:
             expense_type_map: Mapping of expense type name to database ID
             source_files: List of SourceFile models for source_hash lookup
         """
-        raise NotImplementedError("Phase 4: Data Insertion")
+        for chunk, embedding in embedded_chunks:
+            # 1. Insert into rules table
+            cursor = conn.execute(
+                """
+                INSERT INTO rules (
+                    content, citation_id, source_url, source_hash,
+                    province, business_type, metadata_json, retrieved_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    chunk["content"],
+                    chunk["citation_id"],
+                    chunk["source_url"],
+                    chunk["source_hash"],
+                    json.dumps(chunk.get("province")),
+                    json.dumps(chunk.get("business_type")),
+                    json.dumps(chunk.get("metadata", {})),
+                    datetime.now(timezone.utc).isoformat(),
+                ),
+            )
+            rule_id = cursor.lastrowid
+
+            # 2. Insert into rules_vec table
+            conn.execute(
+                "INSERT INTO rules_vec (id, embedding) VALUES (?, ?)",
+                (rule_id, embedding.tobytes()),
+            )
+
+            # 3. Insert into rule_expense_type_links (many-to-many)
+            expense_types = chunk.get("expense_types", [])
+            for expense_type in expense_types:
+                type_id = expense_type_map.get(expense_type)
+                if type_id:
+                    conn.execute(
+                        "INSERT INTO rule_expense_type_links (rule_id, expense_type_id) VALUES (?, ?)",
+                        (rule_id, type_id),
+                    )
+
+        logger.info(f"Inserted {len(embedded_chunks)} rules with embeddings and expense type links")
 
     def _run_integrity_checks(self, conn: sqlite3.Connection, expected_count: int) -> None:
         """
