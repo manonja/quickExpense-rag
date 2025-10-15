@@ -69,6 +69,10 @@ class HybridSearchEngine:
     3. Run vector semantic search on filtered candidates
     4. Merge results using Reciprocal Rank Fusion (RRF)
     5. Hydrate final results from database
+
+    Security:
+        All SQL queries use parameterized statements (? placeholders) to prevent
+        SQL injection. User inputs are never concatenated into query strings.
     """
 
     def __init__(self, db_path: Path, encoder: _EmbeddingService) -> None:

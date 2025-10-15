@@ -90,6 +90,10 @@ def search(
         DatabaseNotInitializedError: If init() not called.
         ValidationError: If invalid parameters provided.
 
+    Security:
+        String parameters are validated against enum values before query
+        construction. All database queries use parameterized statements.
+
     """
     if _search_engine is None:
         raise DatabaseNotInitializedError(

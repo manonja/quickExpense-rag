@@ -22,7 +22,14 @@ from quickexpense_rag.exceptions import DatabaseNotInitializedError
 
 
 class TestUserStory1:
-    """Integration test for User Story 1: ML Engineer API workflow."""
+    """Integration test for User Story 1: ML Engineer API workflow.
+
+    User Story 1: ML engineer imports library, calls init() to download database,
+    then uses search() to query CRA expense rules with natural language and filters.
+    Returns SearchResult objects with citations, disclaimers, and expense types.
+
+    See plan.md section "User Story 1: ML Engineer API" for full specification.
+    """
 
     @pytest.fixture(autouse=True)
     def setup_fixture_db(self, tmp_path, monkeypatch):
