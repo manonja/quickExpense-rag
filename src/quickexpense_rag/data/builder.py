@@ -206,7 +206,30 @@ class IndexBuilder:
         Returns:
             Dictionary mapping expense type name (str) to database ID (int)
         """
-        raise NotImplementedError("Phase 2: Populate Expense Types")
+        # Collect unique expense types from all chunks
+        expense_types: set[str] = set()
+        for chunk in chunks:
+            chunk_types = chunk.get("expense_types", [])
+            if chunk_types:
+                expense_types.update(chunk_types)
+
+        # If no expense types found, return empty dict
+        if not expense_types:
+            logger.info("No expense types found in chunks")
+            return {}
+
+        # Insert expense types into table (sorted for deterministic order)
+        for expense_type in sorted(expense_types):
+            conn.execute(
+                "INSERT INTO expense_types (name) VALUES (?)", (expense_type,)
+            )
+
+        # Query back to get name→id mapping
+        cursor = conn.execute("SELECT id, name FROM expense_types")
+        expense_type_map = {name: id for id, name in cursor.fetchall()}
+
+        logger.info(f"Populated {len(expense_type_map)} unique expense types")
+        return expense_type_map
 
     def _embed_chunks_in_batches(
         self, chunks: list[dict[str, Any]], continue_on_error: bool
