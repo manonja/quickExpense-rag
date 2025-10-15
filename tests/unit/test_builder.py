@@ -791,3 +791,304 @@ class TestIntegrityChecks:
         cursor = in_memory_db_with_data.execute("SELECT COUNT(*) FROM rules_fts")
         count = cursor.fetchone()[0]
         assert count == 10
+
+
+class TestBuildFromJsonl:
+    """
+    Tests for build_from_jsonl orchestration method.
+
+    User Story 2: As a library maintainer, I want to build a searchable database
+    from manually downloaded CRA documents so that users can query up-to-date tax rules.
+
+    This method orchestrates the complete build process:
+    1. Setup database schema
+    2. Load and flatten chunks
+    3. Populate expense types
+    4. Embed chunks in batches
+    5. Insert data
+    6. Run integrity checks
+    7. Optimize database
+    8. Create manifest
+    """
+
+    def test_build_from_jsonl_complete_workflow(self, tmp_path):
+        """
+        GIVEN: Valid JSONL file with ParsedDocuments and source files
+        WHEN: build_from_jsonl is called
+        THEN: Creates database, populates tables, validates integrity, creates manifest
+        """
+        # Create test JSONL with 2 documents
+        jsonl_path = tmp_path / "test_chunks.jsonl"
+
+        doc1 = ParsedDocument(
+            title="Test Document 1",
+            document_id="S1-F1-C1",
+            metadata=Metadata(
+                province=["BC"],
+                business_type=["sole_proprietorship"],
+                expense_type=["meals"],
+            ),
+            sections=[
+                Section(
+                    section_title="Section 1",
+                    section_level=1,
+                    content=[
+                        TextChunk(
+                            type="paragraph",
+                            text="Test content 1",
+                            citation_id="S1-F1-C1-p1.1",
+                        )
+                    ],
+                )
+            ],
+        )
+
+        doc2 = ParsedDocument(
+            title="Test Document 2",
+            document_id="S1-F1-C2",
+            metadata=Metadata(
+                province=["ON"],
+                business_type=["corporation"],
+                expense_type=["travel"],
+            ),
+            sections=[
+                Section(
+                    section_title="Section 2",
+                    section_level=1,
+                    content=[
+                        TextChunk(
+                            type="paragraph",
+                            text="Test content 2",
+                            citation_id="S1-F1-C2-p1.1",
+                        )
+                    ],
+                ),
+            ],
+        )
+
+        with open(jsonl_path, "w") as f:
+            f.write(doc1.model_dump_json() + "\n")
+            f.write(doc2.model_dump_json() + "\n")
+
+        # Create source files
+        source_files = [
+            SourceFile(
+                path="data/raw/S1-F1-C1.html",
+                url="https://www.canada.ca/test1",
+                hash="hash1",
+            ),
+            SourceFile(
+                path="data/raw/S1-F1-C2.html",
+                url="https://www.canada.ca/test2",
+                hash="hash2",
+            ),
+        ]
+
+        # Mock encoder
+        mock_encoder = Mock()
+        mock_encoder.embed_documents.return_value = np.random.rand(2, 384).astype(
+            np.float32
+        )
+        mock_encoder.model_name = "BAAI/bge-small-en-v1.5"
+
+        # Create builder and run build
+        db_path = tmp_path / "test.db"
+        manifest_path = tmp_path / "manifest.json"
+
+        builder = IndexBuilder(db_path=str(db_path), encoder=mock_encoder)
+        builder.build_from_jsonl(
+            jsonl_path=str(jsonl_path),
+            manifest_path=str(manifest_path),
+            source_files=source_files,
+            data_version="2024.12",
+            continue_on_error=False,
+        )
+
+        # Verify database file created
+        assert db_path.exists()
+
+        # Verify manifest file created
+        assert manifest_path.exists()
+
+        # Verify database contents
+        conn = sqlite3.connect(str(db_path))
+
+        # Check rules count
+        cursor = conn.execute("SELECT COUNT(*) FROM rules")
+        assert cursor.fetchone()[0] == 2
+
+        # Check expense types populated
+        cursor = conn.execute("SELECT COUNT(*) FROM expense_types")
+        assert cursor.fetchone()[0] == 2
+
+        # Check vectors inserted
+        cursor = conn.execute("SELECT COUNT(*) FROM rules_vec")
+        assert cursor.fetchone()[0] == 2
+
+        # Check FTS synced
+        cursor = conn.execute("SELECT COUNT(*) FROM rules_fts")
+        assert cursor.fetchone()[0] == 2
+
+        # Check metadata table
+        cursor = conn.execute("SELECT data_version FROM metadata")
+        assert cursor.fetchone()[0] == "2024.12"
+
+        conn.close()
+
+        # Verify manifest contents
+        with open(manifest_path) as f:
+            manifest_data = json.load(f)
+            assert manifest_data["version"] == "2024.12"
+            assert manifest_data["chunk_count"] == 2
+            assert "sha256" in manifest_data
+            assert manifest_data["embedding_model"] == "BAAI/bge-small-en-v1.5"
+
+    def test_build_from_jsonl_atomic_rollback_on_error(self, tmp_path):
+        """
+        GIVEN: Encoder that fails during embedding
+        WHEN: build_from_jsonl called with continue_on_error=False
+        THEN: Transaction rolls back, database file not created or empty
+        """
+        # Create test JSONL
+        jsonl_path = tmp_path / "test_chunks.jsonl"
+
+        doc = ParsedDocument(
+            title="Test Document",
+            document_id="S1-F1-C1",
+            metadata=Metadata(),
+            sections=[
+                Section(
+                    section_title="Section 1",
+                    section_level=1,
+                    content=[
+                        TextChunk(
+                            type="paragraph", text="Test content", citation_id="S1-F1-C1-p1.1"
+                        )
+                    ],
+                )
+            ],
+        )
+
+        with open(jsonl_path, "w") as f:
+            f.write(doc.model_dump_json() + "\n")
+
+        source_files = [
+            SourceFile(
+                path="test.html", url="https://www.canada.ca/test", hash="hash1"
+            )
+        ]
+
+        # Mock encoder that fails
+        mock_encoder = Mock()
+        mock_encoder.embed_documents.side_effect = Exception("Embedding service down")
+
+        db_path = tmp_path / "test.db"
+        manifest_path = tmp_path / "manifest.json"
+
+        builder = IndexBuilder(db_path=str(db_path), encoder=mock_encoder)
+
+        # Should raise EmbeddingError
+        with pytest.raises(EmbeddingError):
+            builder.build_from_jsonl(
+                jsonl_path=str(jsonl_path),
+                manifest_path=str(manifest_path),
+                source_files=source_files,
+                data_version="2024.12",
+                continue_on_error=False,
+            )
+
+        # Database should not be created or should be empty
+        if db_path.exists():
+            conn = sqlite3.connect(str(db_path))
+            cursor = conn.execute(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table'"
+            )
+            table_count = cursor.fetchone()[0]
+            conn.close()
+            # Either no tables or only metadata table
+            assert table_count <= 1
+
+        # Manifest should not be created
+        assert not manifest_path.exists()
+
+    def test_build_from_jsonl_continue_on_error_creates_partial_database(
+        self, tmp_path
+    ):
+        """
+        GIVEN: Encoder that fails on some batches
+        WHEN: build_from_jsonl called with continue_on_error=True
+        THEN: Creates database with successfully embedded chunks only
+        """
+        # Create test JSONL with 64 chunks (2 batches of 32)
+        jsonl_path = tmp_path / "test_chunks.jsonl"
+
+        docs = []
+        for i in range(64):
+            doc = ParsedDocument(
+                title=f"Test Document {i}",
+                document_id=f"S1-F1-C{i}",
+                metadata=Metadata(expense_type=["meals"]),
+                sections=[
+                    Section(
+                        section_title="Section 1",
+                        section_level=1,
+                        content=[
+                            TextChunk(
+                                type="paragraph",
+                                text=f"Test content {i}",
+                                citation_id=f"S1-F1-C{i}-p1.1",
+                            )
+                        ],
+                    )
+                ],
+            )
+            docs.append(doc)
+
+        with open(jsonl_path, "w") as f:
+            for doc in docs:
+                f.write(doc.model_dump_json() + "\n")
+
+        source_files = [
+            SourceFile(
+                path=f"data/raw/S1-F1-C{i}.html",
+                url=f"https://www.canada.ca/test{i}",
+                hash=f"hash{i}",
+            )
+            for i in range(64)
+        ]
+
+        # Mock encoder that fails on second batch
+        mock_encoder = Mock()
+        mock_encoder.embed_documents.side_effect = [
+            np.random.rand(32, 384).astype(np.float32),  # Batch 1: success
+            Exception("Timeout"),  # Batch 2: failure
+        ]
+        mock_encoder.model_name = "BAAI/bge-small-en-v1.5"
+
+        db_path = tmp_path / "test.db"
+        manifest_path = tmp_path / "manifest.json"
+
+        builder = IndexBuilder(db_path=str(db_path), encoder=mock_encoder)
+        builder.build_from_jsonl(
+            jsonl_path=str(jsonl_path),
+            manifest_path=str(manifest_path),
+            source_files=source_files,
+            data_version="2024.12",
+            continue_on_error=True,
+        )
+
+        # Database created with partial data
+        assert db_path.exists()
+
+        conn = sqlite3.connect(str(db_path))
+        cursor = conn.execute("SELECT COUNT(*) FROM rules")
+        count = cursor.fetchone()[0]
+        conn.close()
+
+        # Only first batch (32 chunks) should be inserted
+        assert count == 32
+
+        # Manifest should reflect partial count
+        with open(manifest_path) as f:
+            manifest_data = json.load(f)
+            assert manifest_data["chunk_count"] == 32
