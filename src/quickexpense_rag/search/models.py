@@ -96,6 +96,7 @@ class SourceFile(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     path: str
+    url: HttpUrl
     hash: str
 
 
