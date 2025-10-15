@@ -66,6 +66,21 @@ class Settings(BaseSettings):
         default=30, description="Timeout in seconds for network requests."
     )
 
+    # Gemini settings (for indexing pipeline only, not runtime)
+    gemini_api_key: str = Field(
+        default="", description="Gemini API key for document parsing (indexing only)."
+    )
+    gemini_model: str = Field(
+        default="gemini-2.0-flash-exp",
+        description="Gemini model for document parsing.",
+    )
+    gemini_temperature: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=1.0,
+        description="Gemini temperature for parsing (0.0 = deterministic).",
+    )
+
     # Database verification settings (bundled with library)
     database_sha256: str = Field(
         default="",  # Will be updated when production database is built
