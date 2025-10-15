@@ -301,3 +301,111 @@ class TestPopulateExpenseTypes:
         cursor = in_memory_db.execute("SELECT COUNT(*) FROM expense_types")
         count = cursor.fetchone()[0]
         assert count == 3
+
+
+class TestEmbedChunksInBatches:
+    """Tests for _embed_chunks_in_batches method."""
+
+    def test_embed_chunks_in_batches_with_mock_encoder(self, tmp_path):
+        """
+        GIVEN: 100 chunks and mocked encoder
+        WHEN: _embed_chunks_in_batches is called
+        THEN: Returns list of (chunk, embedding) tuples, processes in batches of 32
+        """
+        # Create 100 test chunks
+        chunks = [{"content": f"Test content {i}", "citation_id": f"S1-F1-C1-p{i}"} for i in range(100)]
+
+        # Mock encoder that returns fake embeddings
+        mock_encoder = Mock()
+        mock_encoder.embed_documents.return_value = np.random.rand(32, 384).astype(np.float32)
+
+        builder = IndexBuilder(db_path=str(tmp_path / "test.db"), encoder=mock_encoder)
+        results = builder._embed_chunks_in_batches(chunks, continue_on_error=False)
+
+        # Verify results
+        assert len(results) == 100
+        assert all(isinstance(item, tuple) for item in results)
+        assert all(len(item) == 2 for item in results)
+
+        # Verify first result structure
+        chunk, embedding = results[0]
+        assert isinstance(chunk, dict)
+        assert isinstance(embedding, np.ndarray)
+        assert embedding.shape == (384,)
+        assert embedding.dtype == np.float32
+
+        # Verify encoder called 4 times (100 chunks / 32 batch_size = 3.125 → 4 batches)
+        # Batches: 32, 32, 32, 4
+        assert mock_encoder.embed_documents.call_count == 4
+
+    def test_embed_chunks_continue_on_error_true(self, tmp_path):
+        """
+        GIVEN: Encoder that fails on batch 2
+        WHEN: _embed_chunks_in_batches called with continue_on_error=True
+        THEN: Logs error, skips failed batch, returns partial results
+        """
+        # Create 96 chunks (3 batches of 32)
+        chunks = [{"content": f"Test content {i}", "citation_id": f"S1-F1-C1-p{i}"} for i in range(96)]
+
+        # Mock encoder that fails on second call
+        mock_encoder = Mock()
+        mock_encoder.embed_documents.side_effect = [
+            np.random.rand(32, 384).astype(np.float32),  # Batch 1: success
+            Exception("Embedding service timeout"),      # Batch 2: failure
+            np.random.rand(32, 384).astype(np.float32),  # Batch 3: success
+        ]
+
+        builder = IndexBuilder(db_path=str(tmp_path / "test.db"), encoder=mock_encoder)
+
+        # Should not raise exception, returns partial results
+        results = builder._embed_chunks_in_batches(chunks, continue_on_error=True)
+
+        # Only batches 1 and 3 succeeded (64 chunks total)
+        assert len(results) == 64
+
+        # Verify all results have correct structure
+        for chunk, embedding in results:
+            assert isinstance(chunk, dict)
+            assert isinstance(embedding, np.ndarray)
+            assert embedding.shape == (384,)
+
+    def test_embed_chunks_continue_on_error_false(self, tmp_path):
+        """
+        GIVEN: Encoder that fails on batch 2
+        WHEN: _embed_chunks_in_batches called with continue_on_error=False
+        THEN: Raises EmbeddingError
+        """
+        # Create 96 chunks
+        chunks = [{"content": f"Test content {i}", "citation_id": f"S1-F1-C1-p{i}"} for i in range(96)]
+
+        # Mock encoder that fails on second call
+        mock_encoder = Mock()
+        mock_encoder.embed_documents.side_effect = [
+            np.random.rand(32, 384).astype(np.float32),  # Batch 1: success
+            Exception("Embedding service timeout"),      # Batch 2: failure
+        ]
+
+        builder = IndexBuilder(db_path=str(tmp_path / "test.db"), encoder=mock_encoder)
+
+        # Should raise EmbeddingError
+        with pytest.raises(EmbeddingError) as exc_info:
+            builder._embed_chunks_in_batches(chunks, continue_on_error=False)
+
+        assert "Embedding failed" in str(exc_info.value)
+
+    def test_embed_chunks_batch_size_boundary(self, tmp_path):
+        """
+        GIVEN: Exactly 32 chunks (one batch)
+        WHEN: _embed_chunks_in_batches is called
+        THEN: Encoder called exactly once
+        """
+        chunks = [{"content": f"Test {i}", "citation_id": f"S1-F1-C1-p{i}"} for i in range(32)]
+
+        mock_encoder = Mock()
+        mock_encoder.embed_documents.return_value = np.random.rand(32, 384).astype(np.float32)
+
+        builder = IndexBuilder(db_path=str(tmp_path / "test.db"), encoder=mock_encoder)
+        results = builder._embed_chunks_in_batches(chunks, continue_on_error=False)
+
+        assert len(results) == 32
+        assert mock_encoder.embed_documents.call_count == 1
