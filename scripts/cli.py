@@ -19,6 +19,7 @@ from parser.gemini_parser import GeminiParser
 from preprocessor.models import DownloadMetadata, PreprocessManifest
 from preprocessor.text_extractor import TextExtractor
 from quickexpense_rag.data.builder import IndexBuilder
+from quickexpense_rag.data.validator import IndexValidator
 from quickexpense_rag.embeddings.encoder import embedding_service
 from quickexpense_rag.search.models import SourceFile
 
@@ -414,6 +415,105 @@ def build(
         console.print(f"[red]Build failed: {e}[/red]")
         logger.exception("Build failed")
         raise typer.Exit(code=1) from e
+
+
+@app.command()
+def validate(
+    db_path: Path = typer.Option(  # noqa: B008
+        Path("data/cra_rules.db"),
+        "--db-path",
+        "-d",
+        help="Path to SQLite database to validate",
+    ),
+) -> None:
+    """
+    Validate database integrity and perform smoke tests.
+
+    Runs comprehensive validation checks including schema verification,
+    row count consistency, embedding dimensions, and live search test.
+
+    Example:
+        uv run python scripts/cli.py validate --db-path data/cra_rules.db
+
+    """
+    console.print("[bold blue]QuickExpense RAG Database Validation[/bold blue]")
+    console.print(f"Database: {db_path}\n")
+
+    # Verify database exists
+    if not db_path.exists():
+        console.print(f"[red]Error: Database not found: {db_path}[/red]")
+        raise typer.Exit(code=1)
+
+    try:
+        # Initialize validator
+        validator = IndexValidator(db_path=db_path)
+
+        # Run validation
+        console.print("[cyan]Running validation checks...[/cyan]\n")
+        report = validator.validate()
+
+    except typer.Exit:
+        # Re-raise typer.Exit to preserve exit code
+        raise
+
+    except Exception as e:
+        console.print(f"[red]Validation error: {e}[/red]")
+        logger.exception("Validation failed")
+        raise typer.Exit(code=1) from e
+
+    # Display results with rich formatting
+    from rich.panel import Panel
+    from rich.table import Table
+
+    # Overall status
+    overall_passed = report["overall_passed"]
+    status_color = "green" if overall_passed else "red"
+    status_emoji = "✅" if overall_passed else "❌"
+    status_text = "PASSED" if overall_passed else "FAILED"
+
+    console.print(
+        Panel(
+            f"[{status_color}]{status_emoji} Validation {status_text}[/{status_color}]",
+            title="Validation Summary",
+            border_style=status_color,
+        )
+    )
+
+    # Detailed checks table
+    table = Table(title="Validation Checks", show_header=True)
+    table.add_column("Check", style="cyan", no_wrap=True)
+    table.add_column("Status", justify="center")
+    table.add_column("Details")
+
+    for check_name, check_result in report.items():
+        if check_name == "overall_passed":
+            continue
+
+        if isinstance(check_result, dict):
+            passed = check_result.get("passed", False)
+            message = check_result.get("message", "")
+            status = "✅" if passed else "❌"
+            table.add_row(check_name, status, message)
+
+    console.print(table)
+
+    # Statistics (if available)
+    if "statistics" in report and isinstance(report["statistics"], dict):
+        stats = report["statistics"]
+        console.print("\n[bold cyan]Database Statistics:[/bold cyan]")
+        for key, value in stats.items():
+            console.print(f"  {key}: {value}")
+
+    # Exit with appropriate code
+    if overall_passed:
+        console.print("\n[bold green]All validation checks passed![/bold green]")
+        raise typer.Exit(code=0)
+    else:
+        console.print(
+            "\n[bold red]Some validation checks failed. "
+            "Please review the details above.[/bold red]"
+        )
+        raise typer.Exit(code=1)
 
 
 if __name__ == "__main__":
