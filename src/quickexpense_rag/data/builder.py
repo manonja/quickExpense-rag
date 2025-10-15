@@ -94,7 +94,66 @@ class IndexBuilder:
             EmbeddingError: Embedding generation failed (if continue_on_error=False)
             sqlite3.IntegrityError: Database constraint violation
         """
-        raise NotImplementedError("Phase 6: Orchestration")
+        logger.info(f"Starting index build: {jsonl_path} → {self.db_path}")
+        logger.info(f"Data version: {data_version}, continue_on_error: {continue_on_error}")
+
+        # Create database connection
+        conn = sqlite3.connect(str(self.db_path))
+
+        try:
+            # Phase 1: Setup database schema and metadata
+            logger.info("Phase 1: Setting up database schema...")
+            self._setup_database(conn, data_version)
+
+            # Phase 2: Load and flatten chunks from JSONL
+            logger.info("Phase 2: Loading and flattening chunks...")
+            chunks = self._load_and_flatten_chunks(jsonl_path, source_files)
+
+            # Phase 3: Populate expense types table
+            logger.info("Phase 3: Populating expense types...")
+            expense_type_map = self._populate_expense_types(conn, chunks)
+
+            # Phase 4: Generate embeddings in batches
+            logger.info("Phase 4: Generating embeddings...")
+            embedded_chunks = self._embed_chunks_in_batches(chunks, continue_on_error)
+
+            # Phase 5: Insert data into database (within transaction)
+            logger.info("Phase 5: Inserting data...")
+            self._insert_data(conn, embedded_chunks, expense_type_map, source_files)
+
+            # Phase 6: Run integrity checks
+            logger.info("Phase 6: Running integrity checks...")
+            self._run_integrity_checks(conn, expected_count=len(embedded_chunks))
+
+            # Phase 7: Optimize database
+            logger.info("Phase 7: Optimizing database...")
+            optimize_database(conn)
+
+            # Commit transaction
+            conn.commit()
+            logger.info("Database build complete, transaction committed")
+
+        except Exception as e:
+            # Rollback on any error
+            conn.rollback()
+            logger.error(f"Build failed, rolling back: {e}")
+            raise
+
+        finally:
+            conn.close()
+
+        # Phase 8: Calculate database hash and create manifest
+        logger.info("Phase 8: Creating manifest...")
+        db_hash = self._calculate_file_hash(self.db_path)
+        self._create_manifest(
+            manifest_path=manifest_path,
+            db_hash=db_hash,
+            chunk_count=len(embedded_chunks),
+            source_files=tuple(source_files),
+            data_version=data_version,
+        )
+
+        logger.info(f"Index build complete: {len(embedded_chunks)} chunks indexed")
 
     def _setup_database(self, conn: sqlite3.Connection, data_version: str) -> None:
         """
@@ -104,7 +163,29 @@ class IndexBuilder:
             conn: SQLite connection
             data_version: Version string to store in metadata table
         """
-        raise NotImplementedError("Phase 6: Orchestration")
+        # Load sqlite-vec extension before creating tables
+        try:
+            conn.enable_load_extension(True)
+        except AttributeError:
+            # Extension loading not supported in this build
+            pass
+
+        import sqlite_vec
+
+        sqlite_vec.load(conn)
+
+        try:
+            conn.enable_load_extension(False)
+        except AttributeError:
+            pass
+
+        # Create all tables, indexes, and triggers
+        conn.executescript(CREATE_TABLES_SQL)
+
+        # Initialize metadata table with version info
+        init_metadata(conn, data_version, self.encoder.model_name)
+
+        logger.info("Database schema initialized")
 
     def _load_and_flatten_chunks(
         self, jsonl_path: str, source_files: list[SourceFile]
@@ -341,9 +422,9 @@ class IndexBuilder:
             )
             rule_id = cursor.lastrowid
 
-            # 2. Insert into rules_vec table
+            # 2. Insert into rules_vec table (vec0 uses implicit rowid, not explicit id)
             conn.execute(
-                "INSERT INTO rules_vec (id, embedding) VALUES (?, ?)",
+                "INSERT INTO rules_vec (rowid, embedding) VALUES (?, ?)",
                 (rule_id, embedding.tobytes()),
             )
 
@@ -438,7 +519,23 @@ class IndexBuilder:
             source_files: Tuple of SourceFile models
             data_version: Version string (YYYY.MM format)
         """
-        raise NotImplementedError("Phase 6: Orchestration")
+        from quickexpense_rag.data.schema import SCHEMA_VERSION
+
+        manifest = IndexManifest(
+            version=data_version,
+            schema_version=SCHEMA_VERSION,
+            source_files=source_files,
+            embedding_model=self.encoder.model_name,
+            chunk_count=chunk_count,
+            created_at=datetime.now(timezone.utc),
+            sha256=db_hash,
+        )
+
+        # Write manifest to file
+        with open(manifest_path, "w") as f:
+            f.write(manifest.model_dump_json(indent=2))
+
+        logger.info(f"Manifest created: {manifest_path}")
 
     @staticmethod
     def _calculate_file_hash(file_path: Path) -> str:
@@ -451,4 +548,11 @@ class IndexBuilder:
         Returns:
             Hexadecimal SHA256 hash string
         """
-        raise NotImplementedError("Phase 6: Orchestration")
+        sha256 = hashlib.sha256()
+
+        with open(file_path, "rb") as f:
+            # Read file in chunks to handle large files efficiently
+            for chunk in iter(lambda: f.read(8192), b""):
+                sha256.update(chunk)
+
+        return sha256.hexdigest()

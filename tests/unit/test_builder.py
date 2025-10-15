@@ -913,6 +913,21 @@ class TestBuildFromJsonl:
         # Verify database contents
         conn = sqlite3.connect(str(db_path))
 
+        # Load sqlite-vec extension for querying vec0 table
+        try:
+            conn.enable_load_extension(True)
+        except AttributeError:
+            pass
+
+        import sqlite_vec
+
+        sqlite_vec.load(conn)
+
+        try:
+            conn.enable_load_extension(False)
+        except AttributeError:
+            pass
+
         # Check rules count
         cursor = conn.execute("SELECT COUNT(*) FROM rules")
         assert cursor.fetchone()[0] == 2
@@ -929,8 +944,8 @@ class TestBuildFromJsonl:
         cursor = conn.execute("SELECT COUNT(*) FROM rules_fts")
         assert cursor.fetchone()[0] == 2
 
-        # Check metadata table
-        cursor = conn.execute("SELECT data_version FROM metadata")
+        # Check metadata table (key-value pairs)
+        cursor = conn.execute("SELECT value FROM metadata WHERE key = 'data_version'")
         assert cursor.fetchone()[0] == "2024.12"
 
         conn.close()
@@ -981,6 +996,7 @@ class TestBuildFromJsonl:
         # Mock encoder that fails
         mock_encoder = Mock()
         mock_encoder.embed_documents.side_effect = Exception("Embedding service down")
+        mock_encoder.model_name = "BAAI/bge-small-en-v1.5"
 
         db_path = tmp_path / "test.db"
         manifest_path = tmp_path / "manifest.json"
@@ -997,16 +1013,31 @@ class TestBuildFromJsonl:
                 continue_on_error=False,
             )
 
-        # Database should not be created or should be empty
+        # Database file may exist (schema created) but no data should be inserted
+        # The rollback prevents data from being committed
         if db_path.exists():
             conn = sqlite3.connect(str(db_path))
-            cursor = conn.execute(
-                "SELECT COUNT(*) FROM sqlite_master WHERE type='table'"
-            )
-            table_count = cursor.fetchone()[0]
+
+            # Load sqlite-vec extension
+            try:
+                conn.enable_load_extension(True)
+            except AttributeError:
+                pass
+
+            import sqlite_vec
+
+            sqlite_vec.load(conn)
+
+            try:
+                conn.enable_load_extension(False)
+            except AttributeError:
+                pass
+
+            # Check that rules table has no rows (rollback worked)
+            cursor = conn.execute("SELECT COUNT(*) FROM rules")
+            rule_count = cursor.fetchone()[0]
             conn.close()
-            # Either no tables or only metadata table
-            assert table_count <= 1
+            assert rule_count == 0, "Transaction should have rolled back, no rules should be inserted"
 
         # Manifest should not be created
         assert not manifest_path.exists()
@@ -1081,6 +1112,22 @@ class TestBuildFromJsonl:
         assert db_path.exists()
 
         conn = sqlite3.connect(str(db_path))
+
+        # Load sqlite-vec extension
+        try:
+            conn.enable_load_extension(True)
+        except AttributeError:
+            pass
+
+        import sqlite_vec
+
+        sqlite_vec.load(conn)
+
+        try:
+            conn.enable_load_extension(False)
+        except AttributeError:
+            pass
+
         cursor = conn.execute("SELECT COUNT(*) FROM rules")
         count = cursor.fetchone()[0]
         conn.close()
