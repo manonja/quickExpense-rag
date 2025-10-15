@@ -52,6 +52,7 @@ class _EmbeddingService:
 
         self.device = device
         self.batch_size = batch_size
+        self.model_name = model_name
 
         try:
             self.model: SentenceTransformer = SentenceTransformer(
