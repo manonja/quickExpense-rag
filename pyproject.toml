@@ -30,6 +30,7 @@ dependencies = [
     "numpy>=1.24,<2.0",
     "sentence-transformers>=2.2",
     "torch>=2.1,<2.3",
+    "google-generativeai>=0.8.5",
 ]
 
 [project.optional-dependencies]
