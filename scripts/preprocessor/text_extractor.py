@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 
 from bs4 import BeautifulSoup
+import pdfplumber
 
 from src.quickexpense_rag.exceptions import ParsingError
 
@@ -89,6 +90,63 @@ class TextExtractor:
 
         except Exception as e:
             msg = f"Failed to parse HTML file {html_path}: {e}"
+            logger.error(msg)
+            raise ParsingError(msg) from e
+
+    def extract_from_pdf(self, pdf_path: Path) -> str:
+        """
+        Extract clean text from PDF using pdfplumber.
+
+        Strategy (80/20 approach):
+        1. Iterate pages in order
+        2. Use pdfplumber's default layout extraction
+        3. Join pages with newlines
+        4. Accept minor ordering issues in multi-column layouts (LLM can handle)
+
+        Args:
+            pdf_path: Path to PDF file
+
+        Returns:
+            Clean text preserving reading order
+
+        Raises:
+            FileNotFoundError: If file doesn't exist
+            ParsingError: If PDF is unparseable
+        """
+        if not pdf_path.exists():
+            msg = f"File not found: {pdf_path}"
+            raise FileNotFoundError(msg)
+
+        try:
+            pages_text = []
+
+            # Open PDF and extract text from each page
+            with pdfplumber.open(pdf_path) as pdf:
+                logger.debug("Extracting text from %d pages in %s", len(pdf.pages), pdf_path.name)
+
+                for page_num, page in enumerate(pdf.pages, start=1):
+                    # Extract text using pdfplumber's default layout
+                    page_text = page.extract_text()
+
+                    if page_text:
+                        pages_text.append(page_text)
+                        logger.debug("Extracted %d chars from page %d", len(page_text), page_num)
+                    else:
+                        logger.warning("No text extracted from page %d in %s", page_num, pdf_path.name)
+
+            # Join pages with double newlines (paragraph break)
+            text = "\n\n".join(pages_text)
+
+            # Normalize whitespace
+            text = self._normalize_whitespace(text)
+
+            if not text:
+                logger.warning("No text extracted from PDF: %s", pdf_path)
+
+            return text
+
+        except Exception as e:
+            msg = f"Failed to parse PDF file {pdf_path}: {e}"
             logger.error(msg)
             raise ParsingError(msg) from e
 
