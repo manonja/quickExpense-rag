@@ -418,6 +418,260 @@ def build(
 
 
 @app.command()
+def pipeline(
+    input_dir: Path = typer.Option(  # noqa: B008
+        Path("data/raw"),
+        "--input-dir",
+        "-i",
+        help="Directory containing HTML/PDF files",
+    ),
+    preprocessed_dir: Path = typer.Option(  # noqa: B008
+        Path("data/preprocessed"),
+        "--preprocessed-dir",
+        help="Directory for preprocessed text files",
+    ),
+    processed_dir: Path = typer.Option(  # noqa: B008
+        Path("data/processed"),
+        "--processed-dir",
+        help="Directory for processed JSONL files",
+    ),
+    output_db: Path = typer.Option(  # noqa: B008
+        Path("data/cra_rules.db"),
+        "--output-db",
+        "-o",
+        help="Output SQLite database path",
+    ),
+    output_manifest: Path = typer.Option(  # noqa: B008
+        Path("data/manifest.json"),
+        "--output-manifest",
+        help="Output manifest.json path",
+    ),
+    data_version: str = typer.Option(
+        "2024.12",
+        "--data-version",
+        "-v",
+        help="Data version string (YYYY.MM format)",
+    ),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        "-f",
+        help="Skip confirmation prompts and continue on non-critical errors",
+    ),
+) -> None:
+    """
+    Run full indexing pipeline: preprocess → parse → build → validate.
+
+    Orchestrates the complete workflow from raw HTML/PDF files to
+    validated searchable database. Stateless execution - always
+    runs from beginning and overwrites existing artifacts.
+
+    Stages:
+    1. Preprocess: HTML/PDF → clean text
+    2. Parse: Text → structured JSONL (requires GEMINI_API_KEY)
+    3. Build: JSONL → SQLite database with embeddings
+    4. Validate: Smoke tests for database integrity
+
+    Example:
+        export GEMINI_API_KEY="your-key-here"
+        uv run python scripts/cli.py pipeline --input-dir data/raw
+
+    """
+    console.print("[bold blue]QuickExpense RAG Full Pipeline[/bold blue]")
+    console.print(f"Input: {input_dir}")
+    console.print(f"Output DB: {output_db}\n")
+
+    # Check for existing artifacts
+    existing_artifacts = []
+    if preprocessed_dir.exists() and any(preprocessed_dir.iterdir()):
+        existing_artifacts.append(f"Preprocessed directory: {preprocessed_dir}")
+    if processed_dir.exists() and any(processed_dir.iterdir()):
+        existing_artifacts.append(f"Processed directory: {processed_dir}")
+    if output_db.exists():
+        existing_artifacts.append(f"Database: {output_db}")
+    if output_manifest.exists():
+        existing_artifacts.append(f"Manifest: {output_manifest}")
+
+    # Prompt for confirmation if artifacts exist (unless --force)
+    if existing_artifacts and not force:
+        console.print(
+            "[yellow]Warning: The following artifacts will be overwritten:[/yellow]"
+        )
+        for artifact in existing_artifacts:
+            console.print(f"  - {artifact}")
+
+        if not typer.confirm("\nContinue and overwrite?"):
+            console.print("[yellow]Pipeline cancelled by user.[/yellow]")
+            raise typer.Exit(code=0)
+
+    # Stage 1: Preprocess
+    console.print("\n[bold cyan]Stage 1/4: Preprocessing HTML/PDF files[/bold cyan]")
+    try:
+        # Call preprocess logic directly instead of invoking command
+        # This avoids subprocess complexity and allows fail-fast
+        if not input_dir.exists():
+            console.print(f"[red]Error: Input directory not found: {input_dir}[/red]")
+            raise typer.Exit(code=1)
+
+        preprocessed_dir.mkdir(parents=True, exist_ok=True)
+
+        # Find files
+        html_files = list(input_dir.glob("*.html"))
+        pdf_files = list(input_dir.glob("*.pdf"))
+        all_files = html_files + pdf_files
+
+        if not all_files:
+            console.print(
+                f"[red]Error: No HTML or PDF files found in {input_dir}[/red]"
+            )
+            raise typer.Exit(code=1)
+
+        console.print(f"Found {len(all_files)} files to preprocess")
+
+        # Preprocess files
+        from preprocessor.text_extractor import TextExtractor
+
+        extractor = TextExtractor()
+        manifest_docs: list[DownloadMetadata] = []
+
+        for input_file in track(all_files, description="Preprocessing..."):
+            output_file = preprocessed_dir / f"{input_file.stem}.txt"
+            sha256 = extractor.preprocess_file(
+                input_file, output_file, compute_hash=True
+            )
+            manifest_docs.append(
+                DownloadMetadata(
+                    filename=input_file.name,
+                    source_url="https://www.canada.ca/...",
+                    downloaded_at=datetime.now(timezone.utc),
+                    sha256=sha256 or "",
+                )
+            )
+
+        # Create manifest
+        manifest = PreprocessManifest(documents=manifest_docs)
+        manifest_path = input_dir / "manifest.json"
+        with manifest_path.open("w", encoding="utf-8") as f:
+            json.dump(manifest.model_dump(mode="json"), f, indent=2, default=str)
+
+        console.print(f"✅ Preprocessed {len(all_files)} files\n")
+
+    except typer.Exit:
+        raise
+    except Exception as e:
+        console.print(f"[red]Preprocessing failed: {e}[/red]")
+        logger.exception("Preprocessing failed")
+        raise typer.Exit(code=1) from e
+
+    # Stage 2: Parse
+    console.print("[bold cyan]Stage 2/4: Parsing with Gemini Flash[/bold cyan]")
+
+    # Check for API key
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        console.print(
+            "[red]Error: GEMINI_API_KEY environment variable not set[/red]\n"
+            "Please set your Gemini API key:\n"
+            "  export GEMINI_API_KEY='your-key-here'"
+        )
+        raise typer.Exit(code=1)
+
+    try:
+        processed_dir.mkdir(parents=True, exist_ok=True)
+        chunks_file = processed_dir / "chunks.jsonl"
+
+        txt_files = sorted(preprocessed_dir.glob("*.txt"))
+        console.print(f"Found {len(txt_files)} text files to parse")
+
+        parser = GeminiParser(api_key=api_key)
+        success_count = 0
+
+        with chunks_file.open("w", encoding="utf-8") as outfile:
+            for txt_file in track(txt_files, description="Parsing documents..."):
+                text_content = txt_file.read_text(encoding="utf-8")
+                parsed_doc = parser.parse_document(
+                    text=text_content, source_filename=txt_file.name
+                )
+                json_str = parsed_doc.model_dump_json()
+                outfile.write(json_str + "\n")
+                success_count += 1
+
+        console.print(f"✅ Parsed {success_count} files\n")
+
+    except typer.Exit:
+        raise
+    except Exception as e:
+        console.print(f"[red]Parsing failed: {e}[/red]")
+        logger.exception("Parsing failed")
+        raise typer.Exit(code=1) from e
+
+    # Stage 3: Build
+    console.print("[bold cyan]Stage 3/4: Building searchable database[/bold cyan]")
+    try:
+        # Load source files from manifest
+        manifest_file = input_dir / "manifest.json"
+        with manifest_file.open() as f:
+            manifest_data = json.load(f)
+
+        source_files = []
+        for doc in manifest_data.get("documents", []):
+            source_files.append(
+                SourceFile(
+                    path=doc["filename"],
+                    url=doc["source_url"],
+                    hash=doc["sha256"],
+                )
+            )
+
+        # Build index
+        output_db.parent.mkdir(parents=True, exist_ok=True)
+        output_manifest.parent.mkdir(parents=True, exist_ok=True)
+
+        builder = IndexBuilder(db_path=str(output_db), encoder=embedding_service)
+        builder.build_from_jsonl(
+            jsonl_path=str(chunks_file),
+            manifest_path=str(output_manifest),
+            source_files=source_files,
+            data_version=data_version,
+            continue_on_error=force,
+        )
+
+        console.print(f"✅ Database created: {output_db}\n")
+
+    except typer.Exit:
+        raise
+    except Exception as e:
+        console.print(f"[red]Build failed: {e}[/red]")
+        logger.exception("Build failed")
+        raise typer.Exit(code=1) from e
+
+    # Stage 4: Validate
+    console.print("[bold cyan]Stage 4/4: Validating database[/bold cyan]")
+    try:
+        validator = IndexValidator(db_path=output_db)
+        report = validator.validate()
+
+        if report["overall_passed"]:
+            console.print("✅ Validation passed\n")
+        else:
+            console.print("[yellow]⚠️  Some validation checks failed[/yellow]\n")
+
+    except Exception as e:
+        console.print(f"[yellow]Warning: Validation failed: {e}[/yellow]")
+        logger.exception("Validation failed")
+        # Don't fail the pipeline if validation fails
+
+    # Success summary
+    console.print("[bold green]Pipeline Complete![/bold green]")
+    console.print(f"✅ Database: {output_db}")
+    console.print(f"✅ Manifest: {output_manifest}")
+
+    # Show database size
+    db_size_mb = output_db.stat().st_size / (1024 * 1024)
+    console.print(f"📊 Database size: {db_size_mb:.2f} MB")
+
+
+@app.command()
 def validate(
     db_path: Path = typer.Option(  # noqa: B008
         Path("data/cra_rules.db"),
