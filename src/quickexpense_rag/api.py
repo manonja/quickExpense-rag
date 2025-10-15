@@ -100,32 +100,11 @@ def search(
             "Database not initialized. Please call init() before using search()."
         )
 
-    # Convert string parameters to enums if provided
-    province_enum: Province | None = None
-    if province is not None:
-        try:
-            province_enum = Province(province)
-        except ValueError as e:
-            valid_provinces = [p.value for p in Province]
-            raise ValueError(
-                f"Invalid province '{province}'. Valid options: {valid_provinces}"
-            ) from e
-
-    business_type_enum: BusinessType | None = None
-    if business_type is not None:
-        try:
-            business_type_enum = BusinessType(business_type)
-        except ValueError as e:
-            valid_types = [bt.value for bt in BusinessType]
-            raise ValueError(
-                f"Invalid business_type '{business_type}'. Valid options: {valid_types}"
-            ) from e
-
-    # Construct ExpenseQuery (Pydantic will validate)
+    # Construct ExpenseQuery (Pydantic will validate all parameters including enums)
     query_obj = ExpenseQuery(
         query=query,
-        province=province_enum,
-        business_type=business_type_enum,
+        province=Province(province) if province else None,
+        business_type=BusinessType(business_type) if business_type else None,
         expense_types=expense_types,
         top_k=top_k,
     )

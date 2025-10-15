@@ -113,7 +113,7 @@ class TestSearch:
         """
         GIVEN: Library is initialized
         WHEN: search() is called with invalid province
-        THEN: ValueError is raised with helpful message showing valid options
+        THEN: ValueError is raised by enum validation
         """
         # Setup mock search engine to verify it's initialized
         api._search_engine = Mock()
@@ -126,11 +126,10 @@ class TestSearch:
                 expense_types=["meals"],
             )
 
-        # Verify error mentions the invalid field and shows valid options
+        # Verify error mentions the invalid value and field
         error_str = str(exc_info.value)
-        assert "province" in error_str.lower()
         assert "INVALID" in error_str
-        assert "valid options" in error_str.lower()
+        assert "Province" in error_str or "province" in error_str.lower()
 
     def test_search_validation_query_too_short(self):
         """
