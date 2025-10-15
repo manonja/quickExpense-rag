@@ -199,3 +199,105 @@ class TestLoadAndFlattenChunks:
 
         assert "S1-F1-C1-p1.1" in str(exc_info.value)
         assert "duplicate" in str(exc_info.value).lower()
+
+
+class TestPopulateExpenseTypes:
+    """Tests for _populate_expense_types method."""
+
+    @pytest.fixture
+    def in_memory_db(self):
+        """Create in-memory SQLite database with schema."""
+        conn = sqlite3.connect(":memory:")
+
+        # Create expense_types table
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS expense_types (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL
+            )
+        """)
+
+        yield conn
+        conn.close()
+
+    def test_populate_expense_types_creates_table_entries(self, in_memory_db, tmp_path):
+        """
+        GIVEN: List of chunks with various expense types
+        WHEN: _populate_expense_types is called
+        THEN: expense_types table populated with unique types, returns name→id map
+        """
+        # Create chunks with different expense types
+        chunks = [
+            {"expense_types": ["meals", "travel"]},
+            {"expense_types": ["vehicle"]},
+            {"expense_types": ["meals", "home_office"]},
+            {"expense_types": []},  # Empty expense types
+        ]
+
+        builder = IndexBuilder(db_path=str(tmp_path / "test.db"), encoder=Mock())
+        expense_type_map = builder._populate_expense_types(in_memory_db, chunks)
+
+        # Verify returned mapping
+        assert isinstance(expense_type_map, dict)
+        assert "meals" in expense_type_map
+        assert "travel" in expense_type_map
+        assert "vehicle" in expense_type_map
+        assert "home_office" in expense_type_map
+
+        # Verify all values are integers (database IDs)
+        assert all(isinstance(v, int) for v in expense_type_map.values())
+
+        # Verify unique IDs
+        assert len(set(expense_type_map.values())) == len(expense_type_map)
+
+        # Verify database table was populated
+        cursor = in_memory_db.execute("SELECT name FROM expense_types ORDER BY name")
+        db_types = [row[0] for row in cursor.fetchall()]
+        assert db_types == ["home_office", "meals", "travel", "vehicle"]
+
+    def test_populate_expense_types_handles_empty_chunks(self, in_memory_db, tmp_path):
+        """
+        GIVEN: Chunks with no expense types
+        WHEN: _populate_expense_types is called
+        THEN: Returns empty dict without error
+        """
+        chunks = [
+            {"expense_types": []},
+            {"expense_types": []},
+        ]
+
+        builder = IndexBuilder(db_path=str(tmp_path / "test.db"), encoder=Mock())
+        expense_type_map = builder._populate_expense_types(in_memory_db, chunks)
+
+        assert expense_type_map == {}
+
+        # Verify table is empty
+        cursor = in_memory_db.execute("SELECT COUNT(*) FROM expense_types")
+        count = cursor.fetchone()[0]
+        assert count == 0
+
+    def test_populate_expense_types_handles_duplicates_across_chunks(
+        self, in_memory_db, tmp_path
+    ):
+        """
+        GIVEN: Multiple chunks with overlapping expense types
+        WHEN: _populate_expense_types is called
+        THEN: Each unique type inserted only once
+        """
+        chunks = [
+            {"expense_types": ["meals", "travel"]},
+            {"expense_types": ["meals"]},  # Duplicate
+            {"expense_types": ["travel", "vehicle"]},  # Partial duplicates
+        ]
+
+        builder = IndexBuilder(db_path=str(tmp_path / "test.db"), encoder=Mock())
+        expense_type_map = builder._populate_expense_types(in_memory_db, chunks)
+
+        # Should have exactly 3 unique types
+        assert len(expense_type_map) == 3
+        assert set(expense_type_map.keys()) == {"meals", "travel", "vehicle"}
+
+        # Verify database has exactly 3 rows
+        cursor = in_memory_db.execute("SELECT COUNT(*) FROM expense_types")
+        count = cursor.fetchone()[0]
+        assert count == 3
