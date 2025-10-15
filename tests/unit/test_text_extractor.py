@@ -4,7 +4,6 @@ import hashlib
 from pathlib import Path
 
 import pytest
-
 from scripts.preprocessor.text_extractor import TextExtractor
 
 
@@ -32,7 +31,7 @@ class TestSHA256Utility:
     def test_compute_sha256_for_binary_file(self, tmp_path: Path) -> None:
         """SHA256 computed correctly for binary file."""
         test_file = tmp_path / "test.bin"
-        content = b"\x00\x01\x02\xFF"
+        content = b"\x00\x01\x02\xff"
         test_file.write_bytes(content)
 
         expected_hash = hashlib.sha256(content).hexdigest()

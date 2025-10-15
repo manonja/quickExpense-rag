@@ -31,13 +31,13 @@ logger = logging.getLogger(__name__)
 
 @app.command()
 def preprocess(
-    input_dir: Path = typer.Option(
+    input_dir: Path = typer.Option(  # noqa: B008
         Path("data/raw"),
         "--input-dir",
         "-i",
         help="Directory containing HTML/PDF files to preprocess",
     ),
-    output_dir: Path = typer.Option(
+    output_dir: Path = typer.Option(  # noqa: B008
         Path("data/preprocessed"),
         "--output-dir",
         "-o",
@@ -58,6 +58,7 @@ def preprocess(
 
     Example:
         uv run python scripts/cli.py preprocess --input-dir data/raw
+
     """
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
@@ -80,7 +81,9 @@ def preprocess(
     all_files = html_files + pdf_files
 
     if not all_files:
-        console.print(f"[yellow]Warning: No HTML or PDF files found in {input_dir}[/yellow]")
+        console.print(
+            f"[yellow]Warning: No HTML or PDF files found in {input_dir}[/yellow]"
+        )
         return
 
     console.print(f"Found {len(html_files)} HTML and {len(pdf_files)} PDF files\n")
@@ -120,7 +123,7 @@ def preprocess(
         except Exception as e:
             error_count += 1
             console.print(f"[red]Error processing {input_file.name}: {e}[/red]")
-            logger.error("Failed to preprocess %s: %s", input_file.name, e, exc_info=True)
+            logger.exception("Failed to preprocess %s: %s", input_file.name, e)
 
     # Create manifest
     manifest = PreprocessManifest(documents=manifest_docs)

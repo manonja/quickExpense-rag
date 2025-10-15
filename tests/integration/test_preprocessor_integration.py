@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import pytest
-
 from scripts.preprocessor.text_extractor import TextExtractor
 
 
@@ -62,7 +61,7 @@ class TestPreprocessorIntegration:
         # Should not have more than 2 consecutive newlines
         assert "\n\n\n" not in text
 
-    def test_preprocess_real_pdf_document(self, tmp_path: Path) -> None:
+    def test_preprocess_real_pdf_document(self, tmp_path: Path) -> None:  # noqa: ARG002
         """Preprocess sample CRA PDF folio."""
         # Skip - no real PDF fixture available
         # Real PDF testing would require downloading actual CRA PDF

@@ -5,9 +5,8 @@ import logging
 import re
 from pathlib import Path
 
-from bs4 import BeautifulSoup
 import pdfplumber
-
+from bs4 import BeautifulSoup
 from src.quickexpense_rag.exceptions import ParsingError
 
 logger = logging.getLogger(__name__)
@@ -40,6 +39,7 @@ class TextExtractor:
         Raises:
             FileNotFoundError: If file doesn't exist
             ParsingError: If HTML is unparseable
+
         """
         if not html_path.exists():
             msg = f"File not found: {html_path}"
@@ -77,7 +77,9 @@ class TextExtractor:
             else:
                 # Last resort: use entire document
                 content_element = soup
-                logger.warning("No semantic tags found in %s, using full document", html_path.name)
+                logger.warning(
+                    "No semantic tags found in %s, using full document", html_path.name
+                )
 
             # Extract text with preserved structure
             # separator='\n' preserves line breaks, strip=True removes extra whitespace
@@ -112,6 +114,7 @@ class TextExtractor:
         Raises:
             FileNotFoundError: If file doesn't exist
             ParsingError: If PDF is unparseable
+
         """
         if not pdf_path.exists():
             msg = f"File not found: {pdf_path}"
@@ -122,7 +125,9 @@ class TextExtractor:
 
             # Open PDF and extract text from each page
             with pdfplumber.open(pdf_path) as pdf:
-                logger.debug("Extracting text from %d pages in %s", len(pdf.pages), pdf_path.name)
+                logger.debug(
+                    "Extracting text from %d pages in %s", len(pdf.pages), pdf_path.name
+                )
 
                 for page_num, page in enumerate(pdf.pages, start=1):
                     # Extract text using pdfplumber's default layout
@@ -130,9 +135,15 @@ class TextExtractor:
 
                     if page_text:
                         pages_text.append(page_text)
-                        logger.debug("Extracted %d chars from page %d", len(page_text), page_num)
+                        logger.debug(
+                            "Extracted %d chars from page %d", len(page_text), page_num
+                        )
                     else:
-                        logger.warning("No text extracted from page %d in %s", page_num, pdf_path.name)
+                        logger.warning(
+                            "No text extracted from page %d in %s",
+                            page_num,
+                            pdf_path.name,
+                        )
 
             # Join pages with double newlines (paragraph break)
             text = "\n\n".join(pages_text)
@@ -178,6 +189,7 @@ class TextExtractor:
             ValueError: If file format not supported
             FileNotFoundError: If input file doesn't exist
             ParsingError: If extraction fails
+
         """
         # Check input file exists
         if not input_path.exists():
@@ -203,7 +215,12 @@ class TextExtractor:
 
         # Write clean text to output file
         output_path.write_text(text, encoding="utf-8")
-        logger.info("Preprocessed %s → %s (%d chars)", input_path.name, output_path.name, len(text))
+        logger.info(
+            "Preprocessed %s → %s (%d chars)",
+            input_path.name,
+            output_path.name,
+            len(text),
+        )
 
         # Optionally compute SHA256 hash of input file
         if compute_hash:
@@ -224,6 +241,7 @@ class TextExtractor:
 
         Raises:
             FileNotFoundError: If file doesn't exist
+
         """
         if not file_path.exists():
             msg = f"File not found: {file_path}"
@@ -252,6 +270,7 @@ class TextExtractor:
 
         Returns:
             Normalized text
+
         """
         # Strip leading/trailing whitespace
         text = text.strip()
