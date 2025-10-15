@@ -253,7 +253,48 @@ class IndexBuilder:
         Raises:
             EmbeddingError: If embedding fails and continue_on_error=False
         """
-        raise NotImplementedError("Phase 3: Batch Embedding")
+        if not chunks:
+            return []
+
+        # Extract content texts for embedding
+        texts = [chunk["content"] for chunk in chunks]
+        results: list[tuple[dict[str, Any], npt.NDArray[np.float32]]] = []
+
+        # Process in batches of 32
+        batch_size = 32
+        total_batches = (len(texts) + batch_size - 1) // batch_size
+
+        for i in tqdm(
+            range(0, len(texts), batch_size),
+            desc="Embedding chunks",
+            total=total_batches,
+            unit="batch",
+        ):
+            batch_texts = texts[i : i + batch_size]
+            batch_chunks = chunks[i : i + batch_size]
+
+            try:
+                # Generate embeddings for this batch
+                embeddings = self.encoder.embed_documents(batch_texts)
+
+                # Pair chunks with their embeddings
+                for chunk, embedding in zip(batch_chunks, embeddings):
+                    results.append((chunk, embedding))
+
+            except Exception as e:
+                if continue_on_error:
+                    logger.error(
+                        f"Embedding failed for batch {i // batch_size + 1}/{total_batches}: {e}"
+                    )
+                    logger.info(f"Skipping {len(batch_texts)} chunks due to error")
+                    continue
+                else:
+                    raise EmbeddingError(
+                        f"Embedding failed for batch {i // batch_size + 1}: {e}"
+                    ) from e
+
+        logger.info(f"Successfully embedded {len(results)}/{len(chunks)} chunks")
+        return results
 
     def _insert_data(
         self,
