@@ -58,6 +58,8 @@ jobs:
             --cov=src/quickexpense_rag \
             --cov-report=xml \
             --cov-report=html \
+            --cov-report=term \
+            --cov-fail-under=85 \
             --junitxml=test-results.xml 2>&1 | tee pytest.log
         continue-on-error: true
 
