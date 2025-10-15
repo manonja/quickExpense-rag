@@ -150,6 +150,67 @@ class TextExtractor:
             logger.error(msg)
             raise ParsingError(msg) from e
 
+    def preprocess_file(
+        self,
+        input_path: Path,
+        output_path: Path,
+        *,
+        compute_hash: bool = True,
+    ) -> str | None:
+        """
+        Auto-detect format and convert to clean text.
+
+        Strategy:
+        1. Detect file format by extension (.html, .pdf)
+        2. Route to appropriate extractor
+        3. Write clean text to output file
+        4. Optionally compute SHA256 hash of input file
+
+        Args:
+            input_path: Path to HTML or PDF file
+            output_path: Path for output .txt file
+            compute_hash: Whether to compute SHA256 hash of input file
+
+        Returns:
+            SHA256 hash if compute_hash=True, else None
+
+        Raises:
+            ValueError: If file format not supported
+            FileNotFoundError: If input file doesn't exist
+            ParsingError: If extraction fails
+        """
+        # Check input file exists
+        if not input_path.exists():
+            msg = f"Input file not found: {input_path}"
+            raise FileNotFoundError(msg)
+
+        # Detect file format by extension
+        suffix = input_path.suffix.lower()
+
+        # Route to appropriate extractor
+        if suffix == ".html":
+            logger.debug("Processing HTML file: %s", input_path.name)
+            text = self.extract_from_html(input_path)
+        elif suffix == ".pdf":
+            logger.debug("Processing PDF file: %s", input_path.name)
+            text = self.extract_from_pdf(input_path)
+        else:
+            msg = f"Unsupported file format: {suffix} (expected .html or .pdf)"
+            raise ValueError(msg)
+
+        # Create output directory if it doesn't exist
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Write clean text to output file
+        output_path.write_text(text, encoding="utf-8")
+        logger.info("Preprocessed %s → %s (%d chars)", input_path.name, output_path.name, len(text))
+
+        # Optionally compute SHA256 hash of input file
+        if compute_hash:
+            return self.compute_sha256(input_path)
+
+        return None
+
     @staticmethod
     def compute_sha256(file_path: Path) -> str:
         """

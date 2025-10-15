@@ -262,3 +262,96 @@ class TestPDFExtraction:
         extractor = TextExtractor()
         with pytest.raises(FileNotFoundError):
             extractor.extract_from_pdf(missing_file)
+
+
+class TestPreprocessFile:
+    """Test end-to-end preprocessing pipeline."""
+
+    def test_preprocess_html_file(self, tmp_path: Path) -> None:
+        """HTML file preprocessed to .txt correctly."""
+        # Create input HTML file
+        input_file = tmp_path / "input" / "test.html"
+        input_file.parent.mkdir()
+        html_content = """
+        <html><body><main>
+        <h1>Test Document</h1>
+        <p>This is test content.</p>
+        </main></body></html>
+        """
+        input_file.write_text(html_content, encoding="utf-8")
+
+        # Create output path
+        output_file = tmp_path / "output" / "test.txt"
+        output_file.parent.mkdir()
+
+        # Preprocess
+        extractor = TextExtractor()
+        sha256 = extractor.preprocess_file(input_file, output_file, compute_hash=True)
+
+        # Verify output file created
+        assert output_file.exists()
+
+        # Verify content extracted
+        result = output_file.read_text(encoding="utf-8")
+        assert "Test Document" in result
+        assert "This is test content." in result
+
+        # Verify SHA256 returned
+        assert sha256 is not None
+        assert len(sha256) == 64
+
+    def test_preprocess_pdf_file(self, tmp_path: Path) -> None:
+        """PDF file preprocessed to .txt correctly."""
+        # Skip - requires real PDF, will test in integration
+        pytest.skip("PDF preprocessing requires real PDF - see integration tests")
+
+    def test_preprocess_computes_sha256_when_requested(self, tmp_path: Path) -> None:
+        """SHA256 hash computed when compute_hash=True."""
+        input_file = tmp_path / "test.html"
+        input_file.write_text("<html><body>Content</body></html>", encoding="utf-8")
+
+        output_file = tmp_path / "test.txt"
+
+        extractor = TextExtractor()
+        sha256 = extractor.preprocess_file(input_file, output_file, compute_hash=True)
+
+        assert sha256 is not None
+        assert len(sha256) == 64
+
+    def test_preprocess_no_hash_when_not_requested(self, tmp_path: Path) -> None:
+        """SHA256 hash not computed when compute_hash=False."""
+        input_file = tmp_path / "test.html"
+        input_file.write_text("<html><body>Content</body></html>", encoding="utf-8")
+
+        output_file = tmp_path / "test.txt"
+
+        extractor = TextExtractor()
+        sha256 = extractor.preprocess_file(input_file, output_file, compute_hash=False)
+
+        assert sha256 is None
+
+    def test_preprocess_unsupported_format_raises(self, tmp_path: Path) -> None:
+        """Unsupported file format raises ValueError."""
+        input_file = tmp_path / "document.txt"
+        input_file.write_text("Plain text", encoding="utf-8")
+
+        output_file = tmp_path / "output.txt"
+
+        extractor = TextExtractor()
+        with pytest.raises(ValueError, match="Unsupported file format"):
+            extractor.preprocess_file(input_file, output_file)
+
+    def test_preprocess_creates_output_directory(self, tmp_path: Path) -> None:
+        """Output directory created if it doesn't exist."""
+        input_file = tmp_path / "test.html"
+        input_file.write_text("<html><body>Content</body></html>", encoding="utf-8")
+
+        # Output file in non-existent directory
+        output_file = tmp_path / "subdir" / "nested" / "test.txt"
+
+        extractor = TextExtractor()
+        extractor.preprocess_file(input_file, output_file)
+
+        # Verify directory created
+        assert output_file.parent.exists()
+        assert output_file.exists()
