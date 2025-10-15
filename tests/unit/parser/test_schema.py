@@ -83,7 +83,9 @@ def test_list_item_model_simple():
     from scripts.parser.schema import ListItem
 
     item = ListItem(
-        type="list_item", text="Meal expenses are 50% deductible", citation_id="S3-F2-C1-p2.1"
+        type="list_item",
+        text="Meal expenses are 50% deductible",
+        citation_id="S3-F2-C1-p2.1",
     )
 
     assert item.type == "list_item"
@@ -96,9 +98,7 @@ def test_list_item_model_with_sub_items():
     from scripts.parser.schema import ListItem
 
     sub_item = ListItem(type="list_item", text="Sub-item detail")
-    parent_item = ListItem(
-        type="list_item", text="Parent item", sub_items=[sub_item]
-    )
+    parent_item = ListItem(type="list_item", text="Parent item", sub_items=[sub_item])
 
     assert len(parent_item.sub_items) == 1
     assert parent_item.sub_items[0].text == "Sub-item detail"
@@ -191,8 +191,6 @@ def test_parsed_document_optional_document_id():
     """Test ParsedDocument allows optional document_id."""
     from scripts.parser.schema import Metadata, ParsedDocument
 
-    doc = ParsedDocument(
-        title="Test Doc", metadata=Metadata(), sections=[]
-    )
+    doc = ParsedDocument(title="Test Doc", metadata=Metadata(), sections=[])
 
     assert doc.document_id is None

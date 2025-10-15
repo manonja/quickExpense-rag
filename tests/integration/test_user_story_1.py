@@ -22,7 +22,8 @@ from quickexpense_rag.exceptions import DatabaseNotInitializedError
 
 
 class TestUserStory1:
-    """Integration test for User Story 1: ML Engineer API workflow.
+    """
+    Integration test for User Story 1: ML Engineer API workflow.
 
     User Story 1: ML engineer imports library, calls init() to download database,
     then uses search() to query CRA expense rules with natural language and filters.
@@ -40,6 +41,7 @@ class TestUserStory1:
 
         # Copy fixture DB to temp cache directory
         import shutil
+
         test_db_path = tmp_path / "test_database.db"
         shutil.copy(fixture_db, test_db_path)
 
@@ -49,7 +51,7 @@ class TestUserStory1:
 
         monkeypatch.setattr(
             "quickexpense_rag.data.manager.DataManager.get_database_path",
-            mock_get_database_path
+            mock_get_database_path,
         )
 
         return test_db_path
@@ -62,6 +64,7 @@ class TestUserStory1:
         """
         # Reset module state
         from quickexpense_rag import api
+
         api._search_engine = None
         api._db_path = None
 
@@ -83,28 +86,30 @@ class TestUserStory1:
         first_result = results[0]
 
         # Check disclaimer (computed field, always present)
-        assert first_result.disclaimer.startswith("⚠️"), \
-            "Disclaimer must start with warning emoji"
-        assert "NOT TAX ADVICE" in first_result.disclaimer, \
-            "Disclaimer must contain 'NOT TAX ADVICE'"
+        assert first_result.disclaimer.startswith(
+            "⚠️"
+        ), "Disclaimer must start with warning emoji"
+        assert (
+            "NOT TAX ADVICE" in first_result.disclaimer
+        ), "Disclaimer must contain 'NOT TAX ADVICE'"
 
         # Check citation_id (unique CRA reference)
-        assert first_result.citation_id is not None, \
-            "citation_id must not be None"
-        assert len(first_result.citation_id) > 0, \
-            "citation_id must not be empty"
+        assert first_result.citation_id is not None, "citation_id must not be None"
+        assert len(first_result.citation_id) > 0, "citation_id must not be empty"
 
         # Check source_url (must be https://canada.ca)
-        assert str(first_result.source_url).startswith("https://"), \
-            "source_url must use HTTPS"
-        assert "canada.ca" in str(first_result.source_url), \
-            "source_url must be from canada.ca domain"
+        assert str(first_result.source_url).startswith(
+            "https://"
+        ), "source_url must use HTTPS"
+        assert "canada.ca" in str(
+            first_result.source_url
+        ), "source_url must be from canada.ca domain"
 
         # Check expense_types (many-to-many, list format)
-        assert isinstance(first_result.expense_types, list), \
-            "expense_types must be a list"
-        assert len(first_result.expense_types) > 0, \
-            "expense_types must not be empty"
+        assert isinstance(
+            first_result.expense_types, list
+        ), "expense_types must be a list"
+        assert len(first_result.expense_types) > 0, "expense_types must not be empty"
 
         # Verify all results have required structure
         for result in results:
@@ -123,6 +128,7 @@ class TestUserStory1:
         """
         # Reset module state
         from quickexpense_rag import api
+
         api._search_engine = None
 
         with pytest.raises(DatabaseNotInitializedError) as exc_info:

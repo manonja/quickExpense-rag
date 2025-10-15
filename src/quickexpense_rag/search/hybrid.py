@@ -266,7 +266,7 @@ class HybridSearchEngine:
               AND embedding MATCH ?
             ORDER BY distance
             LIMIT ?
-        """  # noqa: S608
+        """
 
         # Execute query
         conn = sqlite3.connect(self.db_path)
@@ -335,7 +335,7 @@ class HybridSearchEngine:
             LEFT JOIN expense_types et ON retl.expense_type_id = et.id
             WHERE r.id IN ({placeholders})
             GROUP BY r.id
-        """  # noqa: S608
+        """
 
         # Execute query
         conn = sqlite3.connect(self.db_path)
