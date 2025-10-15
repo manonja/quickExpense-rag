@@ -5,6 +5,7 @@ from typing import Any
 
 import google.generativeai as genai
 
+from scripts.parser.retry import retry_with_backoff
 from scripts.parser.schema import ParsedDocument
 from scripts.parser.validator import CANONICAL_EXPENSE_TYPES
 
@@ -84,15 +85,19 @@ Content items can be:
 
         return prompt
 
+    @retry_with_backoff(max_attempts=3, base_delay=1.0)
     def _call_gemini_api(self, prompt: str) -> Any:
         """
-        Call Gemini API with the prompt.
+        Call Gemini API with the prompt (with retry logic).
 
         Args:
             prompt: Prompt to send to Gemini
 
         Returns:
             Gemini response object
+
+        Note:
+            Retries up to 3 times with exponential backoff (1s, 2s, 4s)
         """
         response = self.client.generate_content(
             prompt,
