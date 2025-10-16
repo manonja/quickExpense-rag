@@ -1,0 +1,141 @@
+"""LLM-based parser for CRA tax documents using Gemini API."""
+
+import json
+import logging
+from pathlib import Path
+
+import google.generativeai as genai
+from bs4 import BeautifulSoup
+
+from qe_tax_rag.extraction.ca.exceptions import ParserError
+from qe_tax_rag.extraction.ca.schema import (
+    ApplicabilityType,
+    ExpertSource,
+    ExtractedRule,
+)
+from qe_tax_rag.extraction.ca.settings import settings
+
+logger = logging.getLogger(__name__)
+
+EXTRACTION_PROMPT = """
+You are an expert data extraction agent specializing in Canadian tax law documents. Your task is to extract all line-numbered expense rules from the provided HTML content of a CRA guide.
+
+Follow these rules precisely:
+1. Identify `<h3>` tags that match the pattern "Line XXXX –", where XXXX is a number.
+2. SKIP any `<h3>` tags that do not match this pattern (e.g., "Prepaid expenses").
+3. For each matched rule, extract the following fields:
+   - `rule_number`: The integer from the "Line XXXX" pattern.
+   - `title`: The text immediately following "–" in the `<h3>` tag.
+   - `content`: All text from the subsequent `<p>`, `<ul>`, and `<ol>` tags, up to the next `<h3>` tag.
+   - `applies_to`: A list of income types derived from `<img>` tags within the `<h3>`. Map the `alt` text as follows: "business icon" -> "business", "farm icon" -> "farming", "fish icon" -> "fishing". If no icons are present, the list should be empty.
+   - `chapter`: The text content of the `<h1>` tag.
+   - `section`: The text content of the nearest preceding `<h2>` tag. If none, this should be null.
+   - `anchor_id`: The `id` attribute of the `<a>` tag inside the `<h3>`. If none, this should be null.
+4. The `source_citation` should be the full text of the `<h3>` tag (e.g., "Line 8523 – Meals and entertainment").
+
+Respond with a single JSON object containing a "rules" key, which holds a list of the extracted rule objects.
+"""
+
+
+def parse(html_path: str) -> list[ExtractedRule]:
+    """
+    Parse HTML file using text-based LLM to extract line-numbered expense rules.
+
+    Uses Gemini (Flash/Pro) to semantically understand HTML structure and extract
+    rules matching "Line XXXX –" pattern. More resilient to HTML changes than
+    rule-based parsing. Serves as the "LLM" expert in the Mixture-of-Experts pipeline.
+
+    Extracts same fields as classic parser: line number, title, applies_to list,
+    content, and context fields (chapter, section, source_file, anchor_id).
+
+    Args:
+        html_path: Absolute path to the local HTML file.
+
+    Returns:
+        List of ExtractedRule objects with expert_source set to LLM.
+        Returns empty list if no line-numbered rules are found.
+
+    Raises:
+        ParserError: If file cannot be read, API call fails, or JSON response
+                     cannot be parsed.
+
+    """
+    # Read HTML file
+    try:
+        html_content = Path(html_path).read_text(encoding="utf-8")
+    except FileNotFoundError as e:
+        msg = f"HTML file not found: {html_path}"
+        logger.error(msg)
+        raise ParserError(msg) from e
+    except OSError as e:
+        msg = f"Failed to read HTML file: {html_path}"
+        logger.error(msg, exc_info=True)
+        raise ParserError(msg) from e
+
+    # Extract <main> content using BeautifulSoup
+    soup = BeautifulSoup(html_content, "html.parser")
+    main_tag = soup.find("main")
+    if not main_tag:
+        msg = f"No <main> tag found in {html_path}"
+        logger.warning(msg)
+        main_content_text = soup.get_text()
+    else:
+        main_content_text = main_tag.get_text()
+
+    # Configure Gemini
+    genai.configure(api_key=settings.gemini_api_key)
+    model = genai.GenerativeModel(settings.llm_model_name)
+
+    # Call LLM with JSON mode
+    try:
+        response = model.generate_content(
+            [EXTRACTION_PROMPT, main_content_text],
+            generation_config=genai.types.GenerationConfig(
+                response_mime_type="application/json"
+            ),
+        )
+    except Exception as e:
+        msg = f"API call failed for {html_path}"
+        logger.error(msg, exc_info=True)
+        raise ParserError(msg) from e
+
+    # Parse JSON response
+    try:
+        data = json.loads(response.text)
+        rules_data = data.get("rules", [])
+    except json.JSONDecodeError as e:
+        msg = f"Failed to parse JSON response for {html_path}"
+        logger.error(f"{msg}. Raw response: {response.text}", exc_info=True)
+        raise ParserError(msg) from e
+
+    # Convert to ExtractedRule objects
+    rules = []
+    source_file = Path(html_path).name
+
+    for rule_dict in rules_data:
+        try:
+            # Map applies_to strings to enum
+            applies_to_str = rule_dict.get("applies_to", [])
+            applies_to_enum = [ApplicabilityType(s) for s in applies_to_str]
+
+            rule = ExtractedRule(
+                rule_number=rule_dict["rule_number"],
+                title=rule_dict["title"],
+                content=rule_dict["content"],
+                applies_to=applies_to_enum,
+                source_citation=rule_dict["source_citation"],
+                chapter=rule_dict["chapter"],
+                section=rule_dict.get("section"),
+                source_file=source_file,
+                expert_source=ExpertSource.LLM,
+                anchor_id=rule_dict.get("anchor_id"),
+                confidence_score=0.8,  # LLM confidence default
+            )
+            rules.append(rule)
+        except (KeyError, ValueError) as e:
+            msg = f"Failed to validate rule data in {html_path}"
+            logger.error(f"{msg}. Invalid data: {rule_dict}", exc_info=True)
+            raise ParserError(msg) from e
+
+    logger.info(f"LLM parser extracted {len(rules)} rules from {html_path}")
+    return rules
