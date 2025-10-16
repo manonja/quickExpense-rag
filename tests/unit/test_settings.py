@@ -12,7 +12,7 @@ def test_settings_load_defaults() -> None:
     settings = Settings()
     assert settings.default_top_k == 5
     assert isinstance(settings.cache_dir, Path)
-    assert "quickexpense_rag" in settings.cache_dir.parts
+    assert "qe_tax_rag" in settings.cache_dir.parts
 
 
 def test_settings_load_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
