@@ -142,3 +142,23 @@ def test_continue_after_malformed_rule(fixture_html_path: Path) -> None:
     assert rule is not None, "Line 8960 should be extracted"
     assert rule.title == "Office expenses"
     assert "pens, pencils" in rule.content.lower()
+
+
+@pytest.mark.unit
+def test_raise_parser_error_on_invalid_file_path() -> None:
+    """Test ParserError raised for non-existent file."""
+    with pytest.raises(ParserError, match="not found"):
+        parse("/nonexistent/path/to/file.html")
+
+
+@pytest.mark.unit
+def test_raise_parser_error_when_no_rules_found(tmp_path: Path) -> None:
+    """Test ParserError when HTML has no line-numbered rules."""
+    empty_html = tmp_path / "empty.html"
+    empty_html.write_text(
+        "<html><body><h1>No Rules Here</h1><p>Some content</p></body></html>",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ParserError, match="No line-numbered rules found"):
+        parse(str(empty_html))
