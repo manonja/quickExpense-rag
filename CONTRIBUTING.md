@@ -1,4 +1,4 @@
-# Contributing to QuickExpense RAG
+# Contributing to QE Tax RAG
 
 Thank you for your interest in contributing! This guide covers development workflow, testing, and code quality standards.
 
@@ -13,8 +13,8 @@ Thank you for your interest in contributing! This guide covers development workf
 
 ```bash
 # Clone repository
-git clone https://github.com/YOUR_USERNAME/quickexpense-rag.git
-cd quickexpense-rag
+git clone https://github.com/YOUR_USERNAME/qe-tax-rag.git
+cd qe-tax-rag
 
 # Install dependencies
 uv sync --all-extras
@@ -339,8 +339,8 @@ docs/                       # Documentation
 
 ## Getting Help
 
-- **Issues**: [GitHub Issues](https://github.com/YOUR_USERNAME/quickexpense-rag/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/YOUR_USERNAME/quickexpense-rag/discussions)
+- **Issues**: [GitHub Issues](https://github.com/YOUR_USERNAME/qe-tax-rag/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/YOUR_USERNAME/qe-tax-rag/discussions)
 
 ## License
 
