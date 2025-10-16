@@ -50,7 +50,9 @@ Note: Alcohol is subject to the same 50% limitation.
     assert api_key, "GEMINI_API_KEY must be set for integration tests"
 
     # Initialize parser
-    parser = GeminiParser(api_key=api_key, model="gemini-2.0-flash-exp", temperature=0.0)
+    parser = GeminiParser(
+        api_key=api_key, model="gemini-2.0-flash-exp", temperature=0.0
+    )
 
     # Parse the document
     parsed_doc = parser.parse_document(sample_text, "S3-F2-C1.txt")

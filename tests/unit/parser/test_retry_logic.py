@@ -92,7 +92,9 @@ def test_retry_decorator_custom_exception_types():
 
     call_count = 0
 
-    @retry_with_backoff(max_attempts=3, base_delay=0.1, retryable_exceptions=(ValueError,))
+    @retry_with_backoff(
+        max_attempts=3, base_delay=0.1, retryable_exceptions=(ValueError,)
+    )
     def selective_retry():
         nonlocal call_count
         call_count += 1

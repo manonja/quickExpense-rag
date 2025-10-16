@@ -13,8 +13,9 @@ Outputs: integrity_report.json
 
 import json
 from pathlib import Path
-from bs4 import BeautifulSoup
 from typing import TypedDict
+
+from bs4 import BeautifulSoup
 
 
 class FileCheck(TypedDict):

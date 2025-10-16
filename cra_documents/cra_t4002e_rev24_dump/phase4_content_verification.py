@@ -115,7 +115,9 @@ def extract_anchor_ids(soup: BeautifulSoup) -> list[str]:
     return [elem.get("id") for elem in elements_with_id[:20]]
 
 
-def verify_page(filename: str, description: str, output_dir: Path) -> PageVerificationResult:
+def verify_page(
+    filename: str, description: str, output_dir: Path
+) -> PageVerificationResult:
     """Verify a single page against live website."""
     print(f"\nVerifying {filename} ({description})...")
 

@@ -43,11 +43,13 @@ PAGES = [
 def setup_session() -> requests.Session:
     """Create configured session."""
     session = requests.Session()
-    session.headers.update({
-        "User-Agent": USER_AGENT,
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-    })
+    session.headers.update(
+        {
+            "User-Agent": USER_AGENT,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+    )
     return session
 
 
@@ -115,9 +117,9 @@ def download_and_verify_page(
     page_name = page_info["name"]
     min_size = page_info["min_size"]
 
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f"Task 2.{task_num}: Download {filename} ({page_name})")
-    print(f"{'='*70}")
+    print(f"{'=' * 70}")
 
     url = urljoin(BASE_URL, filename)
     output_file = OUTPUT_DIR / filename
@@ -192,9 +194,9 @@ def download_and_verify_page(
 
 def main():
     """Main execution for Phase 2."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("PHASE 2: Download All 13 Pages Individually")
-    print("="*70)
+    print("=" * 70)
     print("\nEach page must pass validation before proceeding to next page")
     print()
 
@@ -207,9 +209,9 @@ def main():
         result = download_and_verify_page(session, page_info, i)
 
         if not result["success"]:
-            print("\n" + "="*70)
+            print("\n" + "=" * 70)
             print("✗ FATAL: Page download failed")
-            print("="*70)
+            print("=" * 70)
             print(f"\nFailed on: {page_info['file']}")
             print("Fix the issue and re-run this script")
             sys.exit(1)
@@ -225,9 +227,9 @@ def main():
             time.sleep(1)
 
     # Save metadata
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("Saving Download Metadata")
-    print("="*70)
+    print("=" * 70)
 
     metadata = {
         "total_pages": len(results),
@@ -240,9 +242,9 @@ def main():
     print(f"✓ Metadata saved to: {metadata_file}")
 
     # Summary
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("PHASE 2 COMPLETE!")
-    print("="*70)
+    print("=" * 70)
     print(f"\n✓ All {len(results)} pages downloaded successfully")
     print(f"✓ {len(all_css_links)} unique CSS files identified")
     print("\nUnique CSS files to download:")
@@ -250,7 +252,7 @@ def main():
         print(f"  - {css}")
 
     print("\nNext: Task 2.14 - Download CSS assets")
-    print("="*70)
+    print("=" * 70)
 
 
 if __name__ == "__main__":

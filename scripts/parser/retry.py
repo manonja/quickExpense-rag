@@ -22,6 +22,7 @@ def retry_with_backoff(
 
     Returns:
         Decorated function with retry logic
+
     """
 
     def decorator(func: F) -> F:

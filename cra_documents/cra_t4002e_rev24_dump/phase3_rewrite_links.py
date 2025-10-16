@@ -124,9 +124,9 @@ def verify_rewrites(filepath: Path) -> List[str]:
 
 def main():
     """Main execution for Phase 3."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("PHASE 3: Rewrite Links for Local Navigation")
-    print("="*70)
+    print("=" * 70)
     print("\nTasks 3.1 & 3.2: Internal links + CSS references")
 
     results = []
@@ -148,9 +148,9 @@ def main():
         total_css += result["css_links_rewritten"]
 
     # Verification
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("Verification")
-    print("="*70)
+    print("=" * 70)
 
     all_errors = []
     for filename in PAGES:
@@ -172,15 +172,15 @@ def main():
     print("  ✓ No unrewritten CSS links found")
 
     # Summary
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("PHASE 3 COMPLETE!")
-    print("="*70)
+    print("=" * 70)
     print(f"\n✓ Processed {len(results)} pages")
     print(f"✓ Rewrote {total_internal} internal guide links")
     print(f"✓ Rewrote {total_css} CSS references")
     print("\nAll links are now local and ready for offline browsing")
     print("\nNext: Task 3.3 - Automated integrity verification")
-    print("="*70)
+    print("=" * 70)
 
 
 if __name__ == "__main__":

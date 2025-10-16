@@ -38,6 +38,7 @@ def validate_citation_format(citation_id: str | None) -> bool:
 
     Returns:
         True if citation is valid or None, False otherwise
+
     """
     if citation_id is None:
         # None is allowed for optional citations (footnotes, etc.)
@@ -61,6 +62,7 @@ def validate_expense_types(
 
     Returns:
         Dictionary with 'valid' boolean and 'invalid_types' list
+
     """
     if canonical_list is None:
         canonical_list = CANONICAL_EXPENSE_TYPES
@@ -80,8 +82,11 @@ class ParserValidator:
 
         Args:
             canonical_expense_types: Optional canonical list (defaults to CANONICAL_EXPENSE_TYPES)
+
         """
-        self.canonical_expense_types = canonical_expense_types or CANONICAL_EXPENSE_TYPES
+        self.canonical_expense_types = (
+            canonical_expense_types or CANONICAL_EXPENSE_TYPES
+        )
 
     def validate_parsed_document(
         self, parsed_doc: "ParsedDocument"
@@ -94,6 +99,7 @@ class ParserValidator:
 
         Returns:
             Validation report with 'valid', 'errors', 'warnings', and 'statistics'
+
         """
         from scripts.parser.schema import ListChunk, ParsedDocument, TextChunk
 
@@ -137,12 +143,11 @@ class ParserValidator:
                                     f"Invalid citation format in sub-item: '{sub_item.citation_id}' "
                                     f"in section '{section.section_title}'"
                                 )
-                else:  # TableChunk
-                    if not validate_citation_format(content_item.citation_id):
-                        errors.append(
-                            f"Invalid citation format in table: '{content_item.citation_id}' "
-                            f"in section '{section.section_title}'"
-                        )
+                elif not validate_citation_format(content_item.citation_id):
+                    errors.append(
+                        f"Invalid citation format in table: '{content_item.citation_id}' "
+                        f"in section '{section.section_title}'"
+                    )
 
         # Generate statistics
         statistics = {

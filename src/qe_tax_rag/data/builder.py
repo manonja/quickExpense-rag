@@ -23,13 +23,13 @@ from typing import Any
 
 import numpy as np
 import numpy.typing as npt
+from scripts.parser.schema import ParsedDocument
 from tqdm import tqdm
 
 from qe_tax_rag.data.schema import CREATE_TABLES_SQL, init_metadata, optimize_database
 from qe_tax_rag.embeddings.encoder import _EmbeddingService
 from qe_tax_rag.exceptions import EmbeddingError, QeTaxRagError
 from qe_tax_rag.search.models import IndexManifest, SourceFile
-from scripts.parser.schema import ParsedDocument
 
 logger = logging.getLogger(__name__)
 
@@ -56,8 +56,9 @@ class IndexBuilder:
         ...     jsonl_path="chunks.jsonl",
         ...     manifest_path="manifest.json",
         ...     source_files=[SourceFile(...)],
-        ...     data_version="2024.12"
+        ...     data_version="2024.12",
         ... )
+
     """
 
     def __init__(self, db_path: str, encoder: _EmbeddingService):
@@ -67,6 +68,7 @@ class IndexBuilder:
         Args:
             db_path: Path to the SQLite database file to be created
             encoder: An instance of _EmbeddingService for generating embeddings
+
         """
         self.db_path = Path(db_path)
         self.encoder = encoder
@@ -93,9 +95,12 @@ class IndexBuilder:
             ValueError: Duplicate citation_id found
             EmbeddingError: Embedding generation failed (if continue_on_error=False)
             sqlite3.IntegrityError: Database constraint violation
+
         """
         logger.info(f"Starting index build: {jsonl_path} → {self.db_path}")
-        logger.info(f"Data version: {data_version}, continue_on_error: {continue_on_error}")
+        logger.info(
+            f"Data version: {data_version}, continue_on_error: {continue_on_error}"
+        )
 
         # Create database connection
         conn = sqlite3.connect(str(self.db_path))
@@ -162,6 +167,7 @@ class IndexBuilder:
         Args:
             conn: SQLite connection
             data_version: Version string to store in metadata table
+
         """
         # Load sqlite-vec extension before creating tables
         try:
@@ -207,6 +213,7 @@ class IndexBuilder:
 
         Raises:
             ValueError: If duplicate citation_id detected
+
         """
         # Create document_id -> SourceFile mapping for fast lookup
         source_map = {Path(sf.path).stem: sf for sf in source_files}
@@ -245,7 +252,9 @@ class IndexBuilder:
                 for chunk in chunks:
                     citation_id = chunk.get("citation_id")
                     if not citation_id:
-                        logger.warning(f"Chunk missing citation_id in document {doc.document_id}")
+                        logger.warning(
+                            f"Chunk missing citation_id in document {doc.document_id}"
+                        )
                         continue
 
                     # Duplicate detection
@@ -286,6 +295,7 @@ class IndexBuilder:
 
         Returns:
             Dictionary mapping expense type name (str) to database ID (int)
+
         """
         # Collect unique expense types from all chunks
         expense_types: set[str] = set()
@@ -301,9 +311,7 @@ class IndexBuilder:
 
         # Insert expense types into table (sorted for deterministic order)
         for expense_type in sorted(expense_types):
-            conn.execute(
-                "INSERT INTO expense_types (name) VALUES (?)", (expense_type,)
-            )
+            conn.execute("INSERT INTO expense_types (name) VALUES (?)", (expense_type,))
 
         # Query back to get name→id mapping
         cursor = conn.execute("SELECT id, name FROM expense_types")
@@ -333,6 +341,7 @@ class IndexBuilder:
 
         Raises:
             EmbeddingError: If embedding fails and continue_on_error=False
+
         """
         if not chunks:
             return []
@@ -399,6 +408,7 @@ class IndexBuilder:
             embedded_chunks: List of (chunk_dict, embedding_vector) tuples
             expense_type_map: Mapping of expense type name to database ID
             source_files: List of SourceFile models for source_hash lookup
+
         """
         for chunk, embedding in embedded_chunks:
             # 1. Insert into rules table
@@ -438,9 +448,13 @@ class IndexBuilder:
                         (rule_id, type_id),
                     )
 
-        logger.info(f"Inserted {len(embedded_chunks)} rules with embeddings and expense type links")
+        logger.info(
+            f"Inserted {len(embedded_chunks)} rules with embeddings and expense type links"
+        )
 
-    def _run_integrity_checks(self, conn: sqlite3.Connection, expected_count: int) -> None:
+    def _run_integrity_checks(
+        self, conn: sqlite3.Connection, expected_count: int
+    ) -> None:
         """
         Verify the integrity of the database post-build.
 
@@ -454,6 +468,7 @@ class IndexBuilder:
 
         Raises:
             QeTaxRagError: If any integrity check fails
+
         """
         # Check row counts for core tables
         tables = ["rules", "rules_vec", "rules_fts"]
@@ -518,6 +533,7 @@ class IndexBuilder:
             chunk_count: Number of chunks in database
             source_files: Tuple of SourceFile models
             data_version: Version string (YYYY.MM format)
+
         """
         from qe_tax_rag.data.schema import SCHEMA_VERSION
 
@@ -547,6 +563,7 @@ class IndexBuilder:
 
         Returns:
             Hexadecimal SHA256 hash string
+
         """
         sha256 = hashlib.sha256()
 

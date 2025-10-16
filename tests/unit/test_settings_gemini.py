@@ -34,7 +34,6 @@ def test_gemini_settings_from_env(monkeypatch):
 def test_gemini_temperature_validation():
     """Test Gemini temperature is validated (0.0 to 1.0)."""
     from pydantic import ValidationError
-
     from src.quickexpense_rag.settings import Settings
 
     # Valid temperatures

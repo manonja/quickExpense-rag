@@ -47,7 +47,7 @@ def test_navigation_with_playwright() -> dict:
 
     # Check if TOC has link to Chapter 1
     toc_content = toc_file.read_text(encoding="utf-8")
-    has_ch1_link = 't4002-3.html' in toc_content
+    has_ch1_link = "t4002-3.html" in toc_content
 
     print(f"✓ TOC has link to t4002-3.html: {has_ch1_link}")
 
@@ -55,7 +55,10 @@ def test_navigation_with_playwright() -> dict:
     print(f"\nTest 2: Verify sample anchor links exist")
 
     anchors_to_check = [
-        ("t4002-3.html", ["tocch1", "reportingincome", "daycare", "howtoreportyourself"]),
+        (
+            "t4002-3.html",
+            ["tocch1", "reportingincome", "daycare", "howtoreportyourself"],
+        ),
         ("t4002-5.html", ["tocch3a", "tocch3b", "tocch3c", "tocch3d", "tocch3e"]),
         ("t4002-6.html", ["tocch4a", "tocch4b", "tocch4c", "tocch4d"]),
     ]
@@ -72,11 +75,9 @@ def test_navigation_with_playwright() -> dict:
             status = "✓" if exists else "✗"
             print(f"  {status} {filename}#{anchor}")
 
-            anchor_results.append({
-                "page": filename,
-                "anchor": anchor,
-                "exists": exists
-            })
+            anchor_results.append(
+                {"page": filename, "anchor": anchor, "exists": exists}
+            )
 
             if not exists:
                 all_passed = False
@@ -87,9 +88,9 @@ def test_navigation_with_playwright() -> dict:
 
     total_tests = 2 + len(anchor_results)
     passed_tests = (
-        (1 if has_tocch1 else 0) +
-        (1 if has_ch1_link else 0) +
-        sum(1 for r in anchor_results if r["exists"])
+        (1 if has_tocch1 else 0)
+        + (1 if has_ch1_link else 0)
+        + sum(1 for r in anchor_results if r["exists"])
     )
 
     print(f"Total tests: {total_tests}")
@@ -108,7 +109,7 @@ def test_navigation_with_playwright() -> dict:
         "anchor_tests": anchor_results,
         "total_tests": total_tests,
         "passed_tests": passed_tests,
-        "overall_status": overall_status
+        "overall_status": overall_status,
     }
 
     return report

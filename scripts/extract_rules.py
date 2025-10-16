@@ -1,4 +1,5 @@
-"""HTML-to-YAML Rule Extraction Pipeline Orchestrator.
+"""
+HTML-to-YAML Rule Extraction Pipeline Orchestrator.
 
 This script orchestrates the complete extraction pipeline:
 1. Parse HTML files using classic (BeautifulSoup) and LLM (Gemini) parsers
@@ -23,11 +24,11 @@ sys.path.insert(0, str(Path(__file__).parent))
 # Import pipeline modules (from TICKETS 1-5)
 # These will be implemented in previous tickets
 try:
-    from parser.classic_parser import parse as classic_parse
-    from parser.llm_parser import parse as llm_parse
     from parser.adjudicator import adjudicate
-    from parser.generate_yaml import generate as generate_yaml
+    from parser.classic_parser import parse as classic_parse
     from parser.exceptions import PipelineError
+    from parser.generate_yaml import generate as generate_yaml
+    from parser.llm_parser import parse as llm_parse
 except ImportError as e:
     # Graceful degradation for development
     print(f"Warning: Pipeline modules not yet implemented: {e}", file=sys.stderr)
@@ -105,6 +106,7 @@ def run(
 
         # With custom manual review file
         uv run extract-rules input/ output.yml --manual-review-file review.yml
+
     """
     # Enable verbose logging if requested
     if verbose:

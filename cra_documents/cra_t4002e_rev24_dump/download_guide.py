@@ -43,17 +43,21 @@ EXPECTED_PAGES = [
 def setup_session() -> requests.Session:
     """Create a configured requests session with proper headers."""
     session = requests.Session()
-    session.headers.update({
-        "User-Agent": USER_AGENT,
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Accept-Encoding": "gzip, deflate",
-        "Connection": "keep-alive",
-    })
+    session.headers.update(
+        {
+            "User-Agent": USER_AGENT,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept-Encoding": "gzip, deflate",
+            "Connection": "keep-alive",
+        }
+    )
     return session
 
 
-def download_with_retry(session: requests.Session, url: str, max_retries: int = MAX_RETRIES) -> str:
+def download_with_retry(
+    session: requests.Session, url: str, max_retries: int = MAX_RETRIES
+) -> str:
     """Download content with retry logic."""
     for attempt in range(1, max_retries + 1):
         try:
