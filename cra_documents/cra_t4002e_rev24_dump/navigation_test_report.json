@@ -1,0 +1,77 @@
+{
+  "test_date": "2025-10-16",
+  "toc_url": "file:///Users/manonjacquin/Documents_local/POCs/quickExpense-rag/cra_documents/cra_t4002e_rev24_dump/t4002-1.html",
+  "ch1_url": "file:///Users/manonjacquin/Documents_local/POCs/quickExpense-rag/cra_documents/cra_t4002e_rev24_dump/t4002-3.html#tocch1",
+  "has_tocch1_anchor": false,
+  "has_ch1_link_in_toc": true,
+  "anchor_tests": [
+    {
+      "page": "t4002-3.html",
+      "anchor": "tocch1",
+      "exists": false
+    },
+    {
+      "page": "t4002-3.html",
+      "anchor": "reportingincome",
+      "exists": true
+    },
+    {
+      "page": "t4002-3.html",
+      "anchor": "daycare",
+      "exists": true
+    },
+    {
+      "page": "t4002-3.html",
+      "anchor": "howtoreportyourself",
+      "exists": true
+    },
+    {
+      "page": "t4002-5.html",
+      "anchor": "tocch3a",
+      "exists": true
+    },
+    {
+      "page": "t4002-5.html",
+      "anchor": "tocch3b",
+      "exists": true
+    },
+    {
+      "page": "t4002-5.html",
+      "anchor": "tocch3c",
+      "exists": true
+    },
+    {
+      "page": "t4002-5.html",
+      "anchor": "tocch3d",
+      "exists": true
+    },
+    {
+      "page": "t4002-5.html",
+      "anchor": "tocch3e",
+      "exists": true
+    },
+    {
+      "page": "t4002-6.html",
+      "anchor": "tocch4a",
+      "exists": true
+    },
+    {
+      "page": "t4002-6.html",
+      "anchor": "tocch4b",
+      "exists": true
+    },
+    {
+      "page": "t4002-6.html",
+      "anchor": "tocch4c",
+      "exists": true
+    },
+    {
+      "page": "t4002-6.html",
+      "anchor": "tocch4d",
+      "exists": true
+    }
+  ],
+  "total_tests": 15,
+  "passed_tests": 13,
+  "overall_status": "FAIL"
+}
