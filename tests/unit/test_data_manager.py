@@ -7,13 +7,13 @@ from unittest.mock import Mock, patch
 
 import httpx
 import pytest
-from quickexpense_rag.data.manager import DataManager
-from quickexpense_rag.exceptions import (
+from qe_tax_rag.data.manager import DataManager
+from qe_tax_rag.exceptions import (
     ChecksumMismatchError,
     DataVersionMismatchError,
     NetworkError,
 )
-from quickexpense_rag.settings import Settings
+from qe_tax_rag.settings import Settings
 
 
 def compute_sha256(file_path: Path) -> str:

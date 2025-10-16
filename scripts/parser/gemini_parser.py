@@ -14,7 +14,10 @@ class GeminiParser:
     """Parser using Gemini Flash for structured document extraction."""
 
     def __init__(
-        self, api_key: str, model: str = "gemini-2.0-flash-exp", temperature: float = 0.0
+        self,
+        api_key: str,
+        model: str = "gemini-2.0-flash-exp",
+        temperature: float = 0.0,
     ):
         """
         Initialize Gemini parser.
@@ -23,6 +26,7 @@ class GeminiParser:
             api_key: Gemini API key
             model: Gemini model name
             temperature: Temperature for generation (0.0 = deterministic)
+
         """
         self.api_key = api_key
         self.model = model
@@ -43,6 +47,7 @@ class GeminiParser:
 
         Returns:
             Complete prompt for Gemini
+
         """
         expense_types_str = ", ".join(f'"{et}"' for et in CANONICAL_EXPENSE_TYPES)
 
@@ -98,6 +103,7 @@ Content items can be:
 
         Note:
             Retries up to 3 times with exponential backoff (1s, 2s, 4s)
+
         """
         response = self.client.generate_content(
             prompt,
@@ -121,9 +127,12 @@ Content items can be:
 
         Raises:
             Exception: If API call fails or parsing fails
+
         """
         # Extract document_id from filename (e.g., "S3-F2-C1.txt" -> "S3-F2-C1")
-        document_id = source_filename.replace(".txt", "").replace(".html", "").replace(".pdf", "")
+        document_id = (
+            source_filename.replace(".txt", "").replace(".html", "").replace(".pdf", "")
+        )
 
         # Build prompt
         prompt = self._build_prompt(text, document_id)

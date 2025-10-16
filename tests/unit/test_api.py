@@ -1,12 +1,12 @@
-"""Unit tests for the public API (src/quickexpense_rag/api.py)."""
+"""Unit tests for the public API (src/qe_tax_rag/api.py)."""
 
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-from quickexpense_rag import api
-from quickexpense_rag.exceptions import DatabaseNotInitializedError
-from quickexpense_rag.search.models import SearchResult
+from qe_tax_rag import api
+from qe_tax_rag.exceptions import DatabaseNotInitializedError
+from qe_tax_rag.search.models import SearchResult
 
 
 class TestSearchWithoutInit:
@@ -36,9 +36,9 @@ class TestSearchWithoutInit:
 class TestInit:
     """Test init() function behavior."""
 
-    @patch("quickexpense_rag.api.DataManager")
-    @patch("quickexpense_rag.api.HybridSearchEngine")
-    @patch("quickexpense_rag.api._EmbeddingService")
+    @patch("qe_tax_rag.api.DataManager")
+    @patch("qe_tax_rag.api.HybridSearchEngine")
+    @patch("qe_tax_rag.api._EmbeddingService")
     def test_init_creates_search_engine(
         self, mock_encoder_cls, mock_engine_cls, mock_dm_cls
     ):
@@ -79,9 +79,9 @@ class TestInit:
         assert api._search_engine is mock_engine
         assert api._db_path == mock_db_path
 
-    @patch("quickexpense_rag.api.DataManager")
-    @patch("quickexpense_rag.api.HybridSearchEngine")
-    @patch("quickexpense_rag.api._EmbeddingService")
+    @patch("qe_tax_rag.api.DataManager")
+    @patch("qe_tax_rag.api.HybridSearchEngine")
+    @patch("qe_tax_rag.api._EmbeddingService")
     def test_init_with_force_update(
         self, mock_encoder_cls, mock_engine_cls, mock_dm_cls
     ):
@@ -157,7 +157,7 @@ class TestSearch:
         with pytest.raises(ValidationError):
             api.search(query="test query", top_k=100)  # Max is 50
 
-    @patch("quickexpense_rag.api._search_engine")
+    @patch("qe_tax_rag.api._search_engine")
     def test_search_happy_path(self, mock_engine):
         """
         GIVEN: Library is initialized with valid parameters
@@ -215,7 +215,7 @@ class TestGetVersion:
         assert "schema_version" in version_info
 
         # Verify library_version matches __version__
-        from quickexpense_rag import __version__
+        from qe_tax_rag import __version__
 
         assert version_info["library_version"] == __version__
 

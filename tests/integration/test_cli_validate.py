@@ -32,7 +32,7 @@ def valid_database(tmp_path: Path) -> Path:
         pass
 
     # Create schema
-    from quickexpense_rag.data.schema import CREATE_TABLES_SQL
+    from qe_tax_rag.data.schema import CREATE_TABLES_SQL
 
     conn.executescript(CREATE_TABLES_SQL)
 

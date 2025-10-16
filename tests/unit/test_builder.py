@@ -24,11 +24,10 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 import pytest
-
-from quickexpense_rag.data.builder import IndexBuilder
-from quickexpense_rag.exceptions import EmbeddingError, QuickExpenseError
-from quickexpense_rag.search.models import SourceFile
-from scripts.parser.schema import ParsedDocument, Section, TextChunk, Metadata
+from qe_tax_rag.data.builder import IndexBuilder
+from qe_tax_rag.exceptions import EmbeddingError, QeTaxRagError
+from qe_tax_rag.search.models import SourceFile
+from scripts.parser.schema import Metadata, ParsedDocument, Section, TextChunk
 
 
 class TestLoadAndFlattenChunks:
@@ -50,7 +49,7 @@ class TestLoadAndFlattenChunks:
             metadata=Metadata(
                 province=["BC"],
                 business_type=["sole_proprietorship"],
-                expense_type=["meals"]
+                expense_type=["meals"],
             ),
             sections=[
                 Section(
@@ -60,20 +59,18 @@ class TestLoadAndFlattenChunks:
                         TextChunk(
                             type="paragraph",
                             text="Test content 1",
-                            citation_id="S1-F1-C1-p1.1"
+                            citation_id="S1-F1-C1-p1.1",
                         )
-                    ]
+                    ],
                 )
-            ]
+            ],
         )
 
         doc2 = ParsedDocument(
             title="Test Document 2",
             document_id="S1-F1-C2",
             metadata=Metadata(
-                province=["ON"],
-                business_type=["corporation"],
-                expense_type=["travel"]
+                province=["ON"], business_type=["corporation"], expense_type=["travel"]
             ),
             sections=[
                 Section(
@@ -83,11 +80,11 @@ class TestLoadAndFlattenChunks:
                         TextChunk(
                             type="paragraph",
                             text="Test content 2",
-                            citation_id="S1-F1-C2-p1.1"
+                            citation_id="S1-F1-C2-p1.1",
                         )
-                    ]
+                    ],
                 )
-            ]
+            ],
         )
 
         # Write to JSONL
@@ -152,11 +149,11 @@ class TestLoadAndFlattenChunks:
                         TextChunk(
                             type="paragraph",
                             text="Test content 1",
-                            citation_id="S1-F1-C1-p1.1"  # Duplicate
+                            citation_id="S1-F1-C1-p1.1",  # Duplicate
                         )
-                    ]
+                    ],
                 )
-            ]
+            ],
         )
 
         doc2 = ParsedDocument(
@@ -171,11 +168,11 @@ class TestLoadAndFlattenChunks:
                         TextChunk(
                             type="paragraph",
                             text="Test content 2",
-                            citation_id="S1-F1-C1-p1.1"  # Duplicate!
+                            citation_id="S1-F1-C1-p1.1",  # Duplicate!
                         )
-                    ]
+                    ],
                 )
-            ]
+            ],
         )
 
         with open(jsonl_path, "w") as f:
@@ -313,11 +310,16 @@ class TestEmbedChunksInBatches:
         THEN: Returns list of (chunk, embedding) tuples, processes in batches of 32
         """
         # Create 100 test chunks
-        chunks = [{"content": f"Test content {i}", "citation_id": f"S1-F1-C1-p{i}"} for i in range(100)]
+        chunks = [
+            {"content": f"Test content {i}", "citation_id": f"S1-F1-C1-p{i}"}
+            for i in range(100)
+        ]
 
         # Mock encoder that returns fake embeddings
         mock_encoder = Mock()
-        mock_encoder.embed_documents.return_value = np.random.rand(32, 384).astype(np.float32)
+        mock_encoder.embed_documents.return_value = np.random.rand(32, 384).astype(
+            np.float32
+        )
 
         builder = IndexBuilder(db_path=str(tmp_path / "test.db"), encoder=mock_encoder)
         results = builder._embed_chunks_in_batches(chunks, continue_on_error=False)
@@ -345,13 +347,16 @@ class TestEmbedChunksInBatches:
         THEN: Logs error, skips failed batch, returns partial results
         """
         # Create 96 chunks (3 batches of 32)
-        chunks = [{"content": f"Test content {i}", "citation_id": f"S1-F1-C1-p{i}"} for i in range(96)]
+        chunks = [
+            {"content": f"Test content {i}", "citation_id": f"S1-F1-C1-p{i}"}
+            for i in range(96)
+        ]
 
         # Mock encoder that fails on second call
         mock_encoder = Mock()
         mock_encoder.embed_documents.side_effect = [
             np.random.rand(32, 384).astype(np.float32),  # Batch 1: success
-            Exception("Embedding service timeout"),      # Batch 2: failure
+            Exception("Embedding service timeout"),  # Batch 2: failure
             np.random.rand(32, 384).astype(np.float32),  # Batch 3: success
         ]
 
@@ -376,13 +381,16 @@ class TestEmbedChunksInBatches:
         THEN: Raises EmbeddingError
         """
         # Create 96 chunks
-        chunks = [{"content": f"Test content {i}", "citation_id": f"S1-F1-C1-p{i}"} for i in range(96)]
+        chunks = [
+            {"content": f"Test content {i}", "citation_id": f"S1-F1-C1-p{i}"}
+            for i in range(96)
+        ]
 
         # Mock encoder that fails on second call
         mock_encoder = Mock()
         mock_encoder.embed_documents.side_effect = [
             np.random.rand(32, 384).astype(np.float32),  # Batch 1: success
-            Exception("Embedding service timeout"),      # Batch 2: failure
+            Exception("Embedding service timeout"),  # Batch 2: failure
         ]
 
         builder = IndexBuilder(db_path=str(tmp_path / "test.db"), encoder=mock_encoder)
@@ -399,10 +407,14 @@ class TestEmbedChunksInBatches:
         WHEN: _embed_chunks_in_batches is called
         THEN: Encoder called exactly once
         """
-        chunks = [{"content": f"Test {i}", "citation_id": f"S1-F1-C1-p{i}"} for i in range(32)]
+        chunks = [
+            {"content": f"Test {i}", "citation_id": f"S1-F1-C1-p{i}"} for i in range(32)
+        ]
 
         mock_encoder = Mock()
-        mock_encoder.embed_documents.return_value = np.random.rand(32, 384).astype(np.float32)
+        mock_encoder.embed_documents.return_value = np.random.rand(32, 384).astype(
+            np.float32
+        )
 
         builder = IndexBuilder(db_path=str(tmp_path / "test.db"), encoder=mock_encoder)
         results = builder._embed_chunks_in_batches(chunks, continue_on_error=False)
@@ -477,15 +489,21 @@ class TestInsertData:
         yield conn
         conn.close()
 
-    def test_insert_data_three_statement_pattern(self, in_memory_db_with_schema, tmp_path):
+    def test_insert_data_three_statement_pattern(
+        self, in_memory_db_with_schema, tmp_path
+    ):
         """
         GIVEN: List of (chunk, embedding) tuples
         WHEN: _insert_data is called
         THEN: rules, rules_vec, rule_expense_type_links all populated correctly
         """
         # Populate expense_types table first
-        in_memory_db_with_schema.execute("INSERT INTO expense_types (name) VALUES ('meals')")
-        in_memory_db_with_schema.execute("INSERT INTO expense_types (name) VALUES ('travel')")
+        in_memory_db_with_schema.execute(
+            "INSERT INTO expense_types (name) VALUES ('meals')"
+        )
+        in_memory_db_with_schema.execute(
+            "INSERT INTO expense_types (name) VALUES ('travel')"
+        )
         expense_type_map = {"meals": 1, "travel": 2}
 
         # Create embedded chunks
@@ -553,8 +571,12 @@ class TestInsertData:
         THEN: Two rows created in rule_expense_type_links
         """
         # Populate expense_types
-        in_memory_db_with_schema.execute("INSERT INTO expense_types (name) VALUES ('meals')")
-        in_memory_db_with_schema.execute("INSERT INTO expense_types (name) VALUES ('travel')")
+        in_memory_db_with_schema.execute(
+            "INSERT INTO expense_types (name) VALUES ('meals')"
+        )
+        in_memory_db_with_schema.execute(
+            "INSERT INTO expense_types (name) VALUES ('travel')"
+        )
         expense_type_map = {"meals": 1, "travel": 2}
 
         # Chunk with multiple expense types
@@ -602,7 +624,9 @@ class TestInsertData:
         THEN: FTS index contains searchable content (triggers worked)
         """
         # Populate expense_types
-        in_memory_db_with_schema.execute("INSERT INTO expense_types (name) VALUES ('meals')")
+        in_memory_db_with_schema.execute(
+            "INSERT INTO expense_types (name) VALUES ('meals')"
+        )
         expense_type_map = {"meals": 1}
 
         embedded_chunks = [
@@ -690,7 +714,12 @@ class TestIntegrityChecks:
         for i in range(1, 11):
             conn.execute(
                 "INSERT INTO rules (content, citation_id, source_url, source_hash) VALUES (?, ?, ?, ?)",
-                (f"Content {i}", f"S1-F1-C1-p{i}", "https://www.canada.ca/test", "hash"),
+                (
+                    f"Content {i}",
+                    f"S1-F1-C1-p{i}",
+                    "https://www.canada.ca/test",
+                    "hash",
+                ),
             )
             conn.execute(
                 "INSERT INTO rules_vec (id, embedding) VALUES (?, ?)",
@@ -709,7 +738,9 @@ class TestIntegrityChecks:
         yield conn
         conn.close()
 
-    def test_integrity_checks_all_tables_match_count(self, in_memory_db_with_data, tmp_path):
+    def test_integrity_checks_all_tables_match_count(
+        self, in_memory_db_with_data, tmp_path
+    ):
         """
         GIVEN: Database with 10 rules inserted
         WHEN: _run_integrity_checks called with expected_count=10
@@ -726,29 +757,31 @@ class TestIntegrityChecks:
         """
         GIVEN: Database with 10 rules but expected_count=8
         WHEN: _run_integrity_checks called
-        THEN: Raises QuickExpenseError with clear message
+        THEN: Raises QeTaxRagError with clear message
         """
         builder = IndexBuilder(db_path=str(tmp_path / "test.db"), encoder=Mock())
 
-        with pytest.raises(QuickExpenseError) as exc_info:
+        with pytest.raises(QeTaxRagError) as exc_info:
             builder._run_integrity_checks(in_memory_db_with_data, expected_count=8)
 
         assert "rules" in str(exc_info.value).lower()
         assert "10" in str(exc_info.value)  # Actual count
-        assert "8" in str(exc_info.value)   # Expected count
+        assert "8" in str(exc_info.value)  # Expected count
 
-    def test_integrity_checks_fails_on_vec_count_mismatch(self, in_memory_db_with_data, tmp_path):
+    def test_integrity_checks_fails_on_vec_count_mismatch(
+        self, in_memory_db_with_data, tmp_path
+    ):
         """
         GIVEN: Database with 10 rules but only 9 vectors
         WHEN: _run_integrity_checks called with expected_count=10
-        THEN: Raises QuickExpenseError
+        THEN: Raises QeTaxRagError
         """
         # Delete one vector to create mismatch
         in_memory_db_with_data.execute("DELETE FROM rules_vec WHERE id = 10")
 
         builder = IndexBuilder(db_path=str(tmp_path / "test.db"), encoder=Mock())
 
-        with pytest.raises(QuickExpenseError) as exc_info:
+        with pytest.raises(QeTaxRagError) as exc_info:
             builder._run_integrity_checks(in_memory_db_with_data, expected_count=10)
 
         assert "rules_vec" in str(exc_info.value).lower()
@@ -760,7 +793,7 @@ class TestIntegrityChecks:
         """
         GIVEN: Database with dangling rule_id in rule_expense_type_links
         WHEN: _run_integrity_checks called
-        THEN: Raises QuickExpenseError about dangling references
+        THEN: Raises QeTaxRagError about dangling references
         """
         # Insert a link to non-existent rule
         in_memory_db_with_data.execute("PRAGMA foreign_keys = OFF")
@@ -771,7 +804,7 @@ class TestIntegrityChecks:
 
         builder = IndexBuilder(db_path=str(tmp_path / "test.db"), encoder=Mock())
 
-        with pytest.raises(QuickExpenseError) as exc_info:
+        with pytest.raises(QeTaxRagError) as exc_info:
             builder._run_integrity_checks(in_memory_db_with_data, expected_count=10)
 
         assert "dangling" in str(exc_info.value).lower()
@@ -977,7 +1010,9 @@ class TestBuildFromJsonl:
                     section_level=1,
                     content=[
                         TextChunk(
-                            type="paragraph", text="Test content", citation_id="S1-F1-C1-p1.1"
+                            type="paragraph",
+                            text="Test content",
+                            citation_id="S1-F1-C1-p1.1",
                         )
                     ],
                 )
@@ -988,9 +1023,7 @@ class TestBuildFromJsonl:
             f.write(doc.model_dump_json() + "\n")
 
         source_files = [
-            SourceFile(
-                path="test.html", url="https://www.canada.ca/test", hash="hash1"
-            )
+            SourceFile(path="test.html", url="https://www.canada.ca/test", hash="hash1")
         ]
 
         # Mock encoder that fails
@@ -1037,7 +1070,9 @@ class TestBuildFromJsonl:
             cursor = conn.execute("SELECT COUNT(*) FROM rules")
             rule_count = cursor.fetchone()[0]
             conn.close()
-            assert rule_count == 0, "Transaction should have rolled back, no rules should be inserted"
+            assert rule_count == 0, (
+                "Transaction should have rolled back, no rules should be inserted"
+            )
 
         # Manifest should not be created
         assert not manifest_path.exists()

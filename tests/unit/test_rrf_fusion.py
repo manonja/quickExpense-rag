@@ -1,7 +1,7 @@
 """Unit tests for Reciprocal Rank Fusion algorithm."""
 
 import pytest
-from quickexpense_rag.search.hybrid import reciprocal_rank_fusion
+from qe_tax_rag.search.hybrid import reciprocal_rank_fusion
 
 
 class TestReciprocalRankFusion:

@@ -1,4 +1,4 @@
-# Maintainer Guide: QuickExpense RAG Indexing Pipeline
+# Maintainer Guide: QE Tax RAG Indexing Pipeline
 
 This guide explains how to build and maintain the searchable database of Canadian Revenue Agency (CRA) business expense rules.
 
@@ -26,8 +26,8 @@ The indexing pipeline transforms raw HTML/PDF documents from the CRA website int
 
 ```bash
 # Clone repository
-git clone https://github.com/manonja/quickExpense-rag.git
-cd quickExpense-rag
+git clone https://github.com/manonja/qe-tax-rag.git
+cd qe-tax-rag
 
 # Install dependencies
 uv sync --extra indexing
@@ -80,7 +80,7 @@ uv run python scripts/cli.py pipeline --input-dir data/raw --force
 **Output:**
 
 ```
-QuickExpense RAG Full Pipeline
+QE Tax RAG Full Pipeline
 Input: data/raw
 Output DB: data/cra_rules.db
 
@@ -259,7 +259,7 @@ uv run python scripts/cli.py validate \
 **Output:**
 
 ```
-QuickExpense RAG Database Validation
+QE Tax RAG Database Validation
 Database: data/cra_rules.db
 
 Running validation checks...
@@ -294,7 +294,7 @@ All validation checks passed!
 ## Directory Structure
 
 ```
-quickExpense-rag/
+qe-tax-rag/
 ├── data/
 │   ├── raw/                    # Original HTML/PDF files (git-ignored)
 │   │   ├── S1-F1-C1.html
@@ -369,7 +369,7 @@ pip install sqlite-vec
 **Solution:**
 
 - Expected: ~10-15 chunks/second on CPU
-- For GPU acceleration: Set `QUICKEXPENSE_RAG_DEVICE=cuda` (requires CUDA)
+- For GPU acceleration: Set `QE_TAX_RAG_DEVICE=cuda` (requires CUDA)
 - Reduce batch size if running out of memory
 
 ### Validation Failures
@@ -546,6 +546,6 @@ uv run python scripts/cli.py pipeline [OPTIONS]
 
 ## Support
 
-- **Issues**: https://github.com/manonja/quickExpense-rag/issues
-- **Documentation**: https://github.com/manonja/quickExpense-rag/docs
+- **Issues**: https://github.com/manonja/qe-tax-rag/issues
+- **Documentation**: https://github.com/manonja/qe-tax-rag/docs
 - **License**: MIT

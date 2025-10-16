@@ -21,7 +21,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
-from quickexpense_rag.data.schema import (
+from qe_tax_rag.data.schema import (
     CREATE_TABLES_SQL,
     SCHEMA_VERSION,
     init_metadata,

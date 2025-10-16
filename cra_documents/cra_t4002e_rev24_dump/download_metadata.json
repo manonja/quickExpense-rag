@@ -1,0 +1,529 @@
+{
+  "total_pages": 13,
+  "pages": [
+    {
+      "success": true,
+      "filename": "t4002-1.html",
+      "size": 29921,
+      "css_links": [
+        "/etc/designs/canada/wet-boew/css/noscript.min.css",
+        "https://use.fontawesome.com/releases/v5.15.4/css/all.css",
+        "/etc/designs/canada/wet-boew/css/theme.min.css"
+      ],
+      "internal_links": [
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-3.html#tocch1e",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html#whatsnew",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html#tocch3c",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html#tocch3g",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-12.html#toctp12",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-15.html#toctp15",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-6.html#tocch4c",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-9.html#tocch7a",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-3.html#tocch1",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-14.html#toctp14",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-4.html#tocch2b",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html#tocch3b",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-4.html#tocch2e",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-4.html#tocch2f",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html#tocch3e",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-4.html#tocch2",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-6.html#tocch4e",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-4.html#tocch2d",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html#toctp3",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-9.html#tocch7c",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-8.html#tocch6a",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-6.html#tocch4b",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-9.html#tocch7",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-4.html#tocch2a",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-3.html#tocch1f",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html#tocch3",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-3.html#tocch1h",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-9.html#tocch7b",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-6.html#tocch4",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-6.html#tocch4d",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-3.html#tocch1c",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html#toctp1",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-4.html#tocch2c",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-11.html#toctp11",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html#tocch3f",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html#tocch3a",
+        "/fr/agence-revenu/services/formulaires-publications/publications/t4002/t4002-1.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html#tocch3d",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-6.html#tocch4a",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-3.html#daycare",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-6.html#tocch4f",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-3.html#tocch1d",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-8.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-3.html#howtoreportyourself",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-3.html#tocch1g",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-10.html#toctp10",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-3.html#reportingincome"
+      ],
+      "anchor_links": [
+        "#wb-info",
+        "#wb-cont"
+      ]
+    },
+    {
+      "success": true,
+      "filename": "t4002-2.html",
+      "size": 57030,
+      "css_links": [
+        "/etc/designs/canada/wet-boew/css/noscript.min.css",
+        "https://use.fontawesome.com/releases/v5.15.4/css/all.css",
+        "/etc/designs/canada/wet-boew/css/theme.min.css"
+      ],
+      "internal_links": [
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html#NCSTrents",
+        "/fr/agence-revenu/services/formulaires-publications/publications/t4002/t4002-2.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-6.html#tocch4frpldmntprpty",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-9.html#tocch7c",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-6.html#tocch4b",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-3.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-3.html#CMETC",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-1.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-3.html#tocch1cmetc",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-6.html#tocch4f",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-9.html#ch7c86234432"
+      ],
+      "anchor_links": [
+        "#toctp3",
+        "#toctp1",
+        "#NCSTrent",
+        "#wb-info",
+        "#wb-cont",
+        "#toctp310",
+        "#whatsnew"
+      ]
+    },
+    {
+      "success": true,
+      "filename": "t4002-3.html",
+      "size": 124576,
+      "css_links": [
+        "/etc/designs/canada/wet-boew/css/noscript.min.css",
+        "https://use.fontawesome.com/releases/v5.15.4/css/all.css",
+        "/etc/designs/canada/wet-boew/css/theme.min.css"
+      ],
+      "internal_links": [
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html#toctp360",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html#tocch3ln9942",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html#toctp350",
+        "/fr/agence-revenu/services/formulaires-publications/publications/t4002/t4002-3.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-6.html#ch4r1223778",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-6.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html#toctp330",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html#tocch3aprpgxpnss",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-1.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-6.html#tocch4",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-4.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-12.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html#tocch3ln9941"
+      ],
+      "anchor_links": [
+        "#tocch1e",
+        "#tocch1c",
+        "#reportingincome",
+        "#daycare",
+        "#tocch1g",
+        "#tocch1h",
+        "#fn1",
+        "#tocch1bsnssbsnsscm",
+        "#repprtnrshpncm",
+        "#wb-info",
+        "#wb-cont",
+        "#fn2",
+        "#tocch1d",
+        "#farmfishinc",
+        "#howtoreportyourself"
+      ]
+    },
+    {
+      "success": true,
+      "filename": "t4002-4.html",
+      "size": 109190,
+      "css_links": [
+        "/etc/designs/canada/wet-boew/css/noscript.min.css",
+        "https://use.fontawesome.com/releases/v5.15.4/css/all.css",
+        "/etc/designs/canada/wet-boew/css/theme.min.css"
+      ],
+      "internal_links": [
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html#tocch3ln9137",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html#llwbl_rsrvs",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html#tocch3c",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html#tocch3g",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-6.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-6.html#tocch4col5",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html#tocch3b",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html#tocch3ln9945",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html#tocch3ln9946",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html#toctp360",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-3.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-6.html#tocch4",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-6.html#tocch4fgrntssbsdrbts",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html#tocch3ln9943",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html#tocch3f",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-1.html",
+        "/fr/agence-revenu/services/formulaires-publications/publications/t4002/t4002-4.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-3.html#howtoreportyourself",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-9.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-3.html#tocch1hflngrqmnt"
+      ],
+      "anchor_links": [
+        "#tocch2ffshngncm",
+        "#tocch2d",
+        "#tocch2b",
+        "#tocch2e",
+        "#tocch2part3a",
+        "#tocch2ffrmngncm",
+        "#tocch2bprn",
+        "#tocch2ln9540",
+        "#tocch2prtb",
+        "#tocch2a",
+        "#tocch2prt3c",
+        "#tocch2ln9425",
+        "#wb-cont",
+        "#tocch2c",
+        "#tocch2ln9542",
+        "#tocch2f",
+        "#tocch2ln9470id",
+        "#wb-info",
+        "#tocch2prt3d"
+      ]
+    },
+    {
+      "success": true,
+      "filename": "t4002-5.html",
+      "size": 220324,
+      "css_links": [
+        "/etc/designs/canada/wet-boew/css/noscript.min.css",
+        "https://use.fontawesome.com/releases/v5.15.4/css/all.css",
+        "/etc/designs/canada/wet-boew/css/theme.min.css"
+      ],
+      "internal_links": [
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html#toctp370",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-11.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-6.html#tocch4col5",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-6.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-6.html#tocch4clss141",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-4.html#tocch2ln9570",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-6.html#tocch4cca",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html#toctp390",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-12.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html#toctp380",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-6.html#ch4col2",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-4.html#tocch2ln8230",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html#zepv",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html#ZEV",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-4.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html#toctp360",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-3.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html#NCA",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-6.html#tocch4fgrntssbsdrbts",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html#toctp1",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-4.html#tocch2fshxmpl",
+        "/fr/agence-revenu/services/formulaires-publications/publications/t4002/t4002-5.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-1.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-4.html#tocch2ln9604",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-8.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-9.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-3.html#tocch1brptngmthds"
+      ],
+      "anchor_links": [
+        "#fn2tb101",
+        "#tocch3grntscrdtsrbts",
+        "#fn1",
+        "#tocch3qlfdmplys",
+        "#tocch3ln8811",
+        "#tocch3ln9943",
+        "#tocch3b",
+        "#tocch3ln9804",
+        "#tocch3f",
+        "#fn1tb101",
+        "#fn2",
+        "#tocch3ln9941",
+        "#tocch3ln8690",
+        "#tocch3d",
+        "#tocch3ln8523",
+        "#fn1tb_1",
+        "#tocch3ln9795",
+        "#tocch3dcnvtnxpnss",
+        "#tocch3ln9790",
+        "#tocch3a",
+        "#tocch3ln9760",
+        "#tocch3nsrblprsns",
+        "#tocch3ln9819",
+        "#tocch3ln9281b",
+        "#wb-cont",
+        "#tocch3aprpgxpnss",
+        "#fn1_tb_1rf",
+        "#ch3mjyur2312",
+        "#tocch3e",
+        "#tocch3c",
+        "#fn2-0-rf",
+        "#fn1-0-rf",
+        "#tocch3ln9942",
+        "#tocch3g",
+        "#wb-info",
+        "#tocch3ln9945"
+      ]
+    },
+    {
+      "success": true,
+      "filename": "t4002-6.html",
+      "size": 194969,
+      "css_links": [
+        "/etc/designs/canada/wet-boew/css/noscript.min.css",
+        "https://use.fontawesome.com/releases/v5.15.4/css/all.css",
+        "/etc/designs/canada/wet-boew/css/theme.min.css"
+      ],
+      "internal_links": [
+        "/fr/agence-revenu/services/formulaires-publications/publications/t4002/t4002-6.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html#toctp370",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html#tocch3c",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html#toctp390",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html#toctp380",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-9.html#tocch7trnsfrngprptychld",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html#DIEP",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html#ZEV",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html#toctp394",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html#AIIP",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html#EPOP",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html#toctp310",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-10.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html#IEP",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html#tocch3a",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-1.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html#toctp330",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-2.html#toctp320",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-4.html#tocch2ln9604",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-8.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-3.html#RPF",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-9.html"
+      ],
+      "anchor_links": [
+        "#tocch4col3",
+        "#fn1ch2",
+        "#tocch4frpldmntprpty",
+        "#tocch4col16",
+        "#tocch4fcalcb",
+        "#tocch4col4areae",
+        "#tocch4f",
+        "#tocch4fcalca",
+        "#tocch4col7recapcca",
+        "#tocch4c",
+        "#tocch4fnnrmslngthtrnsctns",
+        "#tocch4col4aread",
+        "#tocch4fsprlsdspbldng",
+        "#tocch4e",
+        "#tocch4clss46",
+        "#tocch4b",
+        "#tocch4a",
+        "#tocch4fgrntssbsdrbts",
+        "#tocch4dcca",
+        "#tocch4fprsnlprpty",
+        "#tocch4clss5455",
+        "#tocch4col7terloss",
+        "#tocch4col7",
+        "#tocch4d",
+        "#wb-cont",
+        "#tocch4clss56",
+        "#tocch4clss101",
+        "#tocch4clss54",
+        "#tocch4ywrskng",
+        "#tocch4col15",
+        "#tocch4clss8",
+        "#wb-info",
+        "#tocch4clss55",
+        "#tocch4col3areaf"
+      ]
+    },
+    {
+      "success": true,
+      "filename": "t4002-8.html",
+      "size": 39062,
+      "css_links": [
+        "/etc/designs/canada/wet-boew/css/noscript.min.css",
+        "https://use.fontawesome.com/releases/v5.15.4/css/all.css",
+        "/etc/designs/canada/wet-boew/css/theme.min.css"
+      ],
+      "internal_links": [
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html#tocch3ln9942",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-6.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-1.html",
+        "/fr/agence-revenu/services/formulaires-publications/publications/t4002/t4002-8.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-9.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-9.html#ch7c29874565",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html#tocch3ln9941"
+      ],
+      "anchor_links": [
+        "#tocch6frmlss",
+        "#wb-info",
+        "#wb-cont",
+        "#tocch6fshnglss"
+      ]
+    },
+    {
+      "success": true,
+      "filename": "t4002-9.html",
+      "size": 78943,
+      "css_links": [
+        "/etc/designs/canada/wet-boew/css/noscript.min.css",
+        "https://use.fontawesome.com/releases/v5.15.4/css/all.css",
+        "/etc/designs/canada/wet-boew/css/theme.min.css"
+      ],
+      "internal_links": [
+        "/fr/agence-revenu/services/formulaires-publications/publications/t4002/t4002-9.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-8.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-10.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-1.html"
+      ],
+      "anchor_links": [
+        "#tocch7a",
+        "#tocch7c",
+        "#fn2tb3",
+        "#ch7c124422",
+        "#ch7c23124",
+        "#tocch7chldrn",
+        "#fn1tb3",
+        "#wb-info",
+        "#wb-cont",
+        "#tocch7b",
+        "#tocch7trnsfrngprptychld"
+      ]
+    },
+    {
+      "success": true,
+      "filename": "t4002-10.html",
+      "size": 33175,
+      "css_links": [
+        "/etc/designs/canada/wet-boew/css/noscript.min.css",
+        "https://use.fontawesome.com/releases/v5.15.4/css/all.css",
+        "/etc/designs/canada/wet-boew/css/theme.min.css"
+      ],
+      "internal_links": [
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-11.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-1.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-6.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-9.html",
+        "/fr/agence-revenu/services/formulaires-publications/publications/t4002/t4002-10.html"
+      ],
+      "anchor_links": [
+        "#fn1-tb4rf",
+        "#fn1tb4",
+        "#fn2-tb4rf",
+        "#fn1tb6",
+        "#fn1tb7",
+        "#wb-info",
+        "#wb-cont",
+        "#fn1-tb5rf"
+      ]
+    },
+    {
+      "success": true,
+      "filename": "t4002-11.html",
+      "size": 35488,
+      "css_links": [
+        "/etc/designs/canada/wet-boew/css/noscript.min.css",
+        "https://use.fontawesome.com/releases/v5.15.4/css/all.css",
+        "/etc/designs/canada/wet-boew/css/theme.min.css"
+      ],
+      "internal_links": [
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-5.html#tocch3ln9942",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-1.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-10.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-12.html",
+        "/fr/agence-revenu/services/formulaires-publications/publications/t4002/t4002-11.html"
+      ],
+      "anchor_links": [
+        "#wb-info",
+        "#wb-cont"
+      ]
+    },
+    {
+      "success": true,
+      "filename": "t4002-12.html",
+      "size": 34989,
+      "css_links": [
+        "/etc/designs/canada/wet-boew/css/noscript.min.css",
+        "https://use.fontawesome.com/releases/v5.15.4/css/all.css",
+        "/etc/designs/canada/wet-boew/css/theme.min.css"
+      ],
+      "internal_links": [
+        "/fr/agence-revenu/services/formulaires-publications/publications/t4002/t4002-12.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-11.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-14.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-1.html"
+      ],
+      "anchor_links": [
+        "#wb-info",
+        "#toctp12fshngprchs",
+        "#wb-cont"
+      ]
+    },
+    {
+      "success": true,
+      "filename": "t4002-14.html",
+      "size": 31704,
+      "css_links": [
+        "/etc/designs/canada/wet-boew/css/noscript.min.css",
+        "https://use.fontawesome.com/releases/v5.15.4/css/all.css",
+        "/etc/designs/canada/wet-boew/css/theme.min.css"
+      ],
+      "internal_links": [
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-1.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-12.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-15.html",
+        "/fr/agence-revenu/services/formulaires-publications/publications/t4002/t4002-14.html"
+      ],
+      "anchor_links": [
+        "#p19d25",
+        "#p19d45",
+        "#create",
+        "#p19d40",
+        "#wb-info",
+        "#p19d30",
+        "#wb-cont",
+        "#p19d10"
+      ]
+    },
+    {
+      "success": true,
+      "filename": "t4002-15.html",
+      "size": 32386,
+      "css_links": [
+        "/etc/designs/canada/wet-boew/css/noscript.min.css",
+        "https://use.fontawesome.com/releases/v5.15.4/css/all.css",
+        "/etc/designs/canada/wet-boew/css/theme.min.css"
+      ],
+      "internal_links": [
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-14.html",
+        "/fr/agence-revenu/services/formulaires-publications/publications/t4002/t4002-15.html",
+        "/en/revenue-agency/services/forms-publications/publications/t4002/t4002-1.html"
+      ],
+      "anchor_links": [
+        "#p20d60",
+        "#p20d95",
+        "#p20d40",
+        "#p20d75",
+        "#duedates",
+        "#p20d20",
+        "#p20d10",
+        "#p20d70",
+        "#wb-info",
+        "#wb-cont",
+        "#p20d30",
+        "#p20d50"
+      ]
+    }
+  ],
+  "unique_css_links": [
+    "/etc/designs/canada/wet-boew/css/noscript.min.css",
+    "/etc/designs/canada/wet-boew/css/theme.min.css",
+    "https://use.fontawesome.com/releases/v5.15.4/css/all.css"
+  ]
+}

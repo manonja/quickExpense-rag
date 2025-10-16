@@ -26,9 +26,8 @@ from unittest.mock import Mock
 
 import numpy as np
 import pytest
-
-from quickexpense_rag.data.builder import IndexBuilder
-from quickexpense_rag.search.models import SourceFile
+from qe_tax_rag.data.builder import IndexBuilder
+from qe_tax_rag.search.models import SourceFile
 from scripts.parser.schema import Metadata, ParsedDocument, Section, TextChunk
 
 
@@ -148,6 +147,7 @@ class TestUserStory2:
 
         # Step 3: Create mock encoder (integration test doesn't need real embeddings)
         mock_encoder = Mock()
+
         # Return realistic-shaped embeddings (batch_size x 384)
         def mock_embed(texts):
             return np.random.rand(len(texts), 384).astype(np.float32)
@@ -200,7 +200,9 @@ class TestUserStory2:
         # Check unique expense types populated
         cursor = conn.execute("SELECT COUNT(*) FROM expense_types")
         expense_type_count = cursor.fetchone()[0]
-        assert expense_type_count == 5, "Expected 5 unique expense types (meals, entertainment, vehicle, travel, home_office)"
+        assert expense_type_count == 5, (
+            "Expected 5 unique expense types (meals, entertainment, vehicle, travel, home_office)"
+        )
 
         # Verify specific expense types exist
         cursor = conn.execute("SELECT name FROM expense_types ORDER BY name")
@@ -241,9 +243,13 @@ class TestUserStory2:
         schema_version = cursor.fetchone()[0]
         assert schema_version == "1.0", "Schema version should be 1.0"
 
-        cursor = conn.execute("SELECT value FROM metadata WHERE key = 'embedding_model'")
+        cursor = conn.execute(
+            "SELECT value FROM metadata WHERE key = 'embedding_model'"
+        )
         embedding_model = cursor.fetchone()[0]
-        assert embedding_model == "BAAI/bge-small-en-v1.5", "Embedding model should match"
+        assert embedding_model == "BAAI/bge-small-en-v1.5", (
+            "Embedding model should match"
+        )
 
         # Check many-to-many links exist
         cursor = conn.execute("SELECT COUNT(*) FROM rule_expense_type_links")
@@ -266,10 +272,14 @@ class TestUserStory2:
         assert manifest_data["schema_version"] == "1.0"
         assert "sha256" in manifest_data, "Manifest should include SHA256 hash"
         assert "created_at" in manifest_data, "Manifest should include timestamp"
-        assert len(manifest_data["source_files"]) == 3, "Manifest should list all source files"
+        assert len(manifest_data["source_files"]) == 3, (
+            "Manifest should list all source files"
+        )
 
         # Verify source files have correct structure
-        assert manifest_data["source_files"][0]["url"].startswith("https://www.canada.ca")
+        assert manifest_data["source_files"][0]["url"].startswith(
+            "https://www.canada.ca"
+        )
         assert "hash" in manifest_data["source_files"][0]
 
     def test_indexing_workflow_with_continue_on_error(self, tmp_path):
@@ -368,4 +378,6 @@ class TestUserStory2:
         # Verify manifest reflects partial count
         with open(manifest_path) as f:
             manifest_data = json.load(f)
-            assert manifest_data["chunk_count"] == 33, "Manifest should reflect actual chunk count"
+            assert manifest_data["chunk_count"] == 33, (
+                "Manifest should reflect actual chunk count"
+            )

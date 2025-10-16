@@ -3,22 +3,26 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "quickexpense-rag"
+name = "qe-tax-rag"
 dynamic = ["version"]
 description = "Semantic search over Canadian Revenue Agency (CRA) business expense rules"
 readme = "README.md"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
-    {name = "QuickExpense Contributors"}
+    {name = "QE Tax RAG Contributors"}
 ]
 keywords = ["cra", "rag", "tax", "canada", "semantic-search", "expenses"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
 ]
 
 dependencies = [
@@ -52,20 +56,21 @@ indexing = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/manonja/quickExpense-rag"
-Repository = "https://github.com/manonja/quickExpense-rag"
-Documentation = "https://github.com/manonja/quickExpense-rag/docs"
+Homepage = "https://github.com/manonja/qe-tax-rag"
+Repository = "https://github.com/manonja/qe-tax-rag"
+Documentation = "https://github.com/manonja/qe-tax-rag/docs"
+Changelog = "https://github.com/manonja/qe-tax-rag/blob/main/CHANGELOG.md"
 
 [tool.hatch.version]
-path = "src/quickexpense_rag/__init__.py"
+path = "src/qe_tax_rag/__init__.py"
 
 [tool.hatchling.build.targets.wheel]
-packages = ["src/quickexpense_rag"]
+packages = ["qe_tax_rag"]
 
 [tool.ruff]
 target-version = "py312"
 line-length = 88
-src = ["src/quickexpense_rag", "tests"]
+src = ["src/qe_tax_rag", "tests"]
 
 [tool.ruff.lint]
 select = [
@@ -95,7 +100,7 @@ ignore = ["D203", "D212"]
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101", "ANN", "E501", "PLR2004", "S108", "SIM105"]
 "tests/fixtures/create_fixture_db.py" = ["T201"]  # CLI script uses print for output
-"src/quickexpense_rag/data/validator.py" = ["SIM105"]  # Consistent pattern for sqlite extension loading
+"src/qe_tax_rag/data/validator.py" = ["SIM105"]  # Consistent pattern for sqlite extension loading
 "scripts/cli.py" = ["PLR0915", "PLR0913", "C901", "PLR0912"]  # CLI commands naturally have many statements/arguments/branches
 
 [tool.ruff.format]
@@ -129,7 +134,7 @@ typeCheckingMode = "strict"
 reportMissingTypeStubs = false
 
 [tool.coverage.run]
-source = ["src/quickexpense_rag"]
+source = ["src/qe_tax_rag"]
 omit = ["*/tests/*", "*/test_*.py"]
 
 [tool.coverage.report]

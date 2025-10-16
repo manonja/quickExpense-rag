@@ -5,7 +5,7 @@ this repository.
 
 ## Project Overview
 
-**QuickExpense RAG** is a Python library providing semantic search over Canadian Revenue
+**QE Tax RAG** is a Python library providing semantic search over Canadian Revenue
 Agency (CRA) business expense rules. The library combines keyword search (SQLite FTS5)
 and semantic search (sqlite-vec with BGE embeddings) using Reciprocal Rank Fusion (RRF)
 for hybrid search.
@@ -18,7 +18,7 @@ users must consult qualified tax professionals.
 
 This project uses **src-layout** structure following Arkalos principles:
 
-- `src/quickexpense_rag/` - Runtime library (distributed via PyPI, user-facing)
+- `src/qe_tax_rag/` - Runtime library (distributed via PyPI, user-facing)
 - Data is distributed separately via GitHub Releases, not bundled in the Python package
 - Clear separation between runtime code and development/test infrastructure
 
@@ -36,7 +36,7 @@ Search combines three techniques in sequence:
 
 ### Data Distribution Strategy
 
-- **Code**: Distributed via PyPI (`pip install quickexpense-rag`)
+- **Code**: Distributed via PyPI (`pip install qe-tax-rag`)
 - **Database**: Downloaded from GitHub Releases on first use (via `qe.init()`)
 - **Versioning**: Schema version + data version stored in database metadata table
 - **Integrity**: SHA256 checksums verified on download, version compatibility checked on
@@ -44,7 +44,7 @@ Search combines three techniques in sequence:
 
 ## Database Schema Contract
 
-The schema (defined in `src/quickexpense_rag/data/schema.py`) defines the database
+The schema (defined in `src/qe_tax_rag/data/schema.py`) defines the database
 structure:
 
 **Tables**:
@@ -64,7 +64,7 @@ structure:
 
 ```bash
 # Initialize with uv (package manager)
-uv init --lib quickexpense-rag
+uv init --lib qe-tax-rag
 uv sync
 
 # Install pre-commit hooks
@@ -111,7 +111,7 @@ uv run pytest tests/ --db=tests/fixtures/test_database.db
 
 # Interactive testing
 uv run python
->>> import quickexpense_rag as qe
+>>> import qe_tax_rag as qe
 >>> qe.init()
 >>> results = qe.search("restaurant meal", province="BC")
 ```
@@ -123,7 +123,7 @@ uv run python
 uv build
 
 # Check wheel contents
-unzip -l dist/*.whl | grep "quickexpense_rag/"
+unzip -l dist/*.whl | grep "qe_tax_rag/"
 
 # Verify wheel size < 5MB
 ls -lh dist/
@@ -383,8 +383,8 @@ uv run pytest tests/ --db=tests/fixtures/test_database.db
 
 Settings use `pydantic-settings` with environment variable support:
 
-- Prefix: `QUICKEXPENSE_RAG_`
-- Example: `QUICKEXPENSE_RAG_CACHE_DIR=/custom/path`
+- Prefix: `QE_TAX_RAG_`
+- Example: `QE_TAX_RAG_CACHE_DIR=/custom/path`
 - `.env` file supported (use `.env.example` as template)
 
 **Available settings**:
@@ -424,7 +424,7 @@ Incompatible versions raise `DataVersionMismatchError` with clear upgrade instru
 
 ```
 src/
-  quickexpense_rag/           # Runtime library (in PyPI package)
+  qe_tax_rag/           # Runtime library (in PyPI package)
     search/                   # Search engine, enums, models
       hybrid.py               # Hybrid search implementation
       models.py               # Pydantic models

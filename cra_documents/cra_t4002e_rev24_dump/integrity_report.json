@@ -1,0 +1,158 @@
+{
+  "all_html_files_exist": true,
+  "all_sizes_valid": true,
+  "all_links_valid": true,
+  "assets_complete": true,
+  "overall_status": "PASS",
+  "file_checks": {
+    "t4002-1.html": {
+      "exists": true,
+      "size": 24750,
+      "meets_min_size": true
+    },
+    "t4002-2.html": {
+      "exists": true,
+      "size": 53823,
+      "meets_min_size": true
+    },
+    "t4002-3.html": {
+      "exists": true,
+      "size": 116014,
+      "meets_min_size": true
+    },
+    "t4002-4.html": {
+      "exists": true,
+      "size": 103731,
+      "meets_min_size": true
+    },
+    "t4002-5.html": {
+      "exists": true,
+      "size": 207372,
+      "meets_min_size": true
+    },
+    "t4002-6.html": {
+      "exists": true,
+      "size": 184726,
+      "meets_min_size": true
+    },
+    "t4002-8.html": {
+      "exists": true,
+      "size": 36463,
+      "meets_min_size": true
+    },
+    "t4002-9.html": {
+      "exists": true,
+      "size": 75303,
+      "meets_min_size": true
+    },
+    "t4002-10.html": {
+      "exists": true,
+      "size": 29751,
+      "meets_min_size": true
+    },
+    "t4002-11.html": {
+      "exists": true,
+      "size": 32840,
+      "meets_min_size": true
+    },
+    "t4002-12.html": {
+      "exists": true,
+      "size": 32635,
+      "meets_min_size": true
+    },
+    "t4002-14.html": {
+      "exists": true,
+      "size": 29240,
+      "meets_min_size": true
+    },
+    "t4002-15.html": {
+      "exists": true,
+      "size": 30068,
+      "meets_min_size": true
+    }
+  },
+  "link_checks": {
+    "t4002-1.html": {
+      "total_links": 48,
+      "broken_links": [],
+      "all_valid": true
+    },
+    "t4002-2.html": {
+      "total_links": 11,
+      "broken_links": [],
+      "all_valid": true
+    },
+    "t4002-3.html": {
+      "total_links": 16,
+      "broken_links": [],
+      "all_valid": true
+    },
+    "t4002-4.html": {
+      "total_links": 32,
+      "broken_links": [],
+      "all_valid": true
+    },
+    "t4002-5.html": {
+      "total_links": 50,
+      "broken_links": [],
+      "all_valid": true
+    },
+    "t4002-6.html": {
+      "total_links": 37,
+      "broken_links": [],
+      "all_valid": true
+    },
+    "t4002-8.html": {
+      "total_links": 7,
+      "broken_links": [],
+      "all_valid": true
+    },
+    "t4002-9.html": {
+      "total_links": 4,
+      "broken_links": [],
+      "all_valid": true
+    },
+    "t4002-10.html": {
+      "total_links": 5,
+      "broken_links": [],
+      "all_valid": true
+    },
+    "t4002-11.html": {
+      "total_links": 5,
+      "broken_links": [],
+      "all_valid": true
+    },
+    "t4002-12.html": {
+      "total_links": 4,
+      "broken_links": [],
+      "all_valid": true
+    },
+    "t4002-14.html": {
+      "total_links": 4,
+      "broken_links": [],
+      "all_valid": true
+    },
+    "t4002-15.html": {
+      "total_links": 3,
+      "broken_links": [],
+      "all_valid": true
+    }
+  },
+  "assets_checks": {
+    "assets/theme.min.css": {
+      "exists": true,
+      "size": 415374,
+      "meets_min_size": true
+    },
+    "assets/noscript.min.css": {
+      "exists": true,
+      "size": 1063,
+      "meets_min_size": true
+    },
+    "assets/fontawesome-all.css": {
+      "exists": true,
+      "size": 59305,
+      "meets_min_size": true
+    }
+  }
+}

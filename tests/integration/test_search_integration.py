@@ -3,10 +3,10 @@
 from pathlib import Path
 
 import pytest
-from quickexpense_rag.embeddings.encoder import embedding_service
-from quickexpense_rag.search.enums import BusinessType, Province
-from quickexpense_rag.search.hybrid import HybridSearchEngine
-from quickexpense_rag.search.models import ExpenseQuery
+from qe_tax_rag.embeddings.encoder import embedding_service
+from qe_tax_rag.search.enums import BusinessType, Province
+from qe_tax_rag.search.hybrid import HybridSearchEngine
+from qe_tax_rag.search.models import ExpenseQuery
 
 
 @pytest.fixture
@@ -132,9 +132,9 @@ class TestExpenseTypesFiltering:
         # S1-F1-C1-p2 has BOTH travel and meals
         # Should appear only once in results
         citation_ids = [r.citation_id for r in results]
-        assert len(citation_ids) == len(
-            set(citation_ids)
-        ), f"Duplicate citation IDs found: {citation_ids}"
+        assert len(citation_ids) == len(set(citation_ids)), (
+            f"Duplicate citation IDs found: {citation_ids}"
+        )
 
     @pytest.mark.integration
     def test_search_expense_types_with_province(

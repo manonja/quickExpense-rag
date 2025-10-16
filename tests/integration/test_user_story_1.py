@@ -17,8 +17,8 @@ import pytest
 # Add src to path for direct imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
-import quickexpense_rag as qer
-from quickexpense_rag.exceptions import DatabaseNotInitializedError
+import qe_tax_rag as qer
+from qe_tax_rag.exceptions import DatabaseNotInitializedError
 
 
 class TestUserStory1:
@@ -50,7 +50,7 @@ class TestUserStory1:
             return test_db_path
 
         monkeypatch.setattr(
-            "quickexpense_rag.data.manager.DataManager.get_database_path",
+            "qe_tax_rag.data.manager.DataManager.get_database_path",
             mock_get_database_path,
         )
 
@@ -63,7 +63,7 @@ class TestUserStory1:
         THEN: All assertions pass as per TICKET 8 acceptance criteria
         """
         # Reset module state
-        from quickexpense_rag import api
+        from qe_tax_rag import api
 
         api._search_engine = None
         api._db_path = None
@@ -86,29 +86,29 @@ class TestUserStory1:
         first_result = results[0]
 
         # Check disclaimer (computed field, always present)
-        assert first_result.disclaimer.startswith(
-            "⚠️"
-        ), "Disclaimer must start with warning emoji"
-        assert (
-            "NOT TAX ADVICE" in first_result.disclaimer
-        ), "Disclaimer must contain 'NOT TAX ADVICE'"
+        assert first_result.disclaimer.startswith("⚠️"), (
+            "Disclaimer must start with warning emoji"
+        )
+        assert "NOT TAX ADVICE" in first_result.disclaimer, (
+            "Disclaimer must contain 'NOT TAX ADVICE'"
+        )
 
         # Check citation_id (unique CRA reference)
         assert first_result.citation_id is not None, "citation_id must not be None"
         assert len(first_result.citation_id) > 0, "citation_id must not be empty"
 
         # Check source_url (must be https://canada.ca)
-        assert str(first_result.source_url).startswith(
-            "https://"
-        ), "source_url must use HTTPS"
-        assert "canada.ca" in str(
-            first_result.source_url
-        ), "source_url must be from canada.ca domain"
+        assert str(first_result.source_url).startswith("https://"), (
+            "source_url must use HTTPS"
+        )
+        assert "canada.ca" in str(first_result.source_url), (
+            "source_url must be from canada.ca domain"
+        )
 
         # Check expense_types (many-to-many, list format)
-        assert isinstance(
-            first_result.expense_types, list
-        ), "expense_types must be a list"
+        assert isinstance(first_result.expense_types, list), (
+            "expense_types must be a list"
+        )
         assert len(first_result.expense_types) > 0, "expense_types must not be empty"
 
         # Verify all results have required structure
@@ -127,7 +127,7 @@ class TestUserStory1:
         THEN: DatabaseNotInitializedError is raised
         """
         # Reset module state
-        from quickexpense_rag import api
+        from qe_tax_rag import api
 
         api._search_engine = None
 

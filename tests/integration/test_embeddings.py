@@ -6,13 +6,13 @@ to verify actual numerical properties and model behavior.
 """
 
 import pytest
-from quickexpense_rag.embeddings.encoder import _EmbeddingService
+from qe_tax_rag.embeddings.encoder import _EmbeddingService
 
 
 def test_singleton_pattern() -> None:
     """Verify module-level singleton returns same instance."""
-    from quickexpense_rag.embeddings import embedding_service
-    from quickexpense_rag.embeddings import embedding_service as service2
+    from qe_tax_rag.embeddings import embedding_service
+    from qe_tax_rag.embeddings import embedding_service as service2
 
     assert embedding_service is service2  # Same object ID
 

@@ -57,12 +57,12 @@ chunks = parsed_doc.to_flat_chunks(source_url="https://canada.ca/...")
 
 ### Configuration
 
-Set via environment variables (see `src/quickexpense_rag/settings.py`):
+Set via environment variables (see `src/qe_tax_rag/settings.py`):
 
 ```bash
-export QUICKEXPENSE_RAG_GEMINI_API_KEY=your_key_here
-export QUICKEXPENSE_RAG_GEMINI_MODEL=gemini-2.0-flash-exp
-export QUICKEXPENSE_RAG_GEMINI_TEMPERATURE=0.0
+export QE_TAX_RAG_GEMINI_API_KEY=your_key_here
+export QE_TAX_RAG_GEMINI_MODEL=gemini-2.0-flash-exp
+export QE_TAX_RAG_GEMINI_TEMPERATURE=0.0
 ```
 
 ## Testing

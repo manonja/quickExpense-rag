@@ -13,8 +13,8 @@ from datetime import datetime, timezone
 
 import pytest
 from pydantic import ValidationError
-from quickexpense_rag.search.enums import BusinessType, Province
-from quickexpense_rag.search.models import (
+from qe_tax_rag.search.enums import BusinessType, Province
+from qe_tax_rag.search.models import (
     ExpenseQuery,
     IndexManifest,
     SearchResult,
@@ -399,7 +399,9 @@ class TestImmutability:
 
     def test_source_file_is_immutable(self) -> None:
         """SourceFile fields should not be reassignable."""
-        source = SourceFile(path="/path/to/file.txt", hash="abc123")
+        source = SourceFile(
+            path="/path/to/file.txt", hash="abc123", url="https://example.com/file"
+        )
 
         with pytest.raises(ValidationError):
             source.path = "/new/path"  # type: ignore[misc]
@@ -409,7 +411,7 @@ class TestImmutability:
         manifest = IndexManifest(
             version="2024.12",
             schema_version="1.0",
-            source_files=(SourceFile(path="/test", hash="abc"),),
+            source_files=(SourceFile(path="/test", hash="abc", url="https://example.com/test"),),
             embedding_model="test-model",
             chunk_count=100,
             created_at=datetime.now(timezone.utc),
@@ -424,7 +426,7 @@ class TestImmutability:
         manifest = IndexManifest(
             version="2024.12",
             schema_version="1.0",
-            source_files=(SourceFile(path="/test", hash="abc"),),
+            source_files=(SourceFile(path="/test", hash="abc", url="https://example.com/test"),),
             embedding_model="test-model",
             chunk_count=100,
             created_at=datetime.now(timezone.utc),
@@ -433,7 +435,7 @@ class TestImmutability:
 
         # Tuple is immutable, so this should fail
         with pytest.raises(TypeError):
-            manifest.source_files[0] = SourceFile(path="/new", hash="def")  # type: ignore[index]
+            manifest.source_files[0] = SourceFile(path="/new", hash="def", url="https://example.com/new")  # type: ignore[index]
 
 
 @pytest.mark.unit
@@ -449,7 +451,7 @@ class TestIndexManifestValidation:
                 IndexManifest(
                     version=invalid_version,
                     schema_version="1.0",
-                    source_files=(SourceFile(path="/test", hash="abc"),),
+                    source_files=(SourceFile(path="/test", hash="abc", url="https://example.com/test"),),
                     embedding_model="test",
                     chunk_count=10,
                     created_at=datetime.now(timezone.utc),
@@ -464,7 +466,7 @@ class TestIndexManifestValidation:
         manifest = IndexManifest(
             version="2024.12",
             schema_version="1.0",
-            source_files=(SourceFile(path="/test", hash="abc"),),
+            source_files=(SourceFile(path="/test", hash="abc", url="https://example.com/test"),),
             embedding_model="test-model",
             chunk_count=100,
             created_at=datetime.now(timezone.utc),
@@ -479,7 +481,7 @@ class TestIndexManifestValidation:
             IndexManifest(
                 version="2024.12",
                 schema_version="1.0",
-                source_files=(SourceFile(path="/test", hash="abc"),),
+                source_files=(SourceFile(path="/test", hash="abc", url="https://example.com/test"),),
                 embedding_model="test",
                 chunk_count=0,
                 created_at=datetime.now(timezone.utc),
@@ -496,7 +498,7 @@ class TestIndexManifestValidation:
             IndexManifest(
                 version="2024.12",
                 schema_version="1.0",
-                source_files=(SourceFile(path="/test", hash="abc"),),
+                source_files=(SourceFile(path="/test", hash="abc", url="https://example.com/test"),),
                 embedding_model="test",
                 chunk_count=-10,
                 created_at=datetime.now(timezone.utc),
@@ -510,8 +512,8 @@ class TestIndexManifestValidation:
         """Valid IndexManifest should be created successfully."""
         now = datetime.now(timezone.utc)
         source_files = (
-            SourceFile(path="/data/file1.txt", hash="hash1"),
-            SourceFile(path="/data/file2.txt", hash="hash2"),
+            SourceFile(path="/data/file1.txt", hash="hash1", url="https://example.com/file1"),
+            SourceFile(path="/data/file2.txt", hash="hash2", url="https://example.com/file2"),
         )
 
         manifest = IndexManifest(
@@ -537,7 +539,7 @@ class TestSourceFile:
 
     def test_valid_source_file_creation(self) -> None:
         """Valid SourceFile should be created successfully."""
-        source = SourceFile(path="/path/to/file.txt", hash="abc123def456")
+        source = SourceFile(path="/path/to/file.txt", hash="abc123def456", url="https://example.com/file")
 
         assert source.path == "/path/to/file.txt"
         assert source.hash == "abc123def456"
@@ -545,8 +547,8 @@ class TestSourceFile:
     def test_source_file_in_tuple(self) -> None:
         """SourceFile should work correctly in tuples."""
         sources = (
-            SourceFile(path="/file1.txt", hash="hash1"),
-            SourceFile(path="/file2.txt", hash="hash2"),
+            SourceFile(path="/file1.txt", hash="hash1", url="https://example.com/file1"),
+            SourceFile(path="/file2.txt", hash="hash2", url="https://example.com/file2"),
         )
 
         assert len(sources) == 2

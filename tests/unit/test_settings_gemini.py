@@ -7,7 +7,7 @@ import pytest
 
 def test_gemini_settings_defaults():
     """Test Gemini settings have sensible defaults."""
-    from src.quickexpense_rag.settings import Settings
+    from src.qe_tax_rag.settings import Settings
 
     settings = Settings()
 
@@ -18,11 +18,11 @@ def test_gemini_settings_defaults():
 
 def test_gemini_settings_from_env(monkeypatch):
     """Test Gemini settings load from environment variables."""
-    from src.quickexpense_rag.settings import Settings
+    from src.qe_tax_rag.settings import Settings
 
-    monkeypatch.setenv("QUICKEXPENSE_RAG_GEMINI_API_KEY", "test-key-123")
-    monkeypatch.setenv("QUICKEXPENSE_RAG_GEMINI_MODEL", "gemini-custom-model")
-    monkeypatch.setenv("QUICKEXPENSE_RAG_GEMINI_TEMPERATURE", "0.5")
+    monkeypatch.setenv("QE_TAX_RAG_GEMINI_API_KEY", "test-key-123")
+    monkeypatch.setenv("QE_TAX_RAG_GEMINI_MODEL", "gemini-custom-model")
+    monkeypatch.setenv("QE_TAX_RAG_GEMINI_TEMPERATURE", "0.5")
 
     settings = Settings()
 
@@ -34,8 +34,7 @@ def test_gemini_settings_from_env(monkeypatch):
 def test_gemini_temperature_validation():
     """Test Gemini temperature is validated (0.0 to 1.0)."""
     from pydantic import ValidationError
-
-    from src.quickexpense_rag.settings import Settings
+    from src.qe_tax_rag.settings import Settings
 
     # Valid temperatures
     Settings(gemini_temperature=0.0)

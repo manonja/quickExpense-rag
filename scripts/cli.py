@@ -18,13 +18,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from parser.gemini_parser import GeminiParser
 from preprocessor.models import DownloadMetadata, PreprocessManifest
 from preprocessor.text_extractor import TextExtractor
-from quickexpense_rag.data.builder import IndexBuilder
-from quickexpense_rag.data.validator import IndexValidator
-from quickexpense_rag.embeddings.encoder import embedding_service
-from quickexpense_rag.search.models import SourceFile
+from qe_tax_rag.data.builder import IndexBuilder
+from qe_tax_rag.data.validator import IndexValidator
+from qe_tax_rag.embeddings.encoder import embedding_service
+from qe_tax_rag.search.models import SourceFile
 
 # Initialize Typer app and Rich console
-app = typer.Typer(help="QuickExpense RAG Preprocessing CLI")
+app = typer.Typer(help="QE Tax RAG Preprocessing CLI")
 console = Console()
 
 # Configure logging
@@ -69,7 +69,7 @@ def preprocess(
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    console.print(f"[bold blue]QuickExpense RAG Preprocessing[/bold blue]")
+    console.print(f"[bold blue]QE Tax RAG Preprocessing[/bold blue]")
     console.print(f"Input: {input_dir}")
     console.print(f"Output: {output_dir}\n")
 
@@ -180,7 +180,7 @@ def parse(
         uv run python scripts/cli.py parse --input-dir data/preprocessed
 
     """
-    console.print("[bold blue]QuickExpense RAG Parsing (Gemini Flash)[/bold blue]")
+    console.print("[bold blue]QE Tax RAG Parsing (Gemini Flash)[/bold blue]")
     console.print(f"Input: {input_dir}")
     console.print(f"Output: {output_file}\n")
 
@@ -337,7 +337,7 @@ def build(
         uv run python scripts/cli.py build --input-file data/processed/chunks.jsonl
 
     """
-    console.print("[bold blue]QuickExpense RAG Index Building[/bold blue]")
+    console.print("[bold blue]QE Tax RAG Index Building[/bold blue]")
     console.print(f"Input: {input_file}")
     console.print(f"Manifest: {manifest_file}")
     console.print(f"Output DB: {output_db}")
@@ -477,7 +477,7 @@ def pipeline(
         uv run python scripts/cli.py pipeline --input-dir data/raw
 
     """
-    console.print("[bold blue]QuickExpense RAG Full Pipeline[/bold blue]")
+    console.print("[bold blue]QE Tax RAG Full Pipeline[/bold blue]")
     console.print(f"Input: {input_dir}")
     console.print(f"Output DB: {output_db}\n")
 
@@ -690,7 +690,7 @@ def validate(
         uv run python scripts/cli.py validate --db-path data/cra_rules.db
 
     """
-    console.print("[bold blue]QuickExpense RAG Database Validation[/bold blue]")
+    console.print("[bold blue]QE Tax RAG Database Validation[/bold blue]")
     console.print(f"Database: {db_path}\n")
 
     # Verify database exists
