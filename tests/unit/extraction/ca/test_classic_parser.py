@@ -1,11 +1,15 @@
 """Tests for classic HTML parser."""
 
-import pytest
 from pathlib import Path
 
+import pytest
 from qe_tax_rag.extraction.ca.classic_parser import parse
-from qe_tax_rag.extraction.ca.schema import ExtractedRule, ExpertSource, ApplicabilityType
 from qe_tax_rag.extraction.ca.exceptions import ParserError
+from qe_tax_rag.extraction.ca.schema import (
+    ApplicabilityType,
+    ExpertSource,
+    ExtractedRule,
+)
 
 
 @pytest.fixture

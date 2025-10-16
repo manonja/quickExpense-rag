@@ -1,4 +1,5 @@
-"""Classic rule-based HTML parser for CRA tax documents.
+"""
+Classic rule-based HTML parser for CRA tax documents.
 
 This parser serves as the "classic" expert in the Mixture-of-Experts extraction
 pipeline. It uses BeautifulSoup and rule-based logic to extract line-numbered
@@ -27,7 +28,8 @@ ICON_MAPPING = {
 
 
 def parse(html_path: str) -> list[ExtractedRule]:
-    """Parse HTML file to extract line-numbered tax rules.
+    """
+    Parse HTML file to extract line-numbered tax rules.
 
     Extracts only h3 tags matching "Line XXXX –" pattern using rule-based
     BeautifulSoup parsing. Resilient to individual rule failures - skips
@@ -55,6 +57,7 @@ def parse(html_path: str) -> list[ExtractedRule]:
         8523
         >>> rules[0].title
         'Meals and entertainment'
+
     """
     # Read HTML file
     try:
@@ -157,7 +160,8 @@ def parse(html_path: str) -> list[ExtractedRule]:
 
 
 def _extract_applies_to(header_tag: Tag) -> list[ApplicabilityType]:
-    """Extract applicability types from img tags within header.
+    """
+    Extract applicability types from img tags within header.
 
     Maps icon alt text to ApplicabilityType enum values. Handles multiple
     icons gracefully, returning a list of unique applicability types.
@@ -173,6 +177,7 @@ def _extract_applies_to(header_tag: Tag) -> list[ApplicabilityType]:
         >>> applies_to = _extract_applies_to(header)
         >>> applies_to
         [ApplicabilityType.BUSINESS, ApplicabilityType.FARMING]
+
     """
     applies_to = []
     img_tags = header_tag.find_all("img")

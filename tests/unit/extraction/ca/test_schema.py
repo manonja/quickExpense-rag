@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 import pytest
 import yaml
 from pydantic import ValidationError
-
 from qe_tax_rag.extraction.ca.schema import (
     ApplicabilityType,
     ExpertSource,
