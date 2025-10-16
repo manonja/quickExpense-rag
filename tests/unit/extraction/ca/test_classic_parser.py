@@ -77,3 +77,26 @@ def test_fishing_icon_extraction(fixture_html_path: Path) -> None:
     assert rule is not None, "Line 8000 should be extracted"
     assert rule.title == "Utilities"
     assert rule.applies_to == [ApplicabilityType.FISHING]
+
+
+@pytest.mark.unit
+def test_parse_complex_content_structure(fixture_html_path: Path) -> None:
+    """Test parsing rule with multiple p tags and ol list."""
+    rules = parse(str(fixture_html_path))
+
+    # Line 9200 has multiple p tags + ol list
+    rule = next((r for r in rules if r.rule_number == 9200), None)
+
+    assert rule is not None, "Line 9200 should be extracted"
+    assert rule.title == "Legal and accounting fees"
+    assert ApplicabilityType.BUSINESS in rule.applies_to
+    assert ApplicabilityType.FISHING in rule.applies_to
+
+    # Verify content includes all paragraphs and list items
+    assert "external professional advice" in rule.content.lower()
+    assert "accounting fees" in rule.content.lower()
+    assert "legal fees" in rule.content.lower()
+    assert "not deduct fees for buying capital" in rule.content.lower()
+
+    # Verify whitespace normalization (max 2 newlines)
+    assert "\n\n\n" not in rule.content
