@@ -2,6 +2,8 @@
 
 from enum import StrEnum
 
+from pydantic import BaseModel, ConfigDict, Field
+
 
 class ExpertSource(StrEnum):
     """Source of the extracted rule."""
@@ -17,3 +19,29 @@ class ApplicabilityType(StrEnum):
     BUSINESS = "business"
     FARMING = "farming"
     FISHING = "fishing"
+
+
+class ExtractedRule(BaseModel):
+    """A single extracted tax rule with metadata."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    citation_id: str = Field(
+        description="Unique identifier in format S{section}-F{form}-C{chapter}-p{page}"
+    )
+    rule_text: str = Field(description="The extracted rule content")
+    expert_source: ExpertSource = Field(
+        description="Source of the rule extraction (classic, LLM, or adjudicated)"
+    )
+    applicability: ApplicabilityType = Field(
+        description="Type of business this rule applies to"
+    )
+    confidence_score: float = Field(
+        ge=0.0,
+        le=1.0,
+        description="Confidence score for the extraction (0.0 to 1.0)",
+    )
+    section: str = Field(description="Section number or identifier")
+    form: str = Field(description="Form number or identifier")
+    chapter: str = Field(description="Chapter number or identifier")
+    page: str = Field(description="Page reference")
