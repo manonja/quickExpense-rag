@@ -1,6 +1,6 @@
 # Release Process
 
-This guide documents the manual release process for quickexpense-rag.
+This guide documents the manual release process for qe-tax-rag.
 
 **Note**: Production PyPI releases will be automated via GitHub Actions (see TICKET 12).
 This guide is for TestPyPI uploads and manual releases if needed.
@@ -23,17 +23,17 @@ uv pip install build twine hatchling
 ## Release Workflow
 
 ### Step 1: Update Version
-1. Update `__version__` in `src/quickexpense_rag/__init__.py`
+1. Update `__version__` in `src/qe_tax_rag/__init__.py`
    ```python
    __version__ = "X.Y.Z"
    ```
 2. Update `CHANGELOG.md` with release notes
    - Add new `## [X.Y.Z] - YYYY-MM-DD` section
    - Document all changes under Added/Changed/Fixed/Removed
-   - Add link at bottom: `[X.Y.Z]: https://github.com/manonja/quickExpense-rag/releases/tag/vX.Y.Z`
+   - Add link at bottom: `[X.Y.Z]: https://github.com/manonja/qe-tax-rag/releases/tag/vX.Y.Z`
 3. Commit version bump:
    ```bash
-   git add src/quickexpense_rag/__init__.py CHANGELOG.md
+   git add src/qe_tax_rag/__init__.py CHANGELOG.md
    git commit -m "chore: bump version to X.Y.Z"
    git push
    ```
@@ -48,16 +48,16 @@ uv run hatchling build
 ```
 
 This creates:
-- `dist/quickexpense_rag-X.Y.Z-py3-none-any.whl` (wheel)
-- `dist/quickexpense_rag-X.Y.Z.tar.gz` (source distribution)
+- `dist/qe_tax_rag-X.Y.Z-py3-none-any.whl` (wheel)
+- `dist/qe_tax_rag-X.Y.Z.tar.gz` (source distribution)
 
 ### Step 3: Verify Build
 ```bash
 # 1. Check metadata compliance
 uv run twine check dist/*
 
-# 2. Verify wheel contents (should show quickexpense_rag/ structure)
-unzip -l dist/*.whl | grep "quickexpense_rag/"
+# 2. Verify wheel contents (should show qe_tax_rag/ structure)
+unzip -l dist/*.whl | grep "qe_tax_rag/"
 
 # 3. Check wheel size (should be < 5MB)
 ls -lh dist/
@@ -68,8 +68,8 @@ unzip -l dist/*.whl
 
 **Expected Results**:
 - `twine check` shows "PASSED" for all files
-- Wheel contains `quickexpense_rag/` directory with all modules
-- `quickexpense_rag/py.typed` marker file present
+- Wheel contains `qe_tax_rag/` directory with all modules
+- `qe_tax_rag/py.typed` marker file present
 - Wheel size < 5MB
 - No `tests/`, `scripts/`, or `data/` directories in wheel
 
@@ -81,20 +81,20 @@ uv venv test_env
 source test_env/bin/activate  # On Windows: test_env\Scripts\activate
 
 # Install the wheel
-uv pip install quickexpense-rag/dist/quickexpense_rag-*.whl
+uv pip install qe-tax-rag/dist/qe_tax_rag-*.whl
 
 # Test import and version
-python -c "import quickexpense_rag; print(quickexpense_rag.__version__)"
+python -c "import qe_tax_rag; print(qe_tax_rag.__version__)"
 
 # Test basic import of public APIs
-python -c "from quickexpense_rag import init, search, get_version; print('OK')"
+python -c "from qe_tax_rag import init, search, get_version; print('OK')"
 
 # Test type hints are available
-python -c "from quickexpense_rag import SearchResult; import typing; print(typing.get_type_hints(SearchResult))"
+python -c "from qe_tax_rag import SearchResult; import typing; print(typing.get_type_hints(SearchResult))"
 
 # Cleanup
 deactivate
-cd quickexpense-rag
+cd qe-tax-rag
 rm -rf ../test_env
 ```
 
@@ -140,19 +140,19 @@ source testpypi_verify/bin/activate
 # Note: Dependencies must be available on PyPI (not TestPyPI)
 pip install --index-url https://test.pypi.org/simple/ \
             --extra-index-url https://pypi.org/simple/ \
-            quickexpense-rag
+            qe-tax-rag
 
 # Test
-python -c "import quickexpense_rag as qe; print(qe.__version__)"
+python -c "import qe_tax_rag as qe; print(qe.__version__)"
 
 # Cleanup
 deactivate
-cd quickexpense-rag
+cd qe-tax-rag
 rm -rf ../testpypi_verify
 ```
 
 **Verify on TestPyPI**:
-- Visit https://test.pypi.org/project/quickexpense-rag/
+- Visit https://test.pypi.org/project/qe-tax-rag/
 - Check README renders correctly
 - Verify badges display
 - Check classifiers and metadata
@@ -178,7 +178,7 @@ uv run twine upload dist/*
 **Authentication**: Same as TestPyPI, but use your PyPI API token
 
 ### Step 9: Create GitHub Release
-1. Go to https://github.com/manonja/quickExpense-rag/releases
+1. Go to https://github.com/manonja/qe-tax-rag/releases
 2. Click "Create a new release"
 3. Select tag: `v0.1.0`
 4. Release title: `v0.1.0`
@@ -210,13 +210,13 @@ uv pip install hatchling
 ```
 
 ### Version mismatch after install
-- Ensure `__version__` is updated in `src/quickexpense_rag/__init__.py`
+- Ensure `__version__` is updated in `src/qe_tax_rag/__init__.py`
 - Clear build cache: `rm -rf dist/ build/ *.egg-info/`
 - Rebuild: `uv run hatchling build`
 
 ### Import fails in clean environment
 - Check wheel contents: `unzip -l dist/*.whl`
-- Verify `quickexpense_rag/` structure is preserved (not `src/quickexpense_rag/`)
+- Verify `qe_tax_rag/` structure is preserved (not `src/qe_tax_rag/`)
 - Check for missing dependencies in `pyproject.toml` [project.dependencies]
 - Ensure dependencies are pure Python or have wheels for target platform
 
@@ -265,7 +265,7 @@ If a release has critical issues:
    ```bash
    # Via web UI: PyPI project page → Manage → Options → Yank release
    # Or via twine:
-   twine yank quickexpense-rag <version>
+   twine yank qe-tax-rag <version>
    ```
 3. **Release a patch version** with fixes (e.g., 0.1.1)
 4. **Document the issue** in CHANGELOG under the fixed version
