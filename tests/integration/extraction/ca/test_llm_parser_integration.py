@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import pytest
-
 from qe_tax_rag.extraction.ca.llm_parser import parse
 from qe_tax_rag.extraction.ca.schema import ExpertSource
 

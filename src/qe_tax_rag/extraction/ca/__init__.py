@@ -14,8 +14,8 @@ Modules:
 
 __all__ = [
     "classic_parser",
+    "exceptions",
     "llm_parser",
     "schema",
     "settings",
-    "exceptions",
 ]
