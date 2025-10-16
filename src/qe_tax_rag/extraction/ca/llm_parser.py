@@ -2,10 +2,12 @@
 
 import json
 import logging
+import time
 from pathlib import Path
 
 import google.generativeai as genai
 from bs4 import BeautifulSoup
+from google.api_core import exceptions as google_exceptions
 
 from qe_tax_rag.extraction.ca.exceptions import ParserError
 from qe_tax_rag.extraction.ca.schema import (
@@ -86,18 +88,42 @@ def parse(html_path: str) -> list[ExtractedRule]:
     genai.configure(api_key=settings.gemini_api_key)
     model = genai.GenerativeModel(settings.llm_model_name)
 
-    # Call LLM with JSON mode
-    try:
-        response = model.generate_content(
-            [EXTRACTION_PROMPT, main_content_text],
-            generation_config=genai.types.GenerationConfig(
-                response_mime_type="application/json"
-            ),
-        )
-    except Exception as e:
+    # Call LLM with retry logic
+    retries = 3
+    backoff_factor = 2
+    last_exception = None
+
+    for attempt in range(retries):
+        try:
+            response = model.generate_content(
+                [EXTRACTION_PROMPT, main_content_text],
+                generation_config=genai.types.GenerationConfig(
+                    response_mime_type="application/json"
+                ),
+            )
+            break  # Success - exit retry loop
+        except (
+            google_exceptions.ResourceExhausted,  # 429
+            google_exceptions.ServiceUnavailable,  # 503
+            google_exceptions.InternalServerError,  # 500
+        ) as e:
+            last_exception = e
+            if attempt + 1 == retries:
+                msg = f"API call failed permanently for {html_path} after {retries} attempts"
+                logger.error(msg, exc_info=True)
+                raise ParserError(msg) from e
+
+            wait_time = backoff_factor**attempt
+            logger.warning(
+                f"API error for {html_path}, attempt {attempt + 1}/{retries}. "
+                f"Retrying in {wait_time} seconds... Error: {e}"
+            )
+            time.sleep(wait_time)
+    else:
+        # If we exhausted retries without success
         msg = f"API call failed for {html_path}"
         logger.error(msg, exc_info=True)
-        raise ParserError(msg) from e
+        raise ParserError(msg) from last_exception
 
     # Parse JSON response
     try:
