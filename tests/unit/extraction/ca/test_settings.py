@@ -6,13 +6,13 @@ from pydantic import ValidationError
 from qe_tax_rag.extraction.ca.settings import Settings, settings
 
 
-def test_settings_requires_gemini_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Verify ValidationError when gemini_api_key is missing."""
+def test_settings_has_empty_default_for_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify gemini_api_key defaults to empty string when not provided."""
     # Clear any existing API key from environment
     monkeypatch.delenv("QE_TAX_RAG_EXTRACTION_GEMINI_API_KEY", raising=False)
 
-    with pytest.raises(ValidationError, match="gemini_api_key"):
-        Settings()
+    config = Settings()
+    assert config.gemini_api_key == ""
 
 
 def test_settings_loads_from_environment(monkeypatch: pytest.MonkeyPatch) -> None:
