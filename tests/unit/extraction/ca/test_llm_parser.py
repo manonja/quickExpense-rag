@@ -4,7 +4,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from google.api_core import exceptions as google_exceptions
-
 from qe_tax_rag.extraction.ca.exceptions import ParserError
 from qe_tax_rag.extraction.ca.llm_parser import parse
 from qe_tax_rag.extraction.ca.schema import ExpertSource

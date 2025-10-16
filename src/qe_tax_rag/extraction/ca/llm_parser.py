@@ -85,8 +85,8 @@ def parse(html_path: str) -> list[ExtractedRule]:
         main_content_text = main_tag.get_text()
 
     # Configure Gemini
-    genai.configure(api_key=settings.gemini_api_key)
-    model = genai.GenerativeModel(settings.llm_model_name)
+    genai.configure(api_key=settings.gemini_api_key)  # type: ignore[attr-defined]
+    model = genai.GenerativeModel(settings.llm_model_name)  # type: ignore[attr-defined]
 
     # Token safety check
     try:
