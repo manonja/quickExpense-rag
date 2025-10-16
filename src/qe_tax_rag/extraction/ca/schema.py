@@ -22,29 +22,49 @@ class ApplicabilityType(StrEnum):
 
 
 class ExtractedRule(BaseModel):
-    """A single extracted tax rule with metadata."""
+    """A single extracted tax rule with metadata.
+
+    Represents a line-numbered expense rule extracted from CRA HTML documents.
+    Used in Mixture-of-Experts pipeline where classic and LLM parsers extract
+    rules, and an adjudicator resolves conflicts.
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    citation_id: str = Field(
-        description="Unique identifier in format S{section}-F{form}-C{chapter}-p{page}"
+    # Core fields for adjudication and final output
+    rule_number: int = Field(
+        description="Line number, e.g., 8523. Primary key for adjudication."
     )
-    rule_text: str = Field(description="The extracted rule content")
+    title: str = Field(description="Rule title, e.g., 'Meals and entertainment'")
+    content: str = Field(description="Full text content of the rule")
+    applies_to: list[ApplicabilityType] = Field(
+        description="Business types this rule applies to (from icons)"
+    )
+    source_citation: str = Field(
+        description="Human-readable citation, e.g., 'Line 8523'"
+    )
+
+    # Context fields for navigation and filtering
+    chapter: str = Field(description="Chapter, e.g., 'Chapter 3 – Expenses'")
+    section: str | None = Field(
+        default=None, description="Section, e.g., 'Part 4 – Net income'"
+    )
+    source_file: str = Field(
+        description="Source HTML filename, e.g., 't4002-5.html'"
+    )
+
+    # Internal pipeline metadata (stripped from final YAML output)
     expert_source: ExpertSource = Field(
-        description="Source of the rule extraction (classic, LLM, or adjudicated)"
+        description="Which expert generated this rule"
     )
-    applicability: ApplicabilityType = Field(
-        description="Type of business this rule applies to"
+    anchor_id: str | None = Field(
+        default=None, description="HTML anchor ID, e.g., 'tocch3ln8523'"
     )
     confidence_score: float = Field(
         ge=0.0,
         le=1.0,
-        description="Confidence score for the extraction (0.0 to 1.0)",
+        description="Expert confidence. Classic parser = 1.0",
     )
-    section: str = Field(description="Section number or identifier")
-    form: str = Field(description="Form number or identifier")
-    chapter: str = Field(description="Chapter number or identifier")
-    page: str = Field(description="Page reference")
 
 
 class RuleSet(BaseModel):
