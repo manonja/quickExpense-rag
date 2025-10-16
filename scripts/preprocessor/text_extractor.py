@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pdfplumber
 from bs4 import BeautifulSoup
-from src.quickexpense_rag.exceptions import ParsingError
+from src.qe_tax_rag.exceptions import ParsingError
 
 logger = logging.getLogger(__name__)
 
