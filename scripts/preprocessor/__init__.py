@@ -1,1 +1,1 @@
-"""Document preprocessing utilities for QuickExpense RAG."""
+"""Document preprocessing utilities for QE Tax RAG."""
