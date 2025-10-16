@@ -186,3 +186,29 @@ def test_raises_parser_error_on_invalid_file_path():
     """Test parser raises error on non-existent file."""
     with pytest.raises(ParserError, match="HTML file not found"):
         parse("/nonexistent/path.html")
+
+
+@patch("qe_tax_rag.extraction.ca.llm_parser.genai.GenerativeModel")
+def test_logs_warning_for_large_content(mock_genai, tmp_path, caplog):
+    """Test parser logs warning for content exceeding token limit."""
+    import logging
+
+    html_file = tmp_path / "test.html"
+    # Create large HTML content
+    large_content = "<html><main>" + ("x" * 800_000) + "</main></html>"
+    html_file.write_text(large_content)
+
+    mock_response = MagicMock()
+    mock_response.text = '{"rules": []}'
+
+    mock_model = mock_genai.return_value
+    mock_count_result = MagicMock()
+    mock_count_result.total_tokens = 1_100_000
+    mock_model.count_tokens.return_value = mock_count_result
+    mock_model.generate_content.return_value = mock_response
+
+    with caplog.at_level(logging.WARNING):
+        parse(str(html_file))
+
+    assert "exceeds token limit" in caplog.text
+    assert mock_model.count_tokens.called
