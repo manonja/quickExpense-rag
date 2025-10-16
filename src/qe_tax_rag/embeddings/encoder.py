@@ -59,7 +59,7 @@ class _EmbeddingService:
                 model_name, device=device
             )
         except Exception as e:
-            from quickexpense_rag.exceptions import ModelLoadingError
+            from qe_tax_rag.exceptions import ModelLoadingError
 
             raise ModelLoadingError(f"Failed to load model '{model_name}': {e}") from e
 

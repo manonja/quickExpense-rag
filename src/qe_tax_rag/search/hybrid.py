@@ -8,8 +8,8 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-from quickexpense_rag.embeddings.encoder import _EmbeddingService
-from quickexpense_rag.search.models import ExpenseQuery, SearchResult
+from qe_tax_rag.embeddings.encoder import _EmbeddingService
+from qe_tax_rag.search.models import ExpenseQuery, SearchResult
 
 # Type aliases for ranked search results
 RankedResult = tuple[int, float]  # (rule_id, score/distance)
@@ -396,7 +396,7 @@ class HybridSearchEngine:
             List of search results ranked by RRF combined score (limited to top_k).
 
         """
-        from quickexpense_rag.settings import settings
+        from qe_tax_rag.settings import settings
 
         # Step 1: Get candidate IDs from metadata filtering
         candidate_ids = self._get_candidate_ids(query)

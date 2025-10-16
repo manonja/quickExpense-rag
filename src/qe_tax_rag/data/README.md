@@ -168,8 +168,8 @@ This project uses **"rebuild and replace"** for database updates:
 
 ```python
 from pathlib import Path
-from quickexpense_rag.data.schema import CREATE_TABLES_SQL, init_metadata, optimize_database
-from quickexpense_rag.data.connection import configure_build_connection
+from qe_tax_rag.data.schema import CREATE_TABLES_SQL, init_metadata, optimize_database
+from qe_tax_rag.data.connection import configure_build_connection
 
 db_path = Path("cra_rules.db")
 conn = configure_build_connection(db_path)
@@ -192,7 +192,7 @@ conn.close()
 
 ```python
 from pathlib import Path
-from quickexpense_rag.data.connection import configure_runtime_connection
+from qe_tax_rag.data.connection import configure_runtime_connection
 
 db_path = Path.home() / ".cache" / "quickexpense_rag" / "cra_rules.db"
 conn = configure_runtime_connection(db_path)

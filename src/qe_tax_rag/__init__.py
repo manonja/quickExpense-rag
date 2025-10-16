@@ -1,5 +1,5 @@
 """
-QuickExpense RAG: Semantic search over CRA business expense rules.
+QE Tax RAG: Semantic search over CRA business expense rules.
 
 ⚠️ LEGAL DISCLAIMER:
 This library provides informational content only and does not constitute
@@ -11,8 +11,8 @@ import logging
 
 __version__ = "0.1.0"
 
-from quickexpense_rag.api import get_version, init, search
-from quickexpense_rag.exceptions import (
+from qe_tax_rag.api import get_version, init, search
+from qe_tax_rag.exceptions import (
     ChecksumMismatchError,
     DatabaseNotInitializedError,
     DataVersionMismatchError,
@@ -21,9 +21,9 @@ from quickexpense_rag.exceptions import (
     ParsingError,
     QuickExpenseError,
 )
-from quickexpense_rag.search.enums import BusinessType, Province
-from quickexpense_rag.search.models import ExpenseQuery, SearchResult
-from quickexpense_rag.settings import settings
+from qe_tax_rag.search.enums import BusinessType, Province
+from qe_tax_rag.search.models import ExpenseQuery, SearchResult
+from qe_tax_rag.settings import settings
 
 __all__ = [
     "BusinessType",

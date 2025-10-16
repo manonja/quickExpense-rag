@@ -1,5 +1,5 @@
 """
-Public API for QuickExpense RAG library.
+Public API for QE Tax RAG library.
 
 This module provides the main user-facing functions for initializing
 the library and searching CRA expense rules.
@@ -12,13 +12,13 @@ from typing import TYPE_CHECKING
 
 from pydantic import ValidationError
 
-from quickexpense_rag.data.manager import DataManager
-from quickexpense_rag.embeddings.encoder import _EmbeddingService
-from quickexpense_rag.exceptions import DatabaseNotInitializedError
-from quickexpense_rag.search.enums import BusinessType, Province
-from quickexpense_rag.search.hybrid import HybridSearchEngine
-from quickexpense_rag.search.models import ExpenseQuery, SearchResult
-from quickexpense_rag.settings import settings
+from qe_tax_rag.data.manager import DataManager
+from qe_tax_rag.embeddings.encoder import _EmbeddingService
+from qe_tax_rag.exceptions import DatabaseNotInitializedError
+from qe_tax_rag.search.enums import BusinessType, Province
+from qe_tax_rag.search.hybrid import HybridSearchEngine
+from qe_tax_rag.search.models import ExpenseQuery, SearchResult
+from qe_tax_rag.settings import settings
 
 if TYPE_CHECKING:
     pass
@@ -121,7 +121,7 @@ def get_version() -> dict[str, str]:
         Dictionary with library_version, data_version, schema_version.
 
     """
-    from quickexpense_rag import __version__
+    from qe_tax_rag import __version__
 
     return {
         "library_version": __version__,

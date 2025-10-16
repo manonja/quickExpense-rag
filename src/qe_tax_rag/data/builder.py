@@ -25,10 +25,10 @@ import numpy as np
 import numpy.typing as npt
 from tqdm import tqdm
 
-from quickexpense_rag.data.schema import CREATE_TABLES_SQL, init_metadata, optimize_database
-from quickexpense_rag.embeddings.encoder import _EmbeddingService
-from quickexpense_rag.exceptions import EmbeddingError, QuickExpenseError
-from quickexpense_rag.search.models import IndexManifest, SourceFile
+from qe_tax_rag.data.schema import CREATE_TABLES_SQL, init_metadata, optimize_database
+from qe_tax_rag.embeddings.encoder import _EmbeddingService
+from qe_tax_rag.exceptions import EmbeddingError, QuickExpenseError
+from qe_tax_rag.search.models import IndexManifest, SourceFile
 from scripts.parser.schema import ParsedDocument
 
 logger = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ class IndexBuilder:
     Supports graceful error handling for embedding failures via continue_on_error flag.
 
     Example:
-        >>> from quickexpense_rag.embeddings.encoder import embedding_service
+        >>> from qe_tax_rag.embeddings.encoder import embedding_service
         >>> builder = IndexBuilder(db_path="cra_rules.db", encoder=embedding_service)
         >>> builder.build_from_jsonl(
         ...     jsonl_path="chunks.jsonl",
@@ -519,7 +519,7 @@ class IndexBuilder:
             source_files: Tuple of SourceFile models
             data_version: Version string (YYYY.MM format)
         """
-        from quickexpense_rag.data.schema import SCHEMA_VERSION
+        from qe_tax_rag.data.schema import SCHEMA_VERSION
 
         manifest = IndexManifest(
             version=data_version,

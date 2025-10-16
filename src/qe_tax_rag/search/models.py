@@ -14,7 +14,7 @@ from pydantic import (
     field_validator,
 )
 
-from quickexpense_rag.search.enums import BusinessType, Province
+from qe_tax_rag.search.enums import BusinessType, Province
 
 # Regex for CRA citation IDs, e.g., "S3-F2-C1-p1.25"
 CITATION_ID_PATTERN = r"S\d+-F\d+-C\d+-p\d+\.?\d*"
