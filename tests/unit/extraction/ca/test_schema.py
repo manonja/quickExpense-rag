@@ -45,40 +45,100 @@ def test_enums_are_string_enums() -> None:
 def test_extracted_rule_creates_with_valid_data() -> None:
     """Verify ExtractedRule can be created with all required fields."""
     rule = ExtractedRule(
-        citation_id="S1-F2-C3-p4.5",
-        rule_text="Business meals are 50% deductible.",
+        rule_number=8523,
+        title="Meals and entertainment",
+        content="Business meals are 50% deductible.",
+        applies_to=[ApplicabilityType.BUSINESS],
+        source_citation="Line 8523",
+        chapter="Chapter 3 – Expenses",
+        section="Part 1 – Income/Loss",
+        source_file="t4002-5.html",
         expert_source=ExpertSource.CLASSIC,
-        applicability=ApplicabilityType.BUSINESS,
+        anchor_id="tocch3ln8523",
         confidence_score=0.95,
-        section="1",
-        form="2",
-        chapter="3",
-        page="4.5",
     )
 
-    assert rule.citation_id == "S1-F2-C3-p4.5"
-    assert rule.rule_text == "Business meals are 50% deductible."
+    assert rule.rule_number == 8523
+    assert rule.title == "Meals and entertainment"
+    assert rule.content == "Business meals are 50% deductible."
+    assert rule.applies_to == [ApplicabilityType.BUSINESS]
+    assert rule.source_citation == "Line 8523"
+    assert rule.chapter == "Chapter 3 – Expenses"
+    assert rule.section == "Part 1 – Income/Loss"
+    assert rule.source_file == "t4002-5.html"
     assert rule.expert_source == ExpertSource.CLASSIC
-    assert rule.applicability == ApplicabilityType.BUSINESS
+    assert rule.anchor_id == "tocch3ln8523"
     assert rule.confidence_score == 0.95
-    assert rule.section == "1"
-    assert rule.form == "2"
-    assert rule.chapter == "3"
-    assert rule.page == "4.5"
 
 
 def test_extracted_rule_validates_required_fields() -> None:
     """Verify all required fields must be present."""
     with pytest.raises(ValidationError) as exc_info:
         ExtractedRule(
-            citation_id="S1-F2-C3-p4.5",
-            # Missing rule_text, expert_source, etc.
+            rule_number=8523,
+            title="Test Rule",
+            # Missing content, applies_to, etc.
         )
 
     errors = exc_info.value.errors()
     assert len(errors) > 0
     missing_fields = {error["loc"][0] for error in errors if error["type"] == "missing"}
-    assert "rule_text" in missing_fields
+    assert "content" in missing_fields
+
+
+def test_extracted_rule_optional_fields_default_to_none() -> None:
+    """Verify optional fields (section, anchor_id) default to None."""
+    rule = ExtractedRule(
+        rule_number=9999,
+        title="Test Rule",
+        content="Test content without section or anchor.",
+        applies_to=[ApplicabilityType.FARMING],
+        source_citation="Line 9999",
+        chapter="Chapter 1",
+        # section and anchor_id omitted
+        source_file="test.html",
+        expert_source=ExpertSource.LLM,
+        confidence_score=0.88,
+    )
+
+    assert rule.section is None
+    assert rule.anchor_id is None
+
+
+def test_extracted_rule_applies_to_multiple_types() -> None:
+    """Verify applies_to can contain multiple ApplicabilityType values."""
+    rule = ExtractedRule(
+        rule_number=9270,
+        title="Motor vehicle expenses",
+        content="Deduct vehicle costs for business and farming.",
+        applies_to=[ApplicabilityType.BUSINESS, ApplicabilityType.FARMING],
+        source_citation="Line 9270",
+        chapter="Chapter 3",
+        source_file="test.html",
+        expert_source=ExpertSource.CLASSIC,
+        confidence_score=1.0,
+    )
+
+    assert len(rule.applies_to) == 2
+    assert ApplicabilityType.BUSINESS in rule.applies_to
+    assert ApplicabilityType.FARMING in rule.applies_to
+
+
+def test_extracted_rule_applies_to_can_be_empty() -> None:
+    """Verify applies_to can be an empty list when no icons present."""
+    rule = ExtractedRule(
+        rule_number=8810,
+        title="Salaries and wages",
+        content="Deduct gross salaries.",
+        applies_to=[],  # No icons in source HTML
+        source_citation="Line 8810",
+        chapter="Chapter 3",
+        source_file="test.html",
+        expert_source=ExpertSource.CLASSIC,
+        confidence_score=1.0,
+    )
+
+    assert rule.applies_to == []
 
 
 def test_extracted_rule_validates_confidence_score_range() -> None:
@@ -86,15 +146,15 @@ def test_extracted_rule_validates_confidence_score_range() -> None:
     # Test score too high
     with pytest.raises(ValidationError) as exc_info:
         ExtractedRule(
-            citation_id="S1-F2-C3-p4.5",
-            rule_text="Test rule",
+            rule_number=8523,
+            title="Test",
+            content="Test content",
+            applies_to=[ApplicabilityType.BUSINESS],
+            source_citation="Line 8523",
+            chapter="Chapter 1",
+            source_file="test.html",
             expert_source=ExpertSource.LLM,
-            applicability=ApplicabilityType.BUSINESS,
             confidence_score=1.5,  # Invalid: > 1.0
-            section="1",
-            form="2",
-            chapter="3",
-            page="4.5",
         )
 
     assert any("less than or equal to 1" in str(e) for e in exc_info.value.errors())
@@ -102,15 +162,15 @@ def test_extracted_rule_validates_confidence_score_range() -> None:
     # Test score too low
     with pytest.raises(ValidationError) as exc_info:
         ExtractedRule(
-            citation_id="S1-F2-C3-p4.5",
-            rule_text="Test rule",
+            rule_number=8523,
+            title="Test",
+            content="Test content",
+            applies_to=[ApplicabilityType.BUSINESS],
+            source_citation="Line 8523",
+            chapter="Chapter 1",
+            source_file="test.html",
             expert_source=ExpertSource.LLM,
-            applicability=ApplicabilityType.BUSINESS,
             confidence_score=-0.1,  # Invalid: < 0.0
-            section="1",
-            form="2",
-            chapter="3",
-            page="4.5",
         )
 
     assert any("greater than or equal to 0" in str(e) for e in exc_info.value.errors())
@@ -119,34 +179,34 @@ def test_extracted_rule_validates_confidence_score_range() -> None:
 def test_extracted_rule_is_frozen() -> None:
     """Verify ExtractedRule instances are immutable."""
     rule = ExtractedRule(
-        citation_id="S1-F2-C3-p4.5",
-        rule_text="Test rule",
+        rule_number=8523,
+        title="Test Rule",
+        content="Test content",
+        applies_to=[ApplicabilityType.FARMING],
+        source_citation="Line 8523",
+        chapter="Chapter 1",
+        source_file="test.html",
         expert_source=ExpertSource.ADJUDICATED,
-        applicability=ApplicabilityType.FARMING,
         confidence_score=0.9,
-        section="1",
-        form="2",
-        chapter="3",
-        page="4.5",
     )
 
     with pytest.raises(ValidationError, match="frozen"):
-        rule.rule_text = "Modified text"  # type: ignore[misc]
+        rule.content = "Modified text"  # type: ignore[misc]
 
 
 def test_extracted_rule_forbids_extra_fields() -> None:
     """Verify ExtractedRule rejects extra fields."""
     with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
         ExtractedRule(
-            citation_id="S1-F2-C3-p4.5",
-            rule_text="Test rule",
+            rule_number=8523,
+            title="Test",
+            content="Test content",
+            applies_to=[ApplicabilityType.FISHING],
+            source_citation="Line 8523",
+            chapter="Chapter 1",
+            source_file="test.html",
             expert_source=ExpertSource.LLM,
-            applicability=ApplicabilityType.FISHING,
             confidence_score=0.85,
-            section="1",
-            form="2",
-            chapter="3",
-            page="4.5",
             extra_field="not allowed",  # type: ignore[call-arg]
         )
 
@@ -154,27 +214,31 @@ def test_extracted_rule_forbids_extra_fields() -> None:
 def test_extracted_rule_json_serialization() -> None:
     """Verify ExtractedRule can be serialized to and from JSON."""
     original = ExtractedRule(
-        citation_id="S1-F2-C3-p4.5",
-        rule_text="Test rule for serialization",
+        rule_number=8523,
+        title="Meals and entertainment",
+        content="Test rule for serialization",
+        applies_to=[ApplicabilityType.BUSINESS, ApplicabilityType.FISHING],
+        source_citation="Line 8523",
+        chapter="Chapter 3",
+        section="Part 1",
+        source_file="t4002-5.html",
         expert_source=ExpertSource.LLM,
-        applicability=ApplicabilityType.BUSINESS,
+        anchor_id="tocch3ln8523",
         confidence_score=0.88,
-        section="1",
-        form="2",
-        chapter="3",
-        page="4.5",
     )
 
     # Serialize to JSON
     json_data = original.model_dump_json()
     assert isinstance(json_data, str)
     assert "Test rule for serialization" in json_data
+    assert "8523" in json_data
 
     # Deserialize from JSON
     reconstructed = ExtractedRule.model_validate_json(json_data)
     assert reconstructed == original
-    assert reconstructed.citation_id == "S1-F2-C3-p4.5"
+    assert reconstructed.rule_number == 8523
     assert reconstructed.expert_source == ExpertSource.LLM
+    assert len(reconstructed.applies_to) == 2
 
 
 # RuleSet model tests
@@ -183,26 +247,26 @@ def test_extracted_rule_json_serialization() -> None:
 def test_ruleset_creates_with_rules_list() -> None:
     """Verify RuleSet can be created with list of rules and metadata."""
     rule1 = ExtractedRule(
-        citation_id="S1-F2-C3-p4.5",
-        rule_text="First rule",
+        rule_number=8523,
+        title="First rule",
+        content="Content for first rule",
+        applies_to=[ApplicabilityType.BUSINESS],
+        source_citation="Line 8523",
+        chapter="Chapter 3",
+        source_file="t4002-5.html",
         expert_source=ExpertSource.CLASSIC,
-        applicability=ApplicabilityType.BUSINESS,
         confidence_score=0.95,
-        section="1",
-        form="2",
-        chapter="3",
-        page="4.5",
     )
     rule2 = ExtractedRule(
-        citation_id="S2-F3-C4-p5.6",
-        rule_text="Second rule",
+        rule_number=9270,
+        title="Second rule",
+        content="Content for second rule",
+        applies_to=[ApplicabilityType.FARMING],
+        source_citation="Line 9270",
+        chapter="Chapter 3",
+        source_file="t4002-5.html",
         expert_source=ExpertSource.LLM,
-        applicability=ApplicabilityType.FARMING,
         confidence_score=0.88,
-        section="2",
-        form="3",
-        chapter="4",
-        page="5.6",
     )
 
     timestamp = datetime.now(timezone.utc).isoformat()
@@ -213,8 +277,8 @@ def test_ruleset_creates_with_rules_list() -> None:
     )
 
     assert len(ruleset.rules) == 2
-    assert ruleset.rules[0].citation_id == "S1-F2-C3-p4.5"
-    assert ruleset.rules[1].citation_id == "S2-F3-C4-p5.6"
+    assert ruleset.rules[0].rule_number == 8523
+    assert ruleset.rules[1].rule_number == 9270
     assert ruleset.schema_version == "1.0"
     assert ruleset.extraction_timestamp == timestamp
 
@@ -222,15 +286,15 @@ def test_ruleset_creates_with_rules_list() -> None:
 def test_ruleset_requires_metadata() -> None:
     """Verify RuleSet requires schema_version and extraction_timestamp."""
     rule = ExtractedRule(
-        citation_id="S1-F2-C3-p4.5",
-        rule_text="Test rule",
+        rule_number=8523,
+        title="Test Rule",
+        content="Test content",
+        applies_to=[ApplicabilityType.BUSINESS],
+        source_citation="Line 8523",
+        chapter="Chapter 1",
+        source_file="test.html",
         expert_source=ExpertSource.CLASSIC,
-        applicability=ApplicabilityType.BUSINESS,
         confidence_score=0.95,
-        section="1",
-        form="2",
-        chapter="3",
-        page="4.5",
     )
 
     # Missing schema_version and extraction_timestamp
@@ -246,15 +310,15 @@ def test_ruleset_requires_metadata() -> None:
 def test_ruleset_is_frozen() -> None:
     """Verify RuleSet instances are immutable."""
     rule = ExtractedRule(
-        citation_id="S1-F2-C3-p4.5",
-        rule_text="Test rule",
+        rule_number=8523,
+        title="Test Rule",
+        content="Test content",
+        applies_to=[ApplicabilityType.FISHING],
+        source_citation="Line 8523",
+        chapter="Chapter 1",
+        source_file="test.html",
         expert_source=ExpertSource.ADJUDICATED,
-        applicability=ApplicabilityType.FISHING,
         confidence_score=0.92,
-        section="1",
-        form="2",
-        chapter="3",
-        page="4.5",
     )
 
     timestamp = datetime.now(timezone.utc).isoformat()
@@ -271,15 +335,15 @@ def test_ruleset_is_frozen() -> None:
 def test_ruleset_forbids_extra_fields() -> None:
     """Verify RuleSet rejects extra fields."""
     rule = ExtractedRule(
-        citation_id="S1-F2-C3-p4.5",
-        rule_text="Test rule",
+        rule_number=8523,
+        title="Test Rule",
+        content="Test content",
+        applies_to=[ApplicabilityType.BUSINESS],
+        source_citation="Line 8523",
+        chapter="Chapter 1",
+        source_file="test.html",
         expert_source=ExpertSource.LLM,
-        applicability=ApplicabilityType.BUSINESS,
         confidence_score=0.87,
-        section="1",
-        form="2",
-        chapter="3",
-        page="4.5",
     )
 
     timestamp = datetime.now(timezone.utc).isoformat()
@@ -296,15 +360,17 @@ def test_ruleset_forbids_extra_fields() -> None:
 def test_ruleset_yaml_serialization() -> None:
     """Verify RuleSet can be serialized to and from YAML."""
     rule = ExtractedRule(
-        citation_id="S1-F2-C3-p4.5",
-        rule_text="Test YAML serialization",
+        rule_number=8523,
+        title="Meals and entertainment",
+        content="Test YAML serialization",
+        applies_to=[ApplicabilityType.BUSINESS],
+        source_citation="Line 8523",
+        chapter="Chapter 3",
+        section="Part 1",
+        source_file="t4002-5.html",
         expert_source=ExpertSource.ADJUDICATED,
-        applicability=ApplicabilityType.BUSINESS,
+        anchor_id="tocch3ln8523",
         confidence_score=0.96,
-        section="1",
-        form="2",
-        chapter="3",
-        page="4.5",
     )
 
     timestamp = datetime.now(timezone.utc).isoformat()
@@ -322,14 +388,16 @@ def test_ruleset_yaml_serialization() -> None:
     )
     assert isinstance(yaml_str, str)
     assert "Test YAML serialization" in yaml_str
-    assert "S1-F2-C3-p4.5" in yaml_str
+    assert "8523" in yaml_str
+    assert "Line 8523" in yaml_str
 
     # Deserialize from YAML
     yaml_data = yaml.safe_load(yaml_str)
     reconstructed = RuleSet.model_validate(yaml_data)
 
     assert len(reconstructed.rules) == 1
-    assert reconstructed.rules[0].citation_id == "S1-F2-C3-p4.5"
-    assert reconstructed.rules[0].rule_text == "Test YAML serialization"
+    assert reconstructed.rules[0].rule_number == 8523
+    assert reconstructed.rules[0].title == "Meals and entertainment"
+    assert reconstructed.rules[0].content == "Test YAML serialization"
     assert reconstructed.schema_version == "1.0"
     assert reconstructed.extraction_timestamp == timestamp
