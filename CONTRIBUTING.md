@@ -69,14 +69,14 @@ uv run pytest tests/ -v
 
 ```bash
 # Terminal report with coverage percentage
-uv run pytest --cov=src/quickexpense_rag --cov-report=term
+uv run pytest --cov=src/qe_tax_rag --cov-report=term
 ```
 
 #### HTML Coverage Report
 
 ```bash
 # Generate browsable HTML report in htmlcov/
-uv run pytest --cov=src/quickexpense_rag --cov-report=html
+uv run pytest --cov=src/qe_tax_rag --cov-report=html
 
 # Open report
 open htmlcov/index.html  # macOS
@@ -88,17 +88,17 @@ start htmlcov/index.html  # Windows
 
 ```bash
 # Check coverage for a single module
-uv run pytest --cov=src/quickexpense_rag/api --cov-report=term -v
+uv run pytest --cov=src/qe_tax_rag/api --cov-report=term -v
 
 # Check coverage for search module
-uv run pytest --cov=src/quickexpense_rag/search --cov-report=term -v
+uv run pytest --cov=src/qe_tax_rag/search --cov-report=term -v
 ```
 
 #### Enforce Coverage Threshold
 
 ```bash
 # Fail if coverage below 85%
-uv run pytest --cov=src/quickexpense_rag --cov-fail-under=85
+uv run pytest --cov=src/qe_tax_rag --cov-fail-under=85
 ```
 
 ### Coverage Requirements
@@ -263,7 +263,7 @@ Before pushing:
 uv run pre-commit run --all-files
 
 # 2. Run tests with coverage threshold
-uv run pytest -m "not slow" --cov=src/quickexpense_rag --cov-fail-under=85
+uv run pytest -m "not slow" --cov=src/qe_tax_rag --cov-fail-under=85
 
 # 3. Verify everything passes
 echo "✅ Ready to push!"

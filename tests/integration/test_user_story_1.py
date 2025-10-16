@@ -50,7 +50,7 @@ class TestUserStory1:
             return test_db_path
 
         monkeypatch.setattr(
-            "quickexpense_rag.data.manager.DataManager.get_database_path",
+            "qe_tax_rag.data.manager.DataManager.get_database_path",
             mock_get_database_path,
         )
 

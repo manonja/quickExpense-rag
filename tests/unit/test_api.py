@@ -1,4 +1,4 @@
-"""Unit tests for the public API (src/quickexpense_rag/api.py)."""
+"""Unit tests for the public API (src/qe_tax_rag/api.py)."""
 
 from pathlib import Path
 from unittest.mock import Mock, patch

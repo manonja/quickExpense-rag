@@ -1,1 +1,1 @@
-"""Test suite for quickexpense_rag."""
+"""Test suite for qe_tax_rag."""
