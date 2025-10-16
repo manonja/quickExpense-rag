@@ -88,6 +88,19 @@ def parse(html_path: str) -> list[ExtractedRule]:
     genai.configure(api_key=settings.gemini_api_key)
     model = genai.GenerativeModel(settings.llm_model_name)
 
+    # Token safety check
+    try:
+        token_count = model.count_tokens(main_content_text)
+        if token_count.total_tokens > 1_000_000:
+            logger.warning(
+                f"Content of {html_path} exceeds token limit: "
+                f"{token_count.total_tokens} tokens (max: 1M). "
+                "Extraction may fail or be incomplete."
+            )
+    except Exception as e:
+        # Don't fail on token counting errors - it's a safety check
+        logger.debug(f"Token counting failed for {html_path}: {e}")
+
     # Call LLM with retry logic
     retries = 3
     backoff_factor = 2
