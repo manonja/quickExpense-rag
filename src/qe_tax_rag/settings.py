@@ -8,15 +8,15 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     """
-    Configuration for the QuickExpense RAG library.
+    Configuration for the QE Tax RAG library.
 
-    Settings are loaded from environment variables with the prefix 'QUICKEXPENSE_RAG_'.
+    Settings are loaded from environment variables with the prefix 'QE_TAX_RAG_'.
     An optional .env file can also be used.
     """
 
     model_config = SettingsConfigDict(
         env_file=".env",
-        env_prefix="QUICKEXPENSE_RAG_",
+        env_prefix="QE_TAX_RAG_",
         case_sensitive=False,
         extra="forbid",
         frozen=True,
@@ -24,12 +24,12 @@ class Settings(BaseSettings):
 
     # Data settings
     cache_dir: Path = Field(
-        default_factory=lambda: Path.home() / ".cache" / "quickexpense_rag",
+        default_factory=lambda: Path.home() / ".cache" / "qe_tax_rag",
         description="Directory to cache the downloaded database.",
     )
     db_download_url: str = Field(
         # Placeholder URL, should be updated when a release exists
-        default="https://github.com/manonja/quickExpense-rag/releases/download/data-v2025.10/cra_rules.db",
+        default="https://github.com/manonja/qe-tax-rag/releases/download/data-v2025.10/cra_rules.db",
         description="URL to download the SQLite database from.",
     )
     db_filename: str = Field(
