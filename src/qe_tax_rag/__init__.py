@@ -19,7 +19,7 @@ from qe_tax_rag.exceptions import (
     EmbeddingError,
     NetworkError,
     ParsingError,
-    QuickExpenseError,
+    QeTaxRagError,
 )
 from qe_tax_rag.search.enums import BusinessType, Province
 from qe_tax_rag.search.models import ExpenseQuery, SearchResult
@@ -35,7 +35,7 @@ __all__ = [
     "NetworkError",
     "ParsingError",
     "Province",
-    "QuickExpenseError",
+    "QeTaxRagError",
     "SearchResult",
     "__version__",
     "get_version",

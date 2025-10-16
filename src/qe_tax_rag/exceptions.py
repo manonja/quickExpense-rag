@@ -1,11 +1,11 @@
-"""Custom exception hierarchy for QuickExpense RAG library."""
+"""Custom exception hierarchy for QE Tax RAG library."""
 
 
-class QuickExpenseError(Exception):
-    """Base exception for all QuickExpense RAG library errors."""
+class QeTaxRagError(Exception):
+    """Base exception for all QE Tax RAG library errors."""
 
 
-class DatabaseNotInitializedError(QuickExpenseError):
+class DatabaseNotInitializedError(QeTaxRagError):
     """
     Database not found or not initialized.
 
@@ -13,7 +13,7 @@ class DatabaseNotInitializedError(QuickExpenseError):
     """
 
 
-class DataVersionMismatchError(QuickExpenseError):
+class DataVersionMismatchError(QeTaxRagError):
     """
     Database version incompatible with library version.
 
@@ -22,7 +22,7 @@ class DataVersionMismatchError(QuickExpenseError):
     """
 
 
-class ChecksumMismatchError(QuickExpenseError):
+class ChecksumMismatchError(QeTaxRagError):
     """
     Downloaded database failed integrity check.
 
@@ -30,7 +30,7 @@ class ChecksumMismatchError(QuickExpenseError):
     """
 
 
-class NetworkError(QuickExpenseError):
+class NetworkError(QeTaxRagError):
     """
     Network operation failed.
 
@@ -38,7 +38,7 @@ class NetworkError(QuickExpenseError):
     """
 
 
-class ParsingError(QuickExpenseError):
+class ParsingError(QeTaxRagError):
     """
     Document parsing failed.
 
@@ -46,7 +46,7 @@ class ParsingError(QuickExpenseError):
     """
 
 
-class EmbeddingError(QuickExpenseError):
+class EmbeddingError(QeTaxRagError):
     """
     Embedding generation failed.
 
@@ -54,7 +54,7 @@ class EmbeddingError(QuickExpenseError):
     """
 
 
-class ModelLoadingError(QuickExpenseError):
+class ModelLoadingError(QeTaxRagError):
     """
     Model loading failed.
 

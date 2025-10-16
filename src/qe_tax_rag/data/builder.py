@@ -27,7 +27,7 @@ from tqdm import tqdm
 
 from qe_tax_rag.data.schema import CREATE_TABLES_SQL, init_metadata, optimize_database
 from qe_tax_rag.embeddings.encoder import _EmbeddingService
-from qe_tax_rag.exceptions import EmbeddingError, QuickExpenseError
+from qe_tax_rag.exceptions import EmbeddingError, QeTaxRagError
 from qe_tax_rag.search.models import IndexManifest, SourceFile
 from scripts.parser.schema import ParsedDocument
 
@@ -453,7 +453,7 @@ class IndexBuilder:
             expected_count: Number of chunks that should be in each table
 
         Raises:
-            QuickExpenseError: If any integrity check fails
+            QeTaxRagError: If any integrity check fails
         """
         # Check row counts for core tables
         tables = ["rules", "rules_vec", "rules_fts"]
@@ -461,7 +461,7 @@ class IndexBuilder:
             cursor = conn.execute(f"SELECT COUNT(*) FROM {table}")
             count = cursor.fetchone()[0]
             if count != expected_count:
-                raise QuickExpenseError(
+                raise QeTaxRagError(
                     f"Integrity check failed: {table} has {count} rows, expected {expected_count}"
                 )
 
@@ -475,7 +475,7 @@ class IndexBuilder:
         )
         dangling_rules = cursor.fetchone()[0]
         if dangling_rules > 0:
-            raise QuickExpenseError(
+            raise QeTaxRagError(
                 f"Integrity check failed: Found {dangling_rules} dangling rule_id references "
                 "in rule_expense_type_links"
             )
@@ -489,7 +489,7 @@ class IndexBuilder:
         )
         dangling_types = cursor.fetchone()[0]
         if dangling_types > 0:
-            raise QuickExpenseError(
+            raise QeTaxRagError(
                 f"Integrity check failed: Found {dangling_types} dangling expense_type_id references "
                 "in rule_expense_type_links"
             )
