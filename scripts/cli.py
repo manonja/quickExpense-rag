@@ -18,10 +18,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from parser.gemini_parser import GeminiParser
 from preprocessor.models import DownloadMetadata, PreprocessManifest
 from preprocessor.text_extractor import TextExtractor
-from quickexpense_rag.data.builder import IndexBuilder
-from quickexpense_rag.data.validator import IndexValidator
-from quickexpense_rag.embeddings.encoder import embedding_service
-from quickexpense_rag.search.models import SourceFile
+from qe_tax_rag.data.builder import IndexBuilder
+from qe_tax_rag.data.validator import IndexValidator
+from qe_tax_rag.embeddings.encoder import embedding_service
+from qe_tax_rag.search.models import SourceFile
 
 # Initialize Typer app and Rich console
 app = typer.Typer(help="QE Tax RAG Preprocessing CLI")
