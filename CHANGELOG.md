@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2025-10-16
+
+### Changed
+
+- **BREAKING**: Package renamed from `quickexpense-rag` to `qe-tax-rag`
+- **BREAKING**: Python module renamed from `quickexpense_rag` to `qe_tax_rag`
+- **BREAKING**: Environment variable prefix changed from `QUICKEXPENSE_RAG_` to `QE_TAX_RAG_`
+- **BREAKING**: Base exception class renamed from `QuickExpenseError` to `QeTaxRagError`
+- GitHub repository URL updated to `https://github.com/manonja/qe-tax-rag`
+- Default cache directory changed from `~/.cache/quickexpense_rag` to `~/.cache/qe_tax_rag`
+
+### Migration Guide
+
+Update your code as follows:
+
+```python
+# Before (v0.1.0)
+import quickexpense_rag as qe
+from quickexpense_rag import QuickExpenseError
+
+# After (v0.2.0)
+import qe_tax_rag as qe
+from qe_tax_rag import QeTaxRagError
+```
+
+Update environment variables:
+```bash
+# Before
+export QUICKEXPENSE_RAG_CACHE_DIR="/custom/path"
+
+# After
+export QE_TAX_RAG_CACHE_DIR="/custom/path"
+```
+
 ## [0.1.0] - 2025-01-15
 
 ### Added
@@ -87,4 +121,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Lightweight package (<5MB wheel, database downloaded separately)
 - Type-safe with mypy and pyright strict mode
 
-[0.1.0]: https://github.com/manonja/quickExpense-rag/releases/tag/v0.1.0
+[0.2.0]: https://github.com/manonja/qe-tax-rag/releases/tag/v0.2.0
+[0.1.0]: https://github.com/manonja/qe-tax-rag/releases/tag/v0.1.0
