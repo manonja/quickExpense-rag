@@ -100,3 +100,45 @@ def test_parse_complex_content_structure(fixture_html_path: Path) -> None:
 
     # Verify whitespace normalization (max 2 newlines)
     assert "\n\n\n" not in rule.content
+
+
+@pytest.mark.unit
+def test_skip_conceptual_h3_without_line_pattern(fixture_html_path: Path) -> None:
+    """Test that h3 tags without 'Line XXXX –' are skipped."""
+    rules = parse(str(fixture_html_path))
+
+    # Should not find "Prepaid expenses"
+    assert not any("prepaid" in r.title.lower() for r in rules)
+    assert not any("prepaid" in r.content.lower() for r in rules)
+
+
+@pytest.mark.unit
+def test_skip_malformed_rule_and_log_warning(fixture_html_path: Path, caplog) -> None:  # type: ignore[no-untyped-def]
+    """Test parser skips malformed rules and logs warning."""
+    import logging
+
+    caplog.set_level(logging.WARNING)
+
+    rules = parse(str(fixture_html_path))
+
+    # Line 9999 has no content - should be skipped
+    assert not any(r.rule_number == 9999 for r in rules)
+
+    # Should have logged warning
+    assert any(
+        "9999" in record.message and "no content" in record.message.lower()
+        for record in caplog.records
+    )
+
+
+@pytest.mark.unit
+def test_continue_after_malformed_rule(fixture_html_path: Path) -> None:
+    """Test parser continues after encountering malformed rule."""
+    rules = parse(str(fixture_html_path))
+
+    # Line 8960 comes after malformed 9999 - should still be parsed
+    rule = next((r for r in rules if r.rule_number == 8960), None)
+
+    assert rule is not None, "Line 8960 should be extracted"
+    assert rule.title == "Office expenses"
+    assert "pens, pencils" in rule.content.lower()
