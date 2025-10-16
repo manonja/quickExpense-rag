@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 import sqlite_vec
-from quickexpense_rag.data.schema import (
+from qe_tax_rag.data.schema import (
     CREATE_TABLES_SQL,
     SCHEMA_VERSION,
     init_metadata,

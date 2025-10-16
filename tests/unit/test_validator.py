@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from quickexpense_rag.data.validator import IndexValidator
+from qe_tax_rag.data.validator import IndexValidator
 
 
 @pytest.mark.unit
@@ -72,7 +72,7 @@ def test_check_row_counts_mismatch(tmp_path: Path) -> None:
         pass
 
     # Create schema
-    from quickexpense_rag.data.schema import CREATE_TABLES_SQL
+    from qe_tax_rag.data.schema import CREATE_TABLES_SQL
 
     conn.executescript(CREATE_TABLES_SQL)
 
@@ -125,7 +125,7 @@ def test_check_embeddings_no_embeddings(tmp_path: Path) -> None:
     except AttributeError:
         pass
 
-    from quickexpense_rag.data.schema import CREATE_TABLES_SQL
+    from qe_tax_rag.data.schema import CREATE_TABLES_SQL
 
     conn.executescript(CREATE_TABLES_SQL)
     conn.close()
@@ -221,7 +221,7 @@ def test_validate_fails_if_any_check_fails(tmp_path: Path) -> None:
     except AttributeError:
         pass
 
-    from quickexpense_rag.data.schema import CREATE_TABLES_SQL
+    from qe_tax_rag.data.schema import CREATE_TABLES_SQL
 
     # Create schema but don't add any data
     conn.executescript(CREATE_TABLES_SQL)

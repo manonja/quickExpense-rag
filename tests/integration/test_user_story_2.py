@@ -27,8 +27,8 @@ from unittest.mock import Mock
 import numpy as np
 import pytest
 
-from quickexpense_rag.data.builder import IndexBuilder
-from quickexpense_rag.search.models import SourceFile
+from qe_tax_rag.data.builder import IndexBuilder
+from qe_tax_rag.search.models import SourceFile
 from scripts.parser.schema import Metadata, ParsedDocument, Section, TextChunk
 
 

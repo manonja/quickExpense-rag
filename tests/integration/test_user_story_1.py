@@ -17,8 +17,8 @@ import pytest
 # Add src to path for direct imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
-import quickexpense_rag as qer
-from quickexpense_rag.exceptions import DatabaseNotInitializedError
+import qe_tax_rag as qer
+from qe_tax_rag.exceptions import DatabaseNotInitializedError
 
 
 class TestUserStory1:
@@ -63,7 +63,7 @@ class TestUserStory1:
         THEN: All assertions pass as per TICKET 8 acceptance criteria
         """
         # Reset module state
-        from quickexpense_rag import api
+        from qe_tax_rag import api
 
         api._search_engine = None
         api._db_path = None
@@ -127,7 +127,7 @@ class TestUserStory1:
         THEN: DatabaseNotInitializedError is raised
         """
         # Reset module state
-        from quickexpense_rag import api
+        from qe_tax_rag import api
 
         api._search_engine = None
 

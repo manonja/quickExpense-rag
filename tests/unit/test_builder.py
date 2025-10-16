@@ -25,9 +25,9 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pytest
 
-from quickexpense_rag.data.builder import IndexBuilder
-from quickexpense_rag.exceptions import EmbeddingError, QuickExpenseError
-from quickexpense_rag.search.models import SourceFile
+from qe_tax_rag.data.builder import IndexBuilder
+from qe_tax_rag.exceptions import EmbeddingError, QeTaxRagError
+from qe_tax_rag.search.models import SourceFile
 from scripts.parser.schema import ParsedDocument, Section, TextChunk, Metadata
 
 
@@ -726,11 +726,11 @@ class TestIntegrityChecks:
         """
         GIVEN: Database with 10 rules but expected_count=8
         WHEN: _run_integrity_checks called
-        THEN: Raises QuickExpenseError with clear message
+        THEN: Raises QeTaxRagError with clear message
         """
         builder = IndexBuilder(db_path=str(tmp_path / "test.db"), encoder=Mock())
 
-        with pytest.raises(QuickExpenseError) as exc_info:
+        with pytest.raises(QeTaxRagError) as exc_info:
             builder._run_integrity_checks(in_memory_db_with_data, expected_count=8)
 
         assert "rules" in str(exc_info.value).lower()
@@ -741,14 +741,14 @@ class TestIntegrityChecks:
         """
         GIVEN: Database with 10 rules but only 9 vectors
         WHEN: _run_integrity_checks called with expected_count=10
-        THEN: Raises QuickExpenseError
+        THEN: Raises QeTaxRagError
         """
         # Delete one vector to create mismatch
         in_memory_db_with_data.execute("DELETE FROM rules_vec WHERE id = 10")
 
         builder = IndexBuilder(db_path=str(tmp_path / "test.db"), encoder=Mock())
 
-        with pytest.raises(QuickExpenseError) as exc_info:
+        with pytest.raises(QeTaxRagError) as exc_info:
             builder._run_integrity_checks(in_memory_db_with_data, expected_count=10)
 
         assert "rules_vec" in str(exc_info.value).lower()
@@ -760,7 +760,7 @@ class TestIntegrityChecks:
         """
         GIVEN: Database with dangling rule_id in rule_expense_type_links
         WHEN: _run_integrity_checks called
-        THEN: Raises QuickExpenseError about dangling references
+        THEN: Raises QeTaxRagError about dangling references
         """
         # Insert a link to non-existent rule
         in_memory_db_with_data.execute("PRAGMA foreign_keys = OFF")
@@ -771,7 +771,7 @@ class TestIntegrityChecks:
 
         builder = IndexBuilder(db_path=str(tmp_path / "test.db"), encoder=Mock())
 
-        with pytest.raises(QuickExpenseError) as exc_info:
+        with pytest.raises(QeTaxRagError) as exc_info:
             builder._run_integrity_checks(in_memory_db_with_data, expected_count=10)
 
         assert "dangling" in str(exc_info.value).lower()

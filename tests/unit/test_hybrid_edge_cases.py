@@ -4,8 +4,8 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-from quickexpense_rag.search.hybrid import HybridSearchEngine
-from quickexpense_rag.search.models import ExpenseQuery
+from qe_tax_rag.search.hybrid import HybridSearchEngine
+from qe_tax_rag.search.models import ExpenseQuery
 
 
 class TestInitialization:
@@ -116,7 +116,7 @@ class TestSearchEdgeCases:
         engine = HybridSearchEngine(db_path=fixture_db, encoder=mock_encoder)
 
         # Use a filter combination that matches nothing
-        from quickexpense_rag.search.enums import Province
+        from qe_tax_rag.search.enums import Province
 
         query = ExpenseQuery(
             query="test",

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
-from quickexpense_rag.settings import Settings
+from qe_tax_rag.settings import Settings
 
 
 def test_settings_load_defaults() -> None:
@@ -17,8 +17,8 @@ def test_settings_load_defaults() -> None:
 
 def test_settings_load_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """Verify settings are overridden by environment variables."""
-    monkeypatch.setenv("QUICKEXPENSE_RAG_DEFAULT_TOP_K", "20")
-    monkeypatch.setenv("QUICKEXPENSE_RAG_CACHE_DIR", "/tmp/custom_cache")
+    monkeypatch.setenv("QE_TAX_RAG_DEFAULT_TOP_K", "20")
+    monkeypatch.setenv("QE_TAX_RAG_CACHE_DIR", "/tmp/custom_cache")
 
     settings = Settings()
 
@@ -29,7 +29,7 @@ def test_settings_load_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_settings_load_from_dotenv_file(tmp_path: Path) -> None:
     """Verify settings are loaded from a .env file."""
     env_content = """
-    QUICKEXPENSE_RAG_DB_FILENAME="test.db"
+    QE_TAX_RAG_DB_FILENAME="test.db"
     """
     env_file = tmp_path / ".env"
     env_file.write_text(env_content)
