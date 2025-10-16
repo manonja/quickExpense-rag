@@ -368,7 +368,7 @@ class IndexBuilder:
                 embeddings = self.encoder.embed_documents(batch_texts)
 
                 # Pair chunks with their embeddings
-                for chunk, embedding in zip(batch_chunks, embeddings):
+                for chunk, embedding in zip(batch_chunks, embeddings, strict=False):
                     results.append((chunk, embedding))
 
             except Exception as e:

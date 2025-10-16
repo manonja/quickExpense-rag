@@ -1,7 +1,6 @@
 """Tests for extraction pipeline exception hierarchy."""
 
 import pytest
-
 from qe_tax_rag.extraction.ca.exceptions import (
     AdjudicationError,
     ParserError,
