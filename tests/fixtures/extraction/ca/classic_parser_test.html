@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CRA T4002 Test Fixture - Classic Parser</title>
+</head>
+<body>
+    <h1>Chapter 3 – Business Expenses</h1>
+
+    <!-- TC1: Standard rule with single icon and simple content -->
+    <h2>Part 1 – Income/Loss and Net Income</h2>
+    <h3><a id="tocch3ln8523"></a>Line 8523 – Meals and entertainment <img alt="business icon" src="business.png"></h3>
+    <p>You can deduct the cost of food, beverages, and entertainment that you incur to earn business income. You can deduct 50% of the lesser of these amounts.</p>
+
+    <!-- TC2: Multiple icons (business + farming) with complex content -->
+    <h3><a id="tocch3ln9270"></a>Line 9270 – Motor vehicle expenses <img alt="business icon" src="business.png"><img alt="farm icon" src="farm.png"></h3>
+    <p>You can deduct motor vehicle expenses you incur to earn income.</p>
+    <ul>
+        <li>Fuel and oil</li>
+        <li>Maintenance and repairs</li>
+        <li>Insurance</li>
+    </ul>
+    <p>Keep detailed records of your expenses.</p>
+
+    <!-- TC3: Rule with no icons (empty applies_to list) -->
+    <h3><a id="tocch3ln8810"></a>Line 8810 – Salaries and wages</h3>
+    <p>Deduct gross salaries and other benefits you pay to employees.</p>
+
+    <!-- TC4: Fishing icon -->
+    <h2>Part 2 – Additional Deductions</h2>
+    <h3><a id="tocch3ln8000"></a>Line 8000 – Utilities <img alt="fish icon" src="fish.png"></h3>
+    <p>You can deduct electricity, heating, and water expenses.</p>
+
+    <!-- TC5: Conceptual h3 WITHOUT "Line XXXX –" pattern (should be SKIPPED) -->
+    <h3>Prepaid expenses</h3>
+    <p>This is general guidance about prepaid expenses. Should not be extracted as a rule.</p>
+
+    <!-- TC6: Malformed rule (missing content after header) -->
+    <h3><a id="tocch3ln9999"></a>Line 9999 – Incomplete Rule</h3>
+    <!-- No content here - parser should skip with warning -->
+
+    <!-- TC7: Valid rule after malformed (tests resilience) -->
+    <h3><a id="tocch3ln8960"></a>Line 8960 – Office expenses <img alt="business icon" src="business.png"></h3>
+    <p>Deduct expenses for small office items like pens, pencils, and paper clips.</p>
+
+    <!-- TC8: Rule with complex content structure (multiple p tags + ol list) -->
+    <h3><a id="tocch3ln9200"></a>Line 9200 – Legal and accounting fees <img alt="business icon" src="business.png"><img alt="fish icon" src="fish.png"></h3>
+    <p>You can deduct fees for external professional advice.</p>
+    <p>Include fees for preparing and filing your income tax return.</p>
+    <ol>
+        <li>Accounting fees</li>
+        <li>Legal fees for business matters</li>
+        <li>Tax preparation fees</li>
+    </ol>
+    <p>Do not deduct fees for buying capital property.</p>
+
+</body>
+</html>
