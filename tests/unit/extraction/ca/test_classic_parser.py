@@ -36,3 +36,44 @@ def test_parse_standard_line_item(fixture_html_path: Path) -> None:
     assert rule.section == "Part 1 – Income/Loss and Net Income"
     assert rule.source_file == "classic_parser_test.html"
     assert rule.anchor_id == "tocch3ln8523"
+
+
+@pytest.mark.unit
+def test_extract_multiple_icons(fixture_html_path: Path) -> None:
+    """Test extraction of multiple icons (business + farming)."""
+    rules = parse(str(fixture_html_path))
+
+    # Line 9270 has both business and farm icons
+    rule = next((r for r in rules if r.rule_number == 9270), None)
+
+    assert rule is not None, "Line 9270 should be extracted"
+    assert rule.title == "Motor vehicle expenses"
+    assert ApplicabilityType.BUSINESS in rule.applies_to
+    assert ApplicabilityType.FARMING in rule.applies_to
+    assert len(rule.applies_to) == 2
+
+
+@pytest.mark.unit
+def test_no_icons_empty_applies_to(fixture_html_path: Path) -> None:
+    """Test rules without icons have empty applies_to list."""
+    rules = parse(str(fixture_html_path))
+
+    # Line 8810 has no icons
+    rule = next((r for r in rules if r.rule_number == 8810), None)
+
+    assert rule is not None, "Line 8810 should be extracted"
+    assert rule.title == "Salaries and wages"
+    assert rule.applies_to == []
+
+
+@pytest.mark.unit
+def test_fishing_icon_extraction(fixture_html_path: Path) -> None:
+    """Test fishing icon extracted correctly."""
+    rules = parse(str(fixture_html_path))
+
+    # Line 8000 has fish icon
+    rule = next((r for r in rules if r.rule_number == 8000), None)
+
+    assert rule is not None, "Line 8000 should be extracted"
+    assert rule.title == "Utilities"
+    assert rule.applies_to == [ApplicabilityType.FISHING]
