@@ -45,3 +45,19 @@ class ExtractedRule(BaseModel):
     form: str = Field(description="Form number or identifier")
     chapter: str = Field(description="Chapter number or identifier")
     page: str = Field(description="Page reference")
+
+
+class RuleSet(BaseModel):
+    """Collection of extracted rules with schema metadata."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    rules: list[ExtractedRule] = Field(
+        description="List of extracted tax rules"
+    )
+    schema_version: str = Field(
+        description="Schema version (e.g., '1.0')"
+    )
+    extraction_timestamp: str = Field(
+        description="ISO 8601 timestamp of extraction (e.g., '2024-12-15T10:30:00Z')"
+    )
