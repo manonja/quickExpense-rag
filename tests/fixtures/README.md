@@ -1,6 +1,6 @@
 # Test Fixtures
 
-This directory contains reproducible test fixtures for the QuickExpense RAG library.
+This directory contains reproducible test fixtures for the QE Tax RAG library.
 
 ## Purpose
 
@@ -79,7 +79,7 @@ git commit -m "chore: regenerate fixture database for schema vX.Y"
 
 The script will:
 
-1. Import the current schema from `src/quickexpense_rag/data/schema.py`
+1. Import the current schema from `src/qe_tax_rag/data/schema.py`
 1. Create a new database file
 1. Populate with synthetic test data
 1. Generate deterministic embeddings (seeded random, seed=42)

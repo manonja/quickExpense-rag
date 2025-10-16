@@ -1,12 +1,12 @@
 # TestPyPI Upload Instructions
 
-This document provides step-by-step instructions for uploading `quickexpense-rag` v0.1.0 to TestPyPI.
+This document provides step-by-step instructions for uploading `qe-tax-rag` v0.1.0 to TestPyPI.
 
 ## Status
 
 ✅ **Package Built and Verified**
-- Wheel: `dist/quickexpense_rag-0.1.0-py3-none-any.whl` (36 KB)
-- Source: `dist/quickexpense_rag-0.1.0.tar.gz` (1.5 MB)
+- Wheel: `dist/qe_tax_rag-0.1.0-py3-none-any.whl` (36 KB)
+- Source: `dist/qe_tax_rag-0.1.0.tar.gz` (1.5 MB)
 - `twine check`: PASSED
 - Clean environment test: PASSED
 - All public APIs importable
@@ -22,7 +22,7 @@ This document provides step-by-step instructions for uploading `quickexpense-rag
 1. Log in to TestPyPI
 2. Go to Account Settings → API tokens
 3. Click "Add API token"
-4. Token name: `quickexpense-rag-upload`
+4. Token name: `qe-tax-rag-upload`
 5. Scope: "Entire account" (or specific to project after first upload)
 6. Click "Add token"
 7. **IMPORTANT**: Copy the token immediately (starts with `pypi-`)
@@ -41,15 +41,15 @@ uv pip list | grep -E "(twine|hatchling)"
 
 ### Step 1: Navigate to Project Directory
 ```bash
-cd /Users/manonjacquin/Documents_local/POCs/quickExpense-rag
+cd /Users/manonjacquin/Documents_local/POCs/qe-tax-rag
 ```
 
 ### Step 2: Verify Built Packages Exist
 ```bash
 ls -lh dist/
 # Should show:
-# quickexpense_rag-0.1.0-py3-none-any.whl (36 KB)
-# quickexpense_rag-0.1.0.tar.gz (1.5 MB)
+# qe_tax_rag-0.1.0-py3-none-any.whl (36 KB)
+# qe_tax_rag-0.1.0.tar.gz (1.5 MB)
 ```
 
 ### Step 3: Upload to TestPyPI
@@ -64,17 +64,17 @@ uv run twine upload --repository testpypi dist/*
 **Expected Output**:
 ```
 Uploading distributions to https://test.pypi.org/legacy/
-Uploading quickexpense_rag-0.1.0-py3-none-any.whl
+Uploading qe_tax_rag-0.1.0-py3-none-any.whl
 100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 37.2/37.2 kB • 00:00 • ?
-Uploading quickexpense_rag-0.1.0.tar.gz
+Uploading qe_tax_rag-0.1.0.tar.gz
 100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.5/1.5 MB • 00:01 • ?
 
 View at:
-https://test.pypi.org/project/quickexpense-rag/0.1.0/
+https://test.pypi.org/project/qe-tax-rag/0.1.0/
 ```
 
 ### Step 4: Verify Upload on TestPyPI
-1. Visit https://test.pypi.org/project/quickexpense-rag/
+1. Visit https://test.pypi.org/project/qe-tax-rag/
 2. Check that version 0.1.0 is listed
 3. Verify README renders correctly
 4. Check metadata (classifiers, Python versions, license)
@@ -94,19 +94,19 @@ source testpypi_verify/bin/activate
 # Note: --extra-index-url needed because dependencies are on PyPI, not TestPyPI
 pip install --index-url https://test.pypi.org/simple/ \
             --extra-index-url https://pypi.org/simple/ \
-            quickexpense-rag
+            qe-tax-rag
 
 # Verify installation
-python -c "import quickexpense_rag as qe; print(f'✅ Version: {qe.__version__}')"
+python -c "import qe_tax_rag as qe; print(f'✅ Version: {qe.__version__}')"
 # Expected: ✅ Version: 0.1.0
 
 # Test public API imports
-python -c "from quickexpense_rag import init, search, get_version; print('✅ All APIs importable')"
+python -c "from qe_tax_rag import init, search, get_version; print('✅ All APIs importable')"
 # Expected: ✅ All APIs importable
 
 # Cleanup
 deactivate
-cd quickExpense-rag
+cd qe-tax-rag
 rm -rf ../testpypi_verify
 ```
 
@@ -115,13 +115,13 @@ rm -rf ../testpypi_verify
 **Note**: This requires the database to be available. For now, just test imports.
 
 ```python
-import quickexpense_rag as qe
+import qe_tax_rag as qe
 
 # This will fail without database uploaded to GitHub Releases
 # qe.init()  # Skip for TestPyPI verification
 
 # Verify type hints work
-from quickexpense_rag import SearchResult
+from qe_tax_rag import SearchResult
 import typing
 hints = typing.get_type_hints(SearchResult)
 print(f"✅ Type hints available: {len(hints)} fields")
@@ -130,7 +130,7 @@ print(f"✅ Type hints available: {len(hints)} fields")
 ## Success Criteria
 
 Upload is successful if:
-- [ ] Package visible at https://test.pypi.org/project/quickexpense-rag/0.1.0/
+- [ ] Package visible at https://test.pypi.org/project/qe-tax-rag/0.1.0/
 - [ ] README renders correctly with legal disclaimer at top
 - [ ] All metadata correct (Python 3.11+, Beta status, MIT license)
 - [ ] `pip install` from TestPyPI succeeds

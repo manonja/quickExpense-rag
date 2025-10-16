@@ -103,7 +103,7 @@ pre-commit hooks
 
 ### Acceptance Criteria
 
-- [ ] Project initialized with `uv init --lib quickexpense-rag`
+- [ ] Project initialized with `uv init --lib qe-tax-rag`
 - [ ] `pyproject.toml` configured:
   ```toml
   [build-system]
@@ -111,7 +111,7 @@ pre-commit hooks
   build-backend = "hatchling.build"
 
   [project]
-  name = "quickexpense-rag"
+  name = "qe-tax-rag"
   version = "0.1.0"
   requires-python = ">=3.11"
   dependencies = [
@@ -340,12 +340,12 @@ ______________________________________________________________________
   class Settings(BaseSettings):
       model_config = SettingsConfigDict(
           env_file=".env",
-          env_prefix="QUICKEXPENSE_RAG_",
+          env_prefix="QE_TAX_RAG_",
           case_sensitive=False
       )
 
       # Data settings
-      cache_dir: Path = Path.home() / ".cache" / "quickexpense_rag"
+      cache_dir: Path = Path.home() / ".cache" / "qe_tax_rag"
       db_download_url: str = "https://github.com/.../releases/download/..."
       db_filename: str = "cra_rules.db"
 
@@ -370,31 +370,31 @@ ______________________________________________________________________
   ```
 - [ ] `app/exceptions.py` with custom exception hierarchy:
   ```python
-  class QuickExpenseError(Exception):
+  class QeTaxRagError(Exception):
       """Base exception for all library errors."""
 
-  class DatabaseNotInitializedError(QuickExpenseError):
+  class DatabaseNotInitializedError(QeTaxRagError):
       """Database not found. Call init() first."""
 
-  class DataVersionMismatchError(QuickExpenseError):
+  class DataVersionMismatchError(QeTaxRagError):
       """Database version incompatible with library version."""
 
-  class ChecksumMismatchError(QuickExpenseError):
+  class ChecksumMismatchError(QeTaxRagError):
       """Downloaded database failed integrity check."""
 
-  class NetworkError(QuickExpenseError):
+  class NetworkError(QeTaxRagError):
       """Network operation failed."""
 
-  class ParsingError(QuickExpenseError):
+  class ParsingError(QeTaxRagError):
       """Document parsing failed."""
 
-  class EmbeddingError(QuickExpenseError):
+  class EmbeddingError(QeTaxRagError):
       """Embedding generation failed."""
   ```
 - [ ] Logging configured in `app/__init__.py`:
   ```python
   import logging
-  logging.getLogger("quickexpense_rag").addHandler(logging.NullHandler())
+  logging.getLogger("qe_tax_rag").addHandler(logging.NullHandler())
   ```
 - [ ] `.env.example` created with all settings documented
 - [ ] Unit tests verify:
@@ -552,12 +552,12 @@ ______________________________________________________________________
 
 ### Acceptance Criteria
 
-- [ ] `src/quickexpense_rag/data/schema.py` - **CRITICAL: Remove old column first to
+- [ ] `src/qe_tax_rag/data/schema.py` - **CRITICAL: Remove old column first to
   avoid duplicate data**:
   - **DELETE line 38**: `expense_type TEXT,` from `rules` table definition
   - **DELETE line 77**:
     `CREATE INDEX IF NOT EXISTS idx_expense_type ON rules(expense_type);`
-- [ ] `src/quickexpense_rag/data/schema.py` - Add new tables to CREATE_TABLES_SQL:
+- [ ] `src/qe_tax_rag/data/schema.py` - Add new tables to CREATE_TABLES_SQL:
   ```python
   -- Controlled vocabulary for expense types
   CREATE TABLE IF NOT EXISTS expense_types (
@@ -971,7 +971,7 @@ interface
   - get_version() returns correct dict structure
 - [ ] Integration test (User Story 1):
   ```python
-  import quickexpense_rag as qer
+  import qe_tax_rag as qer
   qer.init()
   results = qer.search(
       query="restaurant expense while traveling for training",
@@ -1485,7 +1485,7 @@ ______________________________________________________________________
 - [ ] `pyproject.toml` project metadata:
   ```toml
   [project]
-  name = "quickexpense-rag"
+  name = "qe-tax-rag"
   version = "0.1.0"
   description = "Semantic search over CRA business expense rules"
   readme = "README.md"
@@ -1503,10 +1503,10 @@ ______________________________________________________________________
   ]
 
   [project.urls]
-  Homepage = "https://github.com/.../quickexpense-rag"
-  Documentation = "https://github.com/.../quickexpense-rag/docs"
-  Repository = "https://github.com/.../quickexpense-rag"
-  Changelog = "https://github.com/.../quickexpense-rag/CHANGELOG.md"
+  Homepage = "https://github.com/.../qe-tax-rag"
+  Documentation = "https://github.com/.../qe-tax-rag/docs"
+  Repository = "https://github.com/.../qe-tax-rag"
+  Changelog = "https://github.com/.../qe-tax-rag/CHANGELOG.md"
 
   [build-system]
   requires = ["hatchling"]
@@ -1518,7 +1518,7 @@ ______________________________________________________________________
   ```
 - [ ] `README.md` structure:
   ```markdown
-  # QuickExpense RAG
+  # QE Tax RAG
 
   [![PyPI](badge)] [![Python](badge)] [![License](badge)] [![CI](badge)]
 
@@ -1534,7 +1534,7 @@ ______________________________________________________________________
   classification agents.
 
   ## Installation
-  pip install quickexpense-rag
+  pip install qe-tax-rag
 
   ## Quick Start
   [User Story 1 example code]
@@ -1579,14 +1579,14 @@ ______________________________________________________________________
   ls dist/  # Should show .whl and .tar.gz
   unzip -l dist/*.whl | grep "app/"  # Verify only app/ included
   pip install dist/*.whl
-  python -c "import quickexpense_rag; print(quickexpense_rag.__version__)"
+  python -c "import qe_tax_rag; print(qe_tax_rag.__version__)"
   ```
 - [ ] Verify wheel size < 5MB
 - [ ] TestPyPI upload:
   ```bash
   twine check dist/*
   twine upload --repository testpypi dist/*
-  pip install --index-url https://test.pypi.org/simple/ quickexpense-rag
+  pip install --index-url https://test.pypi.org/simple/ qe-tax-rag
   ```
 
 **Dependency**: All implementation tickets **Enables**: User Story 3 (PyPI publishing)
@@ -1738,7 +1738,7 @@ Phase 4: Integration & Release (Days 6-7)
 4.7 (Models), TICKET 7 (Search)
 
 ```python
-import quickexpense_rag as qer
+import qe_tax_rag as qer
 qer.init()
 results = qer.search(
     query="restaurant expense while traveling for training",
