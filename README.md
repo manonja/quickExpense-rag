@@ -1,8 +1,8 @@
-# QuickExpense RAG
+# QE Tax RAG
 
-[![PyPI version](https://badge.fury.io/py/quickexpense-rag.svg)](https://badge.fury.io/py/quickexpense-rag)
-[![Python versions](https://img.shields.io/pypi/pyversions/quickexpense-rag)](https://pypi.org/project/quickexpense-rag)
-[![CI/CD Status](https://github.com/manonja/quickExpense-rag/actions/workflows/ci.yml/badge.svg)](https://github.com/manonja/quickExpense-rag/actions)
+[![PyPI version](https://badge.fury.io/py/qe-tax-rag.svg)](https://badge.fury.io/py/qe-tax-rag)
+[![Python versions](https://img.shields.io/pypi/pyversions/qe-tax-rag)](https://pypi.org/project/qe-tax-rag)
+[![CI/CD Status](https://github.com/manonja/qe-tax-rag/actions/workflows/ci.yml/badge.svg)](https://github.com/manonja/qe-tax-rag/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## ⚠️ IMPORTANT: NOT FINANCIAL OR TAX ADVICE
@@ -27,19 +27,19 @@ A Python library for semantic search over Canadian Revenue Agency (CRA) business
 ## Installation
 
 ```bash
-pip install quickexpense-rag
+pip install qe-tax-rag
 ```
 
 Or with [uv](https://github.com/astral-sh/uv):
 
 ```bash
-uv pip install quickexpense-rag
+uv pip install qe-tax-rag
 ```
 
 ## Quick Start
 
 ```python
-import quickexpense_rag as qe
+import qe_tax_rag as qe
 
 # Initialize (downloads database on first run)
 qe.init()
@@ -75,7 +75,7 @@ This information is for educational purposes only and does not constitute tax ad
 
 ## How It Works
 
-QuickExpense RAG uses a multi-stage hybrid search approach:
+QE Tax RAG uses a multi-stage hybrid search approach:
 
 1. **Metadata Filtering**: SQL WHERE clause filters by province/business_type/expense_type
 2. **FTS5 Keyword Search**: Exact term matching on filtered candidates using SQLite's full-text search
@@ -84,7 +84,7 @@ QuickExpense RAG uses a multi-stage hybrid search approach:
 
 ### Data Distribution
 
-- **Code**: Distributed via PyPI (`pip install quickexpense-rag`)
+- **Code**: Distributed via PyPI (`pip install qe-tax-rag`)
 - **Database**: Downloaded from GitHub Releases on first `init()` call (~10-50MB)
 - **Versioning**: Schema version + data version stored in database metadata
 - **Integrity**: SHA256 checksums verified automatically on download
@@ -120,7 +120,7 @@ Initialize the library and download the database if needed.
 
 **Example:**
 ```python
-import quickexpense_rag as qe
+import qe_tax_rag as qe
 
 # First-time initialization (downloads database)
 qe.init()
@@ -203,13 +203,13 @@ class SearchResult:
 
 ## Configuration
 
-QuickExpense RAG uses environment variables for configuration:
+QE Tax RAG uses environment variables for configuration:
 
 ```bash
 # Optional configuration
-export QUICKEXPENSE_RAG_CACHE_DIR="/custom/cache/path"
-export QUICKEXPENSE_RAG_EMBEDDING_DEVICE="cuda"  # or "cpu" (default)
-export QUICKEXPENSE_RAG_DEFAULT_TOP_K=10
+export QE_TAX_RAG_CACHE_DIR="/custom/cache/path"
+export QE_TAX_RAG_EMBEDDING_DEVICE="cuda"  # or "cpu" (default)
+export QE_TAX_RAG_DEFAULT_TOP_K=10
 ```
 
 See [CLAUDE.md](CLAUDE.md) for all configuration options.
@@ -225,8 +225,8 @@ See [CLAUDE.md](CLAUDE.md) for all configuration options.
 
 ```bash
 # Clone repository
-git clone https://github.com/manonja/quickExpense-rag
-cd quickExpense-rag
+git clone https://github.com/manonja/qe-tax-rag
+cd qe-tax-rag
 
 # Install dependencies
 uv sync
@@ -245,7 +245,7 @@ uv run pytest tests/unit -v
 uv run pytest
 
 # Run with coverage
-uv run pytest --cov=src/quickexpense_rag --cov-report=html
+uv run pytest --cov=src/qe_tax_rag --cov-report=html
 ```
 
 ### Quality Checks
