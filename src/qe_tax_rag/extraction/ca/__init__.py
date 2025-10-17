@@ -10,9 +10,13 @@ Modules:
     exceptions: Custom exception hierarchy
     classic_parser: Rule-based HTML parser (BeautifulSoup)
     llm_parser: LLM-based semantic parser (Gemini)
+    adjudicator: Grounded LLM adjudication with self-correction
 """
 
+from src.qe_tax_rag.extraction.ca.adjudicator import adjudicate
+
 __all__ = [
+    "adjudicate",
     "classic_parser",
     "exceptions",
     "llm_parser",
