@@ -39,8 +39,8 @@ import yaml
 from pydantic import ValidationError
 
 from qe_tax_rag import __version__
-from src.qe_tax_rag.extraction.ca.exceptions import YAMLGenerationError
-from src.qe_tax_rag.extraction.ca.schema import ExtractedRule, RuleSet
+from qe_tax_rag.extraction.ca.exceptions import YAMLGenerationError
+from qe_tax_rag.extraction.ca.schema import ExtractedRule, RuleSet
 
 logger: logging.Logger = logging.getLogger(__name__)
 
