@@ -1,4 +1,5 @@
-"""YAML-to-JSONL transformer for TICKET T2.1: Core Transformer Module.
+"""
+YAML-to-JSONL transformer for TICKET T2.1: Core Transformer Module.
 
 This module transforms ExtractedRule YAML files (from adjudicator) into
 ParsedDocument JSONL files (for database builder).
@@ -22,6 +23,22 @@ Exception handling:
     - SkippableTransformationError: Non-fatal warnings (logged, processing continues)
 """
 
+from collections import defaultdict
+from datetime import datetime
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+from pydantic import BaseModel, Field
+
+if TYPE_CHECKING:
+    from qe_tax_rag.extraction.ca.schema import ExtractedRule, RuleSet
+    from qe_tax_rag.parser.schema import (
+        Metadata,
+        ParsedDocument,
+        Section,
+        TextChunk,
+    )
+
 
 # ============================================================================
 # Exception Hierarchy
@@ -29,7 +46,8 @@ Exception handling:
 
 
 class CriticalTransformationError(Exception):
-    """Fatal transformation error that halts processing.
+    """
+    Fatal transformation error that halts processing.
 
     Raised when:
     - Input YAML is malformed or invalid schema
@@ -44,7 +62,8 @@ class CriticalTransformationError(Exception):
 
 
 class SkippableTransformationError(Exception):
-    """Non-fatal transformation warning (processing continues).
+    """
+    Non-fatal transformation warning (processing continues).
 
     Raised when:
     - Optional fields are missing
@@ -55,3 +74,50 @@ class SkippableTransformationError(Exception):
     """
 
     pass
+
+
+# ============================================================================
+# Transformation Report
+# ============================================================================
+
+
+class TransformationReport(BaseModel):
+    """Report on transformation success/failures."""
+
+    timestamp: str
+    input_file: str
+    output_file: str
+    total_rules: int
+    successful: int
+    skipped: int
+    errors: list[dict[str, str]]
+
+
+# ============================================================================
+# YAML Transformer
+# ============================================================================
+
+
+class YAMLTransformer:
+    """Transform ExtractedRule YAML to ParsedDocument JSONL."""
+
+    def _group_by_source_file(
+        self,
+        rules: list["ExtractedRule"],
+    ) -> dict[str, list["ExtractedRule"]]:
+        """
+        Group rules by source_file.
+
+        Args:
+            rules: List of ExtractedRule objects
+
+        Returns:
+            Dictionary mapping source_file → list of rules
+
+        """
+        grouped: dict[str, list["ExtractedRule"]] = defaultdict(list)
+
+        for rule in rules:
+            grouped[rule.source_file].append(rule)
+
+        return dict(grouped)
