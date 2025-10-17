@@ -1,9 +1,32 @@
 """
 YAML generation module for HTML-to-YAML extraction pipeline.
 
-This module takes validated ExtractedRule objects and generates a
-schema-compliant YAML file with metadata stripping, RuleSet wrapping,
-and read-back verification.
+This module provides the final step of the extraction pipeline, taking
+validated ExtractedRule objects from the adjudicator and generating a
+schema-compliant YAML file suitable for distribution.
+
+Key Features:
+- Strips internal pipeline metadata (expert_source, anchor_id, confidence_score)
+- Wraps rules in RuleSet with schema version and extraction timestamp
+- Adds generation metadata header to output file
+- Performs read-back verification to ensure file integrity
+- Comprehensive error handling with single exception type
+
+Usage:
+    >>> from qe_tax_rag.extraction.ca.yaml_generator import generate
+    >>> from qe_tax_rag.extraction.ca.schema import ExtractedRule
+    >>>
+    >>> rules = [...]  # List of ExtractedRule from adjudicator
+    >>> generate(rules=rules, output_path="output/cra_rules.yml")
+
+Integration:
+    This module is called by the orchestrator (TICKET 6) after adjudication
+    completes. It receives the final, validated list of rules and produces
+    the deployable YAML artifact.
+
+Error Handling:
+    All errors raise YAMLGenerationError, which should be caught by the
+    orchestrator for proper error reporting to the user.
 """
 
 import json
@@ -16,8 +39,8 @@ import yaml
 from pydantic import ValidationError
 
 from qe_tax_rag import __version__
-from qe_tax_rag.extraction.ca.exceptions import YAMLGenerationError
-from qe_tax_rag.extraction.ca.schema import ExtractedRule, RuleSet
+from src.qe_tax_rag.extraction.ca.exceptions import YAMLGenerationError
+from src.qe_tax_rag.extraction.ca.schema import ExtractedRule, RuleSet
 
 logger: logging.Logger = logging.getLogger(__name__)
 

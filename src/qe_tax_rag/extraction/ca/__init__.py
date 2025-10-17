@@ -11,15 +11,13 @@ Modules:
     classic_parser: Rule-based HTML parser (BeautifulSoup)
     llm_parser: LLM-based semantic parser (Gemini)
     adjudicator: Grounded LLM adjudication with self-correction
+    yaml_generator: YAML file generation with metadata stripping
 """
 
 from src.qe_tax_rag.extraction.ca.adjudicator import adjudicate
+from src.qe_tax_rag.extraction.ca.yaml_generator import generate
 
 __all__ = [
     "adjudicate",
-    "classic_parser",
-    "exceptions",
-    "llm_parser",
-    "schema",
-    "settings",
+    "generate",
 ]
