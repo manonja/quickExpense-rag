@@ -175,6 +175,39 @@ class YAMLTransformer:
         """
         self.classifier = expense_type_classifier or ExpenseTypeClassifier()
 
+    def _load_yaml(self, yaml_path: Path) -> "RuleSet":
+        """
+        Load and parse YAML file.
+
+        Args:
+            yaml_path: Path to YAML file containing ExtractedRule objects
+
+        Returns:
+            RuleSet with parsed rules
+
+        Raises:
+            CriticalTransformationError: If YAML is invalid or doesn't parse
+
+        """
+        import yaml
+
+        from qe_tax_rag.extraction.ca.schema import RuleSet
+
+        try:
+            with open(yaml_path) as f:
+                data = yaml.safe_load(f)
+        except (yaml.YAMLError, OSError) as e:
+            raise CriticalTransformationError(
+                f"Failed to load YAML file {yaml_path}: {e}"
+            ) from e
+
+        try:
+            return RuleSet.model_validate(data)
+        except Exception as e:
+            raise CriticalTransformationError(
+                f"Failed to parse YAML as RuleSet: {e}"
+            ) from e
+
     def _group_by_source_file(
         self,
         rules: list["ExtractedRule"],
@@ -261,7 +294,9 @@ class YAMLTransformer:
             # Convert all rules to TextChunks
             # Note: We flatten subsections because ParsedDocument
             # schema doesn't support nested sections
-            chapter_content = [
+            from qe_tax_rag.parser.schema import ListChunk, TableChunk, TextChunk
+
+            chapter_content: list[TextChunk | ListChunk | TableChunk] = [
                 self._rule_to_text_chunk(rule) for rule in chapter_rules
             ]
 
