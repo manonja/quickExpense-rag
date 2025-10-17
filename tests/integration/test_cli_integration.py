@@ -3,9 +3,8 @@
 from pathlib import Path
 
 import pytest
-from typer.testing import CliRunner
-
 from qe_tax_rag.extraction.ca.cli import app
+from typer.testing import CliRunner
 
 runner = CliRunner()
 

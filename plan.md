@@ -552,8 +552,8 @@ ______________________________________________________________________
 
 ### Acceptance Criteria
 
-- [ ] `src/qe_tax_rag/data/schema.py` - **CRITICAL: Remove old column first to
-  avoid duplicate data**:
+- [ ] `src/qe_tax_rag/data/schema.py` - **CRITICAL: Remove old column first to avoid
+  duplicate data**:
   - **DELETE line 38**: `expense_type TEXT,` from `rules` table definition
   - **DELETE line 77**:
     `CREATE INDEX IF NOT EXISTS idx_expense_type ON rules(expense_type);`

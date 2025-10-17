@@ -5,7 +5,7 @@ import pytest
 
 def test_flatten_single_section_simple():
     """Test flattening a single section with simple text chunks."""
-    from scripts.parser.schema import (
+    from qe_tax_rag.parser.schema import (
         Metadata,
         ParsedDocument,
         Section,
@@ -47,7 +47,7 @@ def test_flatten_single_section_simple():
 
 def test_flatten_preserves_section_context():
     """Test that section title is preserved in chunk metadata."""
-    from scripts.parser.schema import (
+    from qe_tax_rag.parser.schema import (
         Metadata,
         ParsedDocument,
         Section,
@@ -81,7 +81,7 @@ def test_flatten_preserves_section_context():
 
 def test_flatten_preserves_document_metadata():
     """Test that document-level metadata is copied to each chunk."""
-    from scripts.parser.schema import (
+    from qe_tax_rag.parser.schema import (
         Metadata,
         ParsedDocument,
         Section,
@@ -118,7 +118,7 @@ def test_flatten_preserves_document_metadata():
 
 def test_flatten_handles_list_chunks():
     """Test flattening ListChunk to individual list items."""
-    from scripts.parser.schema import (
+    from qe_tax_rag.parser.schema import (
         ListChunk,
         ListItem,
         Metadata,
@@ -166,7 +166,7 @@ def test_flatten_handles_list_chunks():
 
 def test_flatten_handles_nested_list_items():
     """Test flattening nested list items (sub-items)."""
-    from scripts.parser.schema import (
+    from qe_tax_rag.parser.schema import (
         ListChunk,
         ListItem,
         Metadata,
@@ -221,7 +221,7 @@ def test_flatten_handles_nested_list_items():
 
 def test_flatten_handles_table_chunks():
     """Test flattening TableChunk to a single chunk with table data."""
-    from scripts.parser.schema import (
+    from qe_tax_rag.parser.schema import (
         Metadata,
         ParsedDocument,
         Section,
@@ -258,7 +258,7 @@ def test_flatten_handles_table_chunks():
 
 def test_flatten_multiple_sections():
     """Test flattening multiple sections preserves all content."""
-    from scripts.parser.schema import (
+    from qe_tax_rag.parser.schema import (
         Metadata,
         ParsedDocument,
         Section,
@@ -300,7 +300,7 @@ def test_flatten_multiple_sections():
 
 def test_flatten_empty_document():
     """Test flattening document with no sections."""
-    from scripts.parser.schema import Metadata, ParsedDocument
+    from qe_tax_rag.parser.schema import Metadata, ParsedDocument
 
     doc = ParsedDocument(
         title="Empty Doc", document_id="S1-F1-C1", metadata=Metadata(), sections=[]
@@ -313,7 +313,7 @@ def test_flatten_empty_document():
 
 def test_flatten_chunk_without_citation():
     """Test flattening chunks without citation_id (footnotes, etc.)."""
-    from scripts.parser.schema import (
+    from qe_tax_rag.parser.schema import (
         Metadata,
         ParsedDocument,
         Section,
@@ -346,7 +346,7 @@ def test_flatten_chunk_without_citation():
 
 def test_flat_chunks_include_source_url():
     """Test that flattened chunks include source_url field."""
-    from scripts.parser.schema import (
+    from qe_tax_rag.parser.schema import (
         Metadata,
         ParsedDocument,
         Section,

@@ -102,7 +102,7 @@ class ParserValidator:
             Validation report with 'valid', 'errors', 'warnings', and 'statistics'
 
         """
-        from scripts.parser.schema import ListChunk, ParsedDocument, TextChunk
+        from qe_tax_rag.parser.schema import ListChunk, ParsedDocument, TextChunk
 
         errors: list[str] = []
         warnings: list[str] = []

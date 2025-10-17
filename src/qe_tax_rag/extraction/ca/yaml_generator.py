@@ -46,9 +46,9 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 # Internal metadata fields to exclude from final YAML output
 _INTERNAL_METADATA_FIELDS: Final[set[str]] = {
-    "expert_source",    # Tracks which expert generated the rule
-    "anchor_id",        # HTML anchor ID for debugging
-    "confidence_score", # Adjudicator confidence metric
+    "expert_source",  # Tracks which expert generated the rule
+    "anchor_id",  # HTML anchor ID for debugging
+    "confidence_score",  # Adjudicator confidence metric
 }
 
 # Schema version for generated YAML files

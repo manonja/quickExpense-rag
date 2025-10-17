@@ -20,6 +20,6 @@ from qe_tax_rag.extraction.ca.yaml_generator import generate
 
 __all__ = [
     "adjudicate",
-    "generate",
     "cli_app",
+    "generate",
 ]

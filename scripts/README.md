@@ -1,17 +1,20 @@
 # Maintainer Guide: QE Tax RAG Indexing Pipeline
 
-This guide explains how to build and maintain the searchable database of Canadian Revenue Agency (CRA) business expense rules.
+This guide explains how to build and maintain the searchable database of Canadian
+Revenue Agency (CRA) business expense rules.
 
 ## Overview
 
-The indexing pipeline transforms raw HTML/PDF documents from the CRA website into a searchable SQLite database with full-text search (FTS5) and semantic vector search capabilities.
+The indexing pipeline transforms raw HTML/PDF documents from the CRA website into a
+searchable SQLite database with full-text search (FTS5) and semantic vector search
+capabilities.
 
 **Pipeline stages:**
 
 1. **Preprocess**: HTML/PDF → clean text files
-2. **Parse**: Text → structured JSONL (using Gemini Flash)
-3. **Build**: JSONL → SQLite database with embeddings
-4. **Validate**: Smoke tests for database integrity
+1. **Parse**: Text → structured JSONL (using Gemini Flash)
+1. **Build**: JSONL → SQLite database with embeddings
+1. **Validate**: Smoke tests for database integrity
 
 ## Prerequisites
 
@@ -113,7 +116,8 @@ For more control, run each stage separately:
 
 ### Step 1: Manual Download
 
-**Currently required**: CRA documents must be downloaded manually (automated scraping not implemented).
+**Currently required**: CRA documents must be downloaded manually (automated scraping
+not implemented).
 
 ```bash
 # Create raw directory
@@ -251,10 +255,9 @@ uv run python scripts/cli.py validate \
 
 **What it checks:**
 
-✅ Schema completeness (all required tables exist)
-✅ Row count consistency (rules, rules_fts, rules_vec match)
-✅ Embedding dimensions (384 for BGE-small-en-v1.5)
-✅ Database statistics (chunks, provinces, expense types)
+✅ Schema completeness (all required tables exist) ✅ Row count consistency (rules,
+rules_fts, rules_vec match) ✅ Embedding dimensions (384 for BGE-small-en-v1.5) ✅
+Database statistics (chunks, provinces, expense types)
 
 **Output:**
 
@@ -415,20 +418,24 @@ uv run python scripts/cli.py build \
 ### For Production
 
 1. **Version control:**
+
    - Commit manifest.json to track data provenance
    - Tag releases: `git tag -a v2024.12 -m "CRA data December 2024"`
 
-2. **Backup strategy:**
+1. **Backup strategy:**
+
    - Archive `data/cra_rules.db` with version tag
    - Store `data/manifest.json` alongside database
    - Keep `data/raw/` for reproducibility
 
-3. **Automation:**
+1. **Automation:**
+
    - Use `--force` flag to skip prompts
    - Set environment variables in CI/CD
    - Monitor token costs in logs
 
-4. **Testing:**
+1. **Testing:**
+
    - Run validation after every build
    - Check database size (should be ~40-50MB)
    - Verify chunk count is reasonable
@@ -436,16 +443,19 @@ uv run python scripts/cli.py build \
 ### For Development
 
 1. **Small test corpus:**
+
    - Use 3-5 HTML files for quick iteration
    - Test full pipeline end-to-end
-   - Validation should complete in <10 seconds
+   - Validation should complete in \<10 seconds
 
-2. **Cost management:**
+1. **Cost management:**
+
    - Test with small files first
    - Monitor token usage output
    - Use `--force` flag sparingly (stops on errors by default)
 
-3. **Debugging:**
+1. **Debugging:**
+
    - Check logs in console output
    - Inspect JSONL intermediate files
    - Use SQLite browser to inspect database

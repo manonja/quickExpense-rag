@@ -551,9 +551,9 @@ class TestHTMLTruncation:
         # Count how many 'x' chars are in result vs original
         x_count_in_result = result.count("x")
         x_count_in_original = large_html.count("x")
-        assert x_count_in_result < x_count_in_original * 0.5, (
-            "Should have removed most filler"
-        )
+        assert (
+            x_count_in_result < x_count_in_original * 0.5
+        ), "Should have removed most filler"
 
     def test_truncate_html_without_anchor_id_takes_first_and_last(self) -> None:
         """Large HTML without anchor_id should take first and last chunks."""

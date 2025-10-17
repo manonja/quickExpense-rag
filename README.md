@@ -7,18 +7,27 @@
 
 ## ⚠️ IMPORTANT: NOT FINANCIAL OR TAX ADVICE
 
-**This software is provided for informational purposes only and is not a substitute for professional financial or tax advice.** Always consult with a qualified tax professional or accountant before making financial decisions. CRA rules are complex, change frequently, and require professional interpretation. The developers assume no liability for any actions taken based on the use of this tool.
+**This software is provided for informational purposes only and is not a substitute for
+professional financial or tax advice.** Always consult with a qualified tax professional
+or accountant before making financial decisions. CRA rules are complex, change
+frequently, and require professional interpretation. The developers assume no liability
+for any actions taken based on the use of this tool.
 
 ## What is this?
 
-A Python library for semantic search over Canadian Revenue Agency (CRA) business expense rules. Built for ML engineers building expense classification agents and developers who need programmatic access to CRA expense rule information.
+A Python library for semantic search over Canadian Revenue Agency (CRA) business expense
+rules. Built for ML engineers building expense classification agents and developers who
+need programmatic access to CRA expense rule information.
 
 ## Key Features
 
-- 🔍 **Hybrid Search**: Combines keyword (FTS5) + semantic search (vector embeddings) using BGE-small-en-v1.5
+- 🔍 **Hybrid Search**: Combines keyword (FTS5) + semantic search (vector embeddings)
+  using BGE-small-en-v1.5
 - 🎯 **Smart Filtering**: Filter by province, business type, and expense categories
-- 📚 **Authoritative Citations**: Returns CRA source URLs with unique citation IDs for verification
-- 🔗 **Many-to-Many Expense Types**: Rules can match multiple expense categories simultaneously
+- 📚 **Authoritative Citations**: Returns CRA source URLs with unique citation IDs for
+  verification
+- 🔗 **Many-to-Many Expense Types**: Rules can match multiple expense categories
+  simultaneously
 - 🔒 **Privacy-First**: No API keys or network calls after initial database download
 - 📦 **Lightweight**: Package < 5MB (database downloaded separately from GitHub Releases)
 - ⚡ **Fast**: Local SQLite database with FTS5 and vector search (sub-250ms queries)
@@ -77,10 +86,14 @@ This information is for educational purposes only and does not constitute tax ad
 
 QE Tax RAG uses a multi-stage hybrid search approach:
 
-1. **Metadata Filtering**: SQL WHERE clause filters by province/business_type/expense_type
-2. **FTS5 Keyword Search**: Exact term matching on filtered candidates using SQLite's full-text search
-3. **Vector Semantic Search**: BGE-small-en-v1.5 embeddings (384-dim) with cosine similarity via sqlite-vec
-4. **RRF Fusion**: Reciprocal Rank Fusion merges keyword and semantic rankings for optimal results
+1. **Metadata Filtering**: SQL WHERE clause filters by
+   province/business_type/expense_type
+1. **FTS5 Keyword Search**: Exact term matching on filtered candidates using SQLite's
+   full-text search
+1. **Vector Semantic Search**: BGE-small-en-v1.5 embeddings (384-dim) with cosine
+   similarity via sqlite-vec
+1. **RRF Fusion**: Reciprocal Rank Fusion merges keyword and semantic rankings for
+   optimal results
 
 ### Data Distribution
 
@@ -112,13 +125,16 @@ Ranked Results with Citations
 Initialize the library and download the database if needed.
 
 **Parameters:**
+
 - `force_update`: Force re-download even if cached database exists
 
 **Raises:**
+
 - `NetworkError`: If download fails and no cached database available
 - `DataVersionMismatchError`: If database version incompatible with library version
 
 **Example:**
+
 ```python
 import qe_tax_rag as qe
 
@@ -134,20 +150,25 @@ qe.init(force_update=True)
 Search CRA expense rules with optional filtering.
 
 **Parameters:**
+
 - `query`: Natural language expense description (min 3 characters)
 - `province`: Filter by province (`"BC"`, `"AB"`, `"ON"`, `"QC"`, etc.)
-- `business_type`: Filter by business type (`"sole_proprietorship"`, `"corporation"`, `"partnership"`)
+- `business_type`: Filter by business type (`"sole_proprietorship"`, `"corporation"`,
+  `"partnership"`)
 - `expense_types`: Filter by expense categories (matches rules with ANY of these types)
 - `top_k`: Number of results to return (1-50, default: 5)
 
 **Returns:**
+
 - List of `SearchResult` objects with citations and disclaimers
 
 **Raises:**
+
 - `DatabaseNotInitializedError`: If `init()` not called first
 - `ValidationError`: If invalid parameters provided
 
 **Example:**
+
 ```python
 # Basic search
 results = qe.search("home office expenses")
@@ -167,9 +188,11 @@ results = qe.search(
 Get library and database version information.
 
 **Returns:**
+
 - Dictionary with `library_version`, `data_version`, and `schema_version`
 
 **Example:**
+
 ```python
 version_info = qe.get_version()
 print(version_info)
@@ -265,6 +288,7 @@ uv run pyright
 ## Project Status
 
 ✅ **Beta** - v0.1.0 ready for release. All core features implemented:
+
 - Hybrid search (FTS5 + vector)
 - Many-to-many expense type support
 - Complete test suite (23/23 tests passing)
@@ -283,10 +307,11 @@ See [plan.md](plan.md) for the full implementation roadmap.
 ## Contributing
 
 Contributions welcome! Please:
+
 1. Fork the repository
-2. Create a feature branch
-3. Run tests and quality checks
-4. Submit a pull request
+1. Create a feature branch
+1. Run tests and quality checks
+1. Submit a pull request
 
 See [CLAUDE.md](CLAUDE.md) for development guidelines.
 
@@ -298,8 +323,10 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 - Built with [sentence-transformers](https://www.sbert.net/) for embeddings
 - Powered by [sqlite-vec](https://github.com/asg017/sqlite-vec) for vector search
-- Data sourced from [Canada Revenue Agency](https://www.canada.ca/en/revenue-agency.html)
+- Data sourced from
+  [Canada Revenue Agency](https://www.canada.ca/en/revenue-agency.html)
 
----
+______________________________________________________________________
 
-**Remember**: This is informational content only. Always consult a qualified tax professional for advice specific to your situation.
+**Remember**: This is informational content only. Always consult a qualified tax
+professional for advice specific to your situation.

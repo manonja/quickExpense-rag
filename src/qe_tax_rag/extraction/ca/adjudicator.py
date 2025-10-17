@@ -28,6 +28,7 @@ import re
 from typing import NamedTuple
 
 from pydantic import BaseModel, ConfigDict, Field
+
 from qe_tax_rag.extraction.ca.exceptions import AdjudicationError
 from qe_tax_rag.extraction.ca.schema import ExpertSource, ExtractedRule
 from qe_tax_rag.extraction.ca.settings import settings

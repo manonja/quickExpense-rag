@@ -1,0 +1,578 @@
+"""
+YAML-to-JSONL transformer for TICKET T2.1: Core Transformer Module.
+
+This module transforms ExtractedRule YAML files (from adjudicator) into
+ParsedDocument JSONL files (for database builder).
+
+Architecture:
+    Input:  YAML files with ExtractedRule schema (qe_tax_rag.extraction.ca.schema)
+    Output: JSONL files with ParsedDocument schema (qe_tax_rag.parser.schema)
+
+Transformation pipeline:
+    1. Load ExtractedRule YAML → RuleSet
+    2. Group rules by section_title
+    3. Transform each rule to TextChunk with LINE-{number} citation
+    4. Classify expense_type using keyword matching
+    5. Aggregate metadata (province, business_type, expense_type, income_type)
+    6. Build Section objects with content
+    7. Create ParsedDocument with all sections
+    8. Write to JSONL (one document per line)
+
+Exception handling:
+    - CriticalTransformationError: Fatal errors that halt processing
+    - SkippableTransformationError: Non-fatal warnings (logged, processing continues)
+"""
+
+from collections import defaultdict
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import TYPE_CHECKING, ClassVar
+
+from pydantic import BaseModel, Field
+
+if TYPE_CHECKING:
+    from qe_tax_rag.extraction.ca.schema import ExtractedRule, RuleSet
+    from qe_tax_rag.parser.schema import (
+        Metadata,
+        ParsedDocument,
+        Section,
+        TextChunk,
+    )
+
+
+# ============================================================================
+# Exception Hierarchy
+# ============================================================================
+
+
+class CriticalTransformationError(Exception):
+    """
+    Fatal transformation error that halts processing.
+
+    Raised when:
+    - Input YAML is malformed or invalid schema
+    - Required fields are missing
+    - Output validation fails
+    - I/O errors (cannot read/write files)
+
+    When raised: Processing stops immediately, error logged, exit with non-zero code.
+    """
+
+    pass
+
+
+class SkippableTransformationError(Exception):
+    """
+    Non-fatal transformation warning (processing continues).
+
+    Raised when:
+    - Optional fields are missing
+    - Non-critical validation warnings
+    - Recoverable data inconsistencies
+
+    When raised: Warning logged, problematic record skipped, processing continues.
+    """
+
+    pass
+
+
+# ============================================================================
+# Expense Type Classifier
+# ============================================================================
+
+
+class ExpenseTypeClassifier:
+    """
+    Keyword-based expense type classifier.
+
+    Simple, deterministic classifier using keyword matching.
+    Good enough for MVP - can be replaced with ML model later if needed.
+
+    Follows 80/20 principle: delivers immediate value without ML complexity.
+    """
+
+    # Canonical expense types from database schema
+    EXPENSE_TYPE_KEYWORDS: ClassVar[dict[str, list[str]]] = {
+        "meals": ["meal", "food", "restaurant", "dining", "entertainment"],
+        "travel": ["travel", "transportation", "airfare", "hotel", "lodging"],
+        "vehicle": ["vehicle", "automobile", "car", "motor", "mileage", "fuel"],
+        "home_office": ["home office", "workspace", "rent"],
+        "advertising": ["advertising", "marketing", "promotion"],
+        "supplies": ["supplies", "materials", "stationery"],
+        "professional_fees": ["professional fees", "legal", "accounting"],
+        "utilities": ["telephone", "utilities", "internet", "electricity"],
+        "insurance": ["insurance", "premium"],
+        "capital": ["capital cost", "cca", "depreciation", "asset"],
+        "maintenance": ["maintenance", "repair"],
+        "salaries": ["salaries", "wages", "employee"],
+        "office_equipment": ["office equipment", "furniture", "computer"],
+        "telecommunications": ["telecommunications", "phone", "mobile"],
+        "interest": ["interest", "loan", "financing"],
+        "bad_debts": ["bad debts", "uncollectible"],
+    }
+
+    def infer_expense_types(self, rule: "ExtractedRule") -> list[str]:
+        """
+        Infer expense types from rule title and content.
+
+        Args:
+            rule: ExtractedRule to classify
+
+        Returns:
+            List of expense types (can be multiple).
+            Falls back to ["general"] if no matches.
+
+        """
+        # Combine title and content for matching
+        text = (rule.title + " " + rule.content).lower()
+
+        matched: list[str] = []
+
+        for expense_type, keywords in self.EXPENSE_TYPE_KEYWORDS.items():
+            if any(keyword in text for keyword in keywords):
+                matched.append(expense_type)
+
+        # Fallback to "general" if no matches
+        return matched if matched else ["general"]
+
+
+# ============================================================================
+# Transformation Report
+# ============================================================================
+
+
+class TransformationReport(BaseModel):
+    """Report on transformation success/failures."""
+
+    timestamp: str
+    input_file: str
+    output_file: str
+    total_rules: int
+    successful: int
+    skipped: int
+    errors: list[dict[str, str]]
+
+
+# ============================================================================
+# YAML Transformer
+# ============================================================================
+
+
+class YAMLTransformer:
+    """Transform ExtractedRule YAML to ParsedDocument JSONL."""
+
+    def __init__(
+        self,
+        expense_type_classifier: ExpenseTypeClassifier | None = None,
+    ) -> None:
+        """
+        Initialize transformer with optional classifier.
+
+        Args:
+            expense_type_classifier: Classifier for inferring expense types.
+                Defaults to ExpenseTypeClassifier() if not provided.
+
+        """
+        self.classifier = expense_type_classifier or ExpenseTypeClassifier()
+
+    def _load_yaml(self, yaml_path: Path) -> "RuleSet":
+        """
+        Load and parse YAML file.
+
+        Args:
+            yaml_path: Path to YAML file containing ExtractedRule objects
+
+        Returns:
+            RuleSet with parsed rules
+
+        Raises:
+            CriticalTransformationError: If YAML is invalid or doesn't parse
+
+        """
+        import yaml
+
+        from qe_tax_rag.extraction.ca.schema import RuleSet
+
+        try:
+            with open(yaml_path) as f:
+                data = yaml.safe_load(f)
+        except (yaml.YAMLError, OSError) as e:
+            raise CriticalTransformationError(
+                f"Failed to load YAML file {yaml_path}: {e}"
+            ) from e
+
+        try:
+            return RuleSet.model_validate(data)
+        except Exception as e:
+            raise CriticalTransformationError(
+                f"Failed to parse YAML as RuleSet: {e}"
+            ) from e
+
+    def _write_jsonl(
+        self,
+        documents: list["ParsedDocument"],
+        jsonl_path: Path,
+    ) -> None:
+        """
+        Write ParsedDocuments to JSONL file.
+
+        Creates parent directories if they don't exist.
+
+        Args:
+            documents: List of ParsedDocument objects to write
+            jsonl_path: Output path for JSONL file
+
+        """
+        # Create parent directories
+        jsonl_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Write JSONL (one document per line)
+        with open(jsonl_path, "w") as f:
+            for doc in documents:
+                f.write(doc.model_dump_json() + "\n")
+
+    def _validate_yaml_input(self, rule_set: "RuleSet") -> None:
+        """
+        Run pre-transformation validation checks.
+
+        Validates structural integrity before transformation begins.
+        Uses fail-fast strategy for critical issues.
+
+        Args:
+            rule_set: RuleSet to validate
+
+        Raises:
+            CriticalTransformationError: If validation fails
+
+        """
+        # Check for duplicate rule_numbers
+        rule_numbers = [r.rule_number for r in rule_set.rules]
+        duplicates = [n for n in set(rule_numbers) if rule_numbers.count(n) > 1]
+
+        if duplicates:
+            raise CriticalTransformationError(
+                f"Duplicate rule_numbers found: {duplicates}. "
+                f"Each rule must have a unique number."
+            )
+
+        # Check all rules have required fields
+        for rule in rule_set.rules:
+            if not rule.source_file:
+                raise CriticalTransformationError(
+                    f"Rule {rule.rule_number} missing required field 'source_file'"
+                )
+            if not rule.chapter:
+                raise CriticalTransformationError(
+                    f"Rule {rule.rule_number} missing required field 'chapter'"
+                )
+
+    def _validate_jsonl_output(self, jsonl_path: Path) -> None:
+        """
+        Post-transformation validation.
+
+        Validates JSONL format and schema compliance.
+
+        Args:
+            jsonl_path: Path to JSONL file to validate
+
+        Raises:
+            CriticalTransformationError: If validation fails
+
+        """
+        from qe_tax_rag.parser.schema import ParsedDocument
+
+        # Verify JSONL format
+        with open(jsonl_path) as f:
+            for i, line in enumerate(f, 1):
+                try:
+                    ParsedDocument.model_validate_json(line)
+                except Exception as e:
+                    raise CriticalTransformationError(
+                        f"Invalid JSONL at line {i}: {e}"
+                    ) from e
+
+    def _group_by_source_file(
+        self,
+        rules: list["ExtractedRule"],
+    ) -> dict[str, list["ExtractedRule"]]:
+        """
+        Group rules by source_file.
+
+        Args:
+            rules: List of ExtractedRule objects
+
+        Returns:
+            Dictionary mapping source_file → list of rules
+
+        """
+        grouped: dict[str, list["ExtractedRule"]] = defaultdict(list)
+
+        for rule in rules:
+            grouped[rule.source_file].append(rule)
+
+        return dict(grouped)
+
+    def _aggregate_metadata(
+        self,
+        rules: list["ExtractedRule"],
+    ) -> "Metadata":
+        """
+        Aggregate metadata across all rules in document.
+
+        Args:
+            rules: List of ExtractedRule objects to aggregate
+
+        Returns:
+            Metadata with combined income_type and expense_type
+
+        """
+        from qe_tax_rag.parser.schema import Metadata
+
+        # Collect all unique values
+        income_types: set[str] = set()
+        expense_types: set[str] = set()
+
+        for rule in rules:
+            # applies_to → income_type (enum values need .value to get string)
+            income_types.update(at.value for at in rule.applies_to)
+
+            # Infer expense_type from content
+            inferred = self.classifier.infer_expense_types(rule)
+            expense_types.update(inferred)
+
+        return Metadata(
+            province=[],  # Federal rules, no province
+            business_type=[],  # Not mapped from applies_to
+            expense_type=sorted(expense_types),
+            income_type=sorted(income_types),
+        )
+
+    def _build_sections(
+        self,
+        rules: list["ExtractedRule"],
+    ) -> list["Section"]:
+        """
+        Build hierarchical section structure.
+
+        Groups rules by chapter, flattening subsections since ParsedDocument
+        doesn't support nested sections.
+
+        Args:
+            rules: List of ExtractedRule objects
+
+        Returns:
+            List of Section objects, one per chapter
+
+        """
+        from qe_tax_rag.parser.schema import Section
+
+        # Group by chapter
+        chapters: dict[str, list["ExtractedRule"]] = defaultdict(list)
+        for rule in rules:
+            chapters[rule.chapter].append(rule)
+
+        sections: list["Section"] = []
+
+        for chapter_title, chapter_rules in chapters.items():
+            # Convert all rules to TextChunks
+            # Note: We flatten subsections because ParsedDocument
+            # schema doesn't support nested sections
+            from qe_tax_rag.parser.schema import ListChunk, TableChunk, TextChunk
+
+            chapter_content: list[TextChunk | ListChunk | TableChunk] = [
+                self._rule_to_text_chunk(rule) for rule in chapter_rules
+            ]
+
+            sections.append(
+                Section(
+                    section_title=chapter_title,
+                    section_level=1,
+                    content=chapter_content,
+                )
+            )
+
+        return sections
+
+    def _transform_rules_to_document(
+        self,
+        source_file: str,
+        rules: list["ExtractedRule"],
+    ) -> "ParsedDocument":
+        """
+        Transform rules from one source file into a ParsedDocument.
+
+        Strategy:
+        - title: Derived from source_file (e.g., "CRA T4002 - PART 5")
+        - document_id: Extracted from source_file (e.g., "t4002-5")
+        - sections: Hierarchical by chapter (flattened)
+        - metadata: Aggregated from all rules
+
+        Args:
+            source_file: HTML filename (e.g., "t4002-5.html")
+            rules: List of ExtractedRule objects from this file
+
+        Returns:
+            ParsedDocument with all rules organized hierarchically
+
+        """
+        from qe_tax_rag.parser.schema import ParsedDocument
+
+        # Extract document_id from source_file
+        # e.g., "t4002-5.html" → "t4002-5"
+        document_id = source_file.replace(".html", "").replace(".pdf", "")
+
+        # Create title from document_id
+        # e.g., "t4002-5" → "CRA T4002 - PART 5"
+        title = f"CRA {document_id.upper().replace('-', ' - PART ')}"
+
+        # Build hierarchical sections
+        sections = self._build_sections(rules)
+
+        # Aggregate metadata across all rules
+        metadata = self._aggregate_metadata(rules)
+
+        return ParsedDocument(
+            title=title,
+            document_id=document_id,
+            metadata=metadata,
+            sections=sections,
+        )
+
+    def _rule_to_text_chunk(self, rule: "ExtractedRule") -> "TextChunk":
+        """
+        Transform ExtractedRule to TextChunk with metadata.
+
+        Args:
+            rule: ExtractedRule object from YAML
+
+        Returns:
+            TextChunk with citation ID, extraction metadata, and source anchor
+
+        """
+        # Import at runtime to avoid circular dependency
+        from qe_tax_rag.parser.schema import TextChunk
+
+        # Generate citation ID: LINE-{rule_number}
+        citation_id = f"LINE-{rule.rule_number}"
+
+        # Map expert_source enum to lowercase string
+        extraction_source = rule.expert_source.value.lower()
+
+        # Generate source anchor: {chapter}{section}ln{rule_number} (normalized)
+        # Remove spaces, lowercase, keep alphanumeric
+        chapter_part = self._normalize_anchor(rule.chapter)
+        section_part = self._normalize_anchor(rule.section) if rule.section else ""
+        source_anchor = f"{chapter_part}{section_part}ln{rule.rule_number}"
+
+        return TextChunk(
+            type="paragraph",
+            text=rule.content,
+            citation_id=citation_id,
+            extraction_source=extraction_source,
+            extraction_confidence=rule.confidence_score,
+            source_anchor=source_anchor,
+        )
+
+    def _normalize_anchor(self, text: str) -> str:
+        """
+        Normalize text for HTML anchor generation.
+
+        Args:
+            text: Text to normalize (e.g., "Chapter 1", "General Rules")
+
+        Returns:
+            Normalized text (e.g., "ch1", "generalrules")
+
+        Examples:
+            "Chapter 1" → "ch1"
+            "General Rules" → "generalrules"
+            "Chapter 2" → "ch2"
+
+        """
+        # Remove spaces and convert to lowercase
+        normalized = text.lower().replace(" ", "")
+
+        # Replace "chapter" with "ch" for brevity
+        normalized = normalized.replace("chapter", "ch")
+
+        return normalized
+
+    def transform_yaml_to_jsonl(
+        self,
+        yaml_path: Path,
+        jsonl_path: Path,
+        continue_on_error: bool = True,
+    ) -> TransformationReport:
+        """
+        Transform YAML to JSONL.
+
+        Orchestrates the full transformation pipeline:
+        1. Load and validate YAML
+        2. Group rules by source_file
+        3. Transform each group to ParsedDocument
+        4. Write JSONL
+        5. Validate output
+        6. Generate report
+
+        Args:
+            yaml_path: Input YAML file from extract-rules
+            jsonl_path: Output JSONL file for IndexBuilder
+            continue_on_error: Skip errors and continue (default: True)
+
+        Returns:
+            TransformationReport with success/error counts
+
+        Raises:
+            CriticalTransformationError: For fatal errors (invalid YAML, etc.)
+
+        """
+        # 1. Load and validate YAML
+        rule_set = self._load_yaml(yaml_path)
+
+        # 2. Pre-transformation validation
+        self._validate_yaml_input(rule_set)
+
+        # 3. Group rules by source_file
+        grouped = self._group_by_source_file(rule_set.rules)
+
+        # 4. Transform each group to ParsedDocument
+        documents: list["ParsedDocument"] = []
+        errors: list[dict[str, str]] = []
+        successful = 0
+        skipped = 0
+
+        for source_file, rules in grouped.items():
+            try:
+                doc = self._transform_rules_to_document(source_file, rules)
+                documents.append(doc)
+                successful += len(rules)
+            except SkippableTransformationError as e:
+                if continue_on_error:
+                    errors.append(
+                        {
+                            "source_file": source_file,
+                            "error": str(e),
+                            "severity": "skippable",
+                            "action": "Skipped this document, continued processing",
+                        }
+                    )
+                    skipped += len(rules)
+                else:
+                    raise
+
+        # 5. Write JSONL
+        self._write_jsonl(documents, jsonl_path)
+
+        # 6. Post-transformation validation
+        self._validate_jsonl_output(jsonl_path)
+
+        # 7. Generate report
+        return TransformationReport(
+            timestamp=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+            input_file=str(yaml_path),
+            output_file=str(jsonl_path),
+            total_rules=len(rule_set.rules),
+            successful=successful,
+            skipped=skipped,
+            errors=errors,
+        )

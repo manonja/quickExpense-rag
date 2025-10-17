@@ -27,7 +27,7 @@ import pytest
 from qe_tax_rag.data.builder import IndexBuilder
 from qe_tax_rag.exceptions import EmbeddingError, QeTaxRagError
 from qe_tax_rag.search.models import SourceFile
-from scripts.parser.schema import Metadata, ParsedDocument, Section, TextChunk
+from qe_tax_rag.parser.schema import Metadata, ParsedDocument, Section, TextChunk
 
 
 class TestLoadAndFlattenChunks:
@@ -1070,9 +1070,9 @@ class TestBuildFromJsonl:
             cursor = conn.execute("SELECT COUNT(*) FROM rules")
             rule_count = cursor.fetchone()[0]
             conn.close()
-            assert rule_count == 0, (
-                "Transaction should have rolled back, no rules should be inserted"
-            )
+            assert (
+                rule_count == 0
+            ), "Transaction should have rolled back, no rules should be inserted"
 
         # Manifest should not be created
         assert not manifest_path.exists()
