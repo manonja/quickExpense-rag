@@ -161,6 +161,20 @@ class TransformationReport(BaseModel):
 class YAMLTransformer:
     """Transform ExtractedRule YAML to ParsedDocument JSONL."""
 
+    def __init__(
+        self,
+        expense_type_classifier: ExpenseTypeClassifier | None = None,
+    ) -> None:
+        """
+        Initialize transformer with optional classifier.
+
+        Args:
+            expense_type_classifier: Classifier for inferring expense types.
+                Defaults to ExpenseTypeClassifier() if not provided.
+
+        """
+        self.classifier = expense_type_classifier or ExpenseTypeClassifier()
+
     def _group_by_source_file(
         self,
         rules: list["ExtractedRule"],
@@ -181,6 +195,41 @@ class YAMLTransformer:
             grouped[rule.source_file].append(rule)
 
         return dict(grouped)
+
+    def _aggregate_metadata(
+        self,
+        rules: list["ExtractedRule"],
+    ) -> "Metadata":
+        """
+        Aggregate metadata across all rules in document.
+
+        Args:
+            rules: List of ExtractedRule objects to aggregate
+
+        Returns:
+            Metadata with combined income_type and expense_type
+
+        """
+        from qe_tax_rag.parser.schema import Metadata
+
+        # Collect all unique values
+        income_types: set[str] = set()
+        expense_types: set[str] = set()
+
+        for rule in rules:
+            # applies_to → income_type (enum values need .value to get string)
+            income_types.update(at.value for at in rule.applies_to)
+
+            # Infer expense_type from content
+            inferred = self.classifier.infer_expense_types(rule)
+            expense_types.update(inferred)
+
+        return Metadata(
+            province=[],  # Federal rules, no province
+            business_type=[],  # Not mapped from applies_to
+            expense_type=sorted(expense_types),
+            income_type=sorted(income_types),
+        )
 
     def _rule_to_text_chunk(self, rule: "ExtractedRule") -> "TextChunk":
         """
