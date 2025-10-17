@@ -23,6 +23,7 @@ Exception handling:
     - SkippableTransformationError: Non-fatal warnings (logged, processing continues)
 """
 
+import re
 from collections import defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
@@ -100,13 +101,20 @@ class ExpenseTypeClassifier:
         "advertising": ["advertising", "marketing", "promotion"],
         "supplies": ["supplies", "materials", "stationery"],
         "professional_fees": ["professional fees", "legal", "accounting"],
-        "utilities": ["telephone", "utilities", "internet", "electricity"],
+        "utilities": [
+            "telephone",
+            "utilities",
+            "internet",
+            "electricity",
+            "phone",
+            "mobile",
+            "telecommunications",
+        ],
         "insurance": ["insurance", "premium"],
         "capital": ["capital cost", "cca", "depreciation", "asset"],
         "maintenance": ["maintenance", "repair"],
         "salaries": ["salaries", "wages", "employee"],
         "office_equipment": ["office equipment", "furniture", "computer"],
-        "telecommunications": ["telecommunications", "phone", "mobile"],
         "interest": ["interest", "loan", "financing"],
         "bad_debts": ["bad debts", "uncollectible"],
     }
@@ -129,7 +137,10 @@ class ExpenseTypeClassifier:
         matched: list[str] = []
 
         for expense_type, keywords in self.EXPENSE_TYPE_KEYWORDS.items():
-            if any(keyword in text for keyword in keywords):
+            if any(
+                re.search(r"\b" + re.escape(keyword) + r"\b", text)
+                for keyword in keywords
+            ):
                 matched.append(expense_type)
 
         # Fallback to "general" if no matches

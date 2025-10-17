@@ -1,4 +1,5 @@
-"""Unit tests for YAMLTransformer (TICKET T2.1: Core Transformer Module).
+"""
+Unit tests for YAMLTransformer (TICKET T2.1: Core Transformer Module).
 
 Test-Driven Development approach following RED→GREEN→REFACTOR cycle:
 1. Write failing test (RED)
@@ -30,7 +31,6 @@ import json
 
 import pytest
 from pydantic import ValidationError
-
 from qe_tax_rag.extraction.ca.schema import (
     ApplicabilityType,
     ExpertSource,
@@ -38,7 +38,6 @@ from qe_tax_rag.extraction.ca.schema import (
     RuleSet,
 )
 from qe_tax_rag.parser.schema import Metadata, ParsedDocument, Section, TextChunk
-
 
 # ============================================================================
 # FIXTURES: Sample YAML input data (ExtractedRule schema)
@@ -533,6 +532,32 @@ def test_expense_type_case_insensitive() -> None:
     assert "meals" in types
 
 
+def test_expense_type_inference_avoids_partial_word_match() -> None:
+    """Substring matches should be avoided; only whole words should match."""
+    from qe_tax_rag.extraction.ca.transformer import ExpenseTypeClassifier
+
+    # "different" contains "rent", but should not match "home_office"
+    rule = ExtractedRule(
+        rule_number=9998,
+        title="A different kind of rule",
+        content="This rule is about something completely different.",
+        applies_to=[ApplicabilityType.BUSINESS],
+        source_citation="Line 9998",
+        chapter="Chapter 3",
+        section=None,
+        source_file="t4002-5.html",
+        expert_source=ExpertSource.CLASSIC,
+        confidence_score=1.0,
+    )
+
+    classifier = ExpenseTypeClassifier()
+    types = classifier.infer_expense_types(rule)
+
+    # It should fall back to "general" and not match "home_office"
+    assert types == ["general"]
+    assert "home_office" not in types
+
+
 # ============================================================================
 # TESTS: Metadata Aggregation
 # ============================================================================
@@ -742,7 +767,6 @@ def test_load_yaml(tmp_path) -> None:
     from pathlib import Path
 
     import yaml
-
     from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
 
     # Create test YAML file
@@ -904,7 +928,9 @@ def test_validate_yaml_input_missing_source_file() -> None:
 
     transformer = YAMLTransformer()
 
-    with pytest.raises(CriticalTransformationError, match="missing required field 'source_file'"):
+    with pytest.raises(
+        CriticalTransformationError, match="missing required field 'source_file'"
+    ):
         transformer._validate_yaml_input(rule_set)
 
 
@@ -936,7 +962,9 @@ def test_validate_yaml_input_missing_chapter() -> None:
 
     transformer = YAMLTransformer()
 
-    with pytest.raises(CriticalTransformationError, match="missing required field 'chapter'"):
+    with pytest.raises(
+        CriticalTransformationError, match="missing required field 'chapter'"
+    ):
         transformer._validate_yaml_input(rule_set)
 
 
@@ -1043,7 +1071,6 @@ def test_transform_yaml_to_jsonl_end_to_end(tmp_path) -> None:
     from pathlib import Path
 
     import yaml
-
     from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
 
     # Create test YAML
@@ -1123,7 +1150,6 @@ def test_transform_yaml_to_jsonl_with_errors(tmp_path) -> None:
     from pathlib import Path
 
     import yaml
-
     from qe_tax_rag.extraction.ca.transformer import (
         CriticalTransformationError,
         YAMLTransformer,
