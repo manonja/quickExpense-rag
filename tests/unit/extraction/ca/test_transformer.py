@@ -409,3 +409,125 @@ def test_rule_to_text_chunk_preserves_confidence_score() -> None:
         )
         chunk = transformer._rule_to_text_chunk(rule)
         assert chunk.extraction_confidence == score
+
+
+# ============================================================================
+# TESTS: Expense Type Classifier
+# ============================================================================
+
+
+def test_expense_type_inference_meals() -> None:
+    """Meals keywords should infer meals type."""
+    from qe_tax_rag.extraction.ca.transformer import ExpenseTypeClassifier
+
+    rule = ExtractedRule(
+        rule_number=8523,
+        title="Meals and entertainment",
+        content="You can deduct 50% of restaurant and dining expenses...",
+        applies_to=[ApplicabilityType.BUSINESS],
+        source_citation="Line 8523",
+        chapter="Chapter 3",
+        section=None,
+        source_file="t4002-5.html",
+        expert_source=ExpertSource.CLASSIC,
+        confidence_score=1.0,
+    )
+
+    classifier = ExpenseTypeClassifier()
+    types = classifier.infer_expense_types(rule)
+
+    assert "meals" in types
+
+
+def test_expense_type_inference_vehicle() -> None:
+    """Vehicle keywords should infer vehicle type."""
+    from qe_tax_rag.extraction.ca.transformer import ExpenseTypeClassifier
+
+    rule = ExtractedRule(
+        rule_number=9200,
+        title="Motor vehicle expenses",
+        content="Deductible car expenses include fuel, mileage, maintenance...",
+        applies_to=[ApplicabilityType.BUSINESS],
+        source_citation="Line 9200",
+        chapter="Chapter 3",
+        section=None,
+        source_file="t4002-5.html",
+        expert_source=ExpertSource.CLASSIC,
+        confidence_score=1.0,
+    )
+
+    classifier = ExpenseTypeClassifier()
+    types = classifier.infer_expense_types(rule)
+
+    assert "vehicle" in types
+
+
+def test_expense_type_inference_multiple() -> None:
+    """Rule can match multiple expense types."""
+    from qe_tax_rag.extraction.ca.transformer import ExpenseTypeClassifier
+
+    rule = ExtractedRule(
+        rule_number=9999,
+        title="Travel and accommodation",
+        content="Hotel, airfare, and restaurant meals during business trips...",
+        applies_to=[ApplicabilityType.BUSINESS],
+        source_citation="Line 9999",
+        chapter="Chapter 3",
+        section=None,
+        source_file="t4002-5.html",
+        expert_source=ExpertSource.CLASSIC,
+        confidence_score=1.0,
+    )
+
+    classifier = ExpenseTypeClassifier()
+    types = classifier.infer_expense_types(rule)
+
+    # Should match both travel and meals
+    assert "travel" in types
+    assert "meals" in types
+
+
+def test_expense_type_inference_fallback() -> None:
+    """No matches should return 'general'."""
+    from qe_tax_rag.extraction.ca.transformer import ExpenseTypeClassifier
+
+    rule = ExtractedRule(
+        rule_number=9999,
+        title="Miscellaneous",
+        content="Other deductible expenses...",
+        applies_to=[ApplicabilityType.BUSINESS],
+        source_citation="Line 9999",
+        chapter="Chapter 3",
+        section=None,
+        source_file="t4002-5.html",
+        expert_source=ExpertSource.CLASSIC,
+        confidence_score=1.0,
+    )
+
+    classifier = ExpenseTypeClassifier()
+    types = classifier.infer_expense_types(rule)
+
+    assert types == ["general"]
+
+
+def test_expense_type_case_insensitive() -> None:
+    """Matching should be case-insensitive."""
+    from qe_tax_rag.extraction.ca.transformer import ExpenseTypeClassifier
+
+    rule = ExtractedRule(
+        rule_number=9999,
+        title="MEALS AND ENTERTAINMENT",
+        content="RESTAURANT expenses...",
+        applies_to=[ApplicabilityType.BUSINESS],
+        source_citation="Line 9999",
+        chapter="Chapter 3",
+        section=None,
+        source_file="t4002-5.html",
+        expert_source=ExpertSource.CLASSIC,
+        confidence_score=1.0,
+    )
+
+    classifier = ExpenseTypeClassifier()
+    types = classifier.infer_expense_types(rule)
+
+    assert "meals" in types
