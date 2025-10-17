@@ -1447,3 +1447,42 @@ def test_continue_on_error_false_raises_on_skippable(tmp_path) -> None:
             jsonl_path=jsonl_path,
             continue_on_error=False,
         )
+
+
+def test_transform_yaml_to_jsonl_empty_rules_list(tmp_path) -> None:
+    """Empty rules list should produce empty JSONL gracefully."""
+    import yaml
+    from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
+
+    # Create YAML with no rules
+    yaml_content = {
+        "schema_version": "1.0",
+        "extraction_timestamp": "2025-01-01T00:00:00Z",
+        "rules": [],  # Empty rules list
+    }
+
+    yaml_path = tmp_path / "empty_rules.yml"
+    with open(yaml_path, "w") as f:
+        yaml.dump(yaml_content, f)
+
+    jsonl_path = tmp_path / "empty_chunks.jsonl"
+
+    # Transform
+    transformer = YAMLTransformer()
+    report = transformer.transform_yaml_to_jsonl(
+        yaml_path=yaml_path,
+        jsonl_path=jsonl_path,
+        continue_on_error=True,
+    )
+
+    # Verify report
+    assert report.total_rules == 0
+    assert report.successful == 0
+    assert report.skipped == 0
+    assert len(report.errors) == 0
+
+    # Verify JSONL is empty
+    assert jsonl_path.exists()
+    with open(jsonl_path) as f:
+        lines = f.readlines()
+        assert len(lines) == 0
