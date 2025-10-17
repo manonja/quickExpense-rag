@@ -96,6 +96,81 @@ class ManualReviewItem(BaseModel):
 # ============================================================================
 
 
+def _triage_rules(
+    classic_rules: list[ExtractedRule],
+    llm_rules: list[ExtractedRule],
+) -> TriageResult:
+    """
+    Categorize rules into perfect matches, conflicts, and orphans.
+
+    Aligns rules from both parsers by rule_number and compares normalized
+    versions to determine:
+    - Perfect matches: Both parsers agree → trust classic (deterministic)
+    - Conflicts: Both found it, but disagree → needs adjudication
+    - Orphans: Only one parser found it → needs validation
+
+    Args:
+        classic_rules: Rules extracted by classic HTML parser
+        llm_rules: Rules extracted by LLM-based parser
+
+    Returns:
+        TriageResult with categorized rules
+
+    Example:
+        >>> classic = [rule1, rule2]
+        >>> llm = [rule1_identical, rule3]
+        >>> result = _triage_rules(classic, llm)
+        >>> len(result.perfect_matches)  # rule1
+        1
+        >>> len(result.orphans)  # rule2 and rule3
+        2
+    """
+    logger.info("[Adjudicator] Starting triage...")
+
+    # Create lookup dictionaries for O(1) access
+    classic_map = {r.rule_number: r for r in classic_rules}
+    llm_map = {r.rule_number: r for r in llm_rules}
+
+    # Find union of all rule numbers
+    all_rule_numbers = set(classic_map.keys()) | set(llm_map.keys())
+
+    perfect_matches: list[ExtractedRule] = []
+    conflicts: list[tuple[ExtractedRule, ExtractedRule]] = []
+    orphans: list[ExtractedRule] = []
+
+    for rule_number in all_rule_numbers:
+        classic_rule = classic_map.get(rule_number)
+        llm_rule = llm_map.get(rule_number)
+
+        if classic_rule and llm_rule:
+            # Both parsers found this rule - compare normalized versions
+            classic_normalized = _normalize_rule_for_comparison(classic_rule)
+            llm_normalized = _normalize_rule_for_comparison(llm_rule)
+
+            if classic_normalized == llm_normalized:
+                # Perfect match - trust classic parser (deterministic)
+                perfect_matches.append(classic_rule)
+            else:
+                # Conflict detected - parsers disagree
+                conflicts.append((classic_rule, llm_rule))
+        else:
+            # Orphan - only one parser found this rule
+            orphan_rule = classic_rule or llm_rule
+            if orphan_rule:
+                orphans.append(orphan_rule)
+
+    logger.info(
+        f"[Adjudicator] Triage complete: {len(perfect_matches)} perfect matches, "
+        f"{len(conflicts)} conflicts, {len(orphans)} orphans"
+    )
+
+    return TriageResult(
+        perfect_matches=perfect_matches,
+        conflicts=conflicts,
+        orphans=orphans,
+    )
+
+
 def _normalize_rule_for_comparison(rule: ExtractedRule) -> dict[str, str | list[str]]:
     """
     Normalize a rule for comparison between parsers.
