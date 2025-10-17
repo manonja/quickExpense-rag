@@ -670,3 +670,63 @@ def test_build_sections_multiple_chapters() -> None:
     assert len(sections) == 2
     chapter_titles = {s.section_title for s in sections}
     assert chapter_titles == {"Chapter 3", "Chapter 4"}
+
+
+# ============================================================================
+# TESTS: Document Transformation
+# ============================================================================
+
+
+def test_transform_rules_to_document() -> None:
+    """Rules should transform to complete ParsedDocument."""
+    from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
+
+    rules = [
+        ExtractedRule(
+            rule_number=8523,
+            title="Meals",
+            content="restaurant expenses",
+            applies_to=[ApplicabilityType.BUSINESS],
+            source_citation="Line 8523",
+            chapter="Chapter 3",
+            section=None,
+            source_file="t4002-5.html",
+            expert_source=ExpertSource.CLASSIC,
+            confidence_score=1.0,
+        ),
+    ]
+
+    transformer = YAMLTransformer()
+    doc = transformer._transform_rules_to_document("t4002-5.html", rules)
+
+    # Check document structure
+    assert doc.document_id == "t4002-5"
+    assert "T4002" in doc.title.upper()
+    assert "5" in doc.title
+
+    # Check sections
+    assert len(doc.sections) == 1
+    assert doc.sections[0].section_title == "Chapter 3"
+
+    # Check content
+    assert len(doc.sections[0].content) == 1
+
+    # Check metadata
+    assert "business" in doc.metadata.income_type
+    assert "meals" in doc.metadata.expense_type
+
+
+def test_transform_rules_to_document_title_generation() -> None:
+    """Document title should be generated from source file."""
+    from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
+
+    transformer = YAMLTransformer()
+
+    # Test various source file formats
+    doc1 = transformer._transform_rules_to_document("t4002-5.html", [])
+    assert doc1.document_id == "t4002-5"
+    assert doc1.title == "CRA T4002 - PART 5"
+
+    doc2 = transformer._transform_rules_to_document("t4002-10.html", [])
+    assert doc2.document_id == "t4002-10"
+    assert doc2.title == "CRA T4002 - PART 10"
