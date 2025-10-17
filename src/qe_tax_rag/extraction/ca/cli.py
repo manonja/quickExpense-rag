@@ -13,7 +13,7 @@ import typer
 from rich.console import Console
 from rich.logging import RichHandler
 
-from src.qe_tax_rag.extraction.ca.orchestrator import run_extraction
+from qe_tax_rag.extraction.ca.orchestrator import run_extraction
 
 app = typer.Typer(
     name="extract-rules",

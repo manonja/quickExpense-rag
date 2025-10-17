@@ -10,12 +10,12 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from src.qe_tax_rag.extraction.ca.adjudicator import ManualReviewItem, adjudicate
-from src.qe_tax_rag.extraction.ca.classic_parser import parse as classic_parse
-from src.qe_tax_rag.extraction.ca.exceptions import PipelineError
-from src.qe_tax_rag.extraction.ca.llm_parser import parse as llm_parse
-from src.qe_tax_rag.extraction.ca.schema import ExtractedRule
-from src.qe_tax_rag.extraction.ca.yaml_generator import generate
+from qe_tax_rag.extraction.ca.adjudicator import ManualReviewItem, adjudicate
+from qe_tax_rag.extraction.ca.classic_parser import parse as classic_parse
+from qe_tax_rag.extraction.ca.exceptions import PipelineError
+from qe_tax_rag.extraction.ca.llm_parser import parse as llm_parse
+from qe_tax_rag.extraction.ca.schema import ExtractedRule
+from qe_tax_rag.extraction.ca.yaml_generator import generate
 
 logger = logging.getLogger(__name__)
 
