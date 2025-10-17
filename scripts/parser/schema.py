@@ -27,6 +27,20 @@ class TextChunk(BaseModel):
     text: str
     citation_id: str | None = None
 
+    # NEW: Extraction pipeline provenance
+    extraction_source: str | None = Field(
+        default=None, description="Expert source: classic, llm, adjudicated"
+    )
+    extraction_confidence: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Confidence score from extraction pipeline",
+    )
+    source_anchor: str | None = Field(
+        default=None, description="HTML anchor ID for debugging"
+    )
+
 
 class ListItem(BaseModel):
     """List item with optional nested sub-items."""
