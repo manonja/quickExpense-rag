@@ -105,8 +105,16 @@ def test_generate_creates_parent_directories(
     fs: FakeFilesystem, sample_rules: list[ExtractedRule]
 ) -> None:
     """Test that generate() creates parent directories if they don't exist."""
-    # RED: Test parent directory creation
-    pass
+    output_path = "/deeply/nested/output/dir/rules.yml"
+
+    # Verify parent directories don't exist
+    assert not Path("/deeply").exists()
+
+    generate(rules=sample_rules, output_path=output_path)
+
+    # Verify file and all parent directories were created
+    assert Path(output_path).exists()
+    assert Path("/deeply/nested/output/dir").exists()
 
 
 # ============================================================================
@@ -170,8 +178,15 @@ def test_generate_adds_schema_version(
     fs: FakeFilesystem, sample_rules: list[ExtractedRule]
 ) -> None:
     """Test that schema_version is added to RuleSet."""
-    # RED: Verify schema_version is present
-    pass
+    output_path = "/output/rules.yml"
+    generate(rules=sample_rules, output_path=output_path)
+
+    with open(output_path, encoding="utf-8") as f:
+        content = f.read()
+        yaml_content = content.split("---\n", 1)[1]
+        data = yaml.safe_load(yaml_content)
+
+    assert data["schema_version"] == "1.0"
 
 
 @pytest.mark.unit
@@ -179,8 +194,17 @@ def test_generate_adds_extraction_timestamp(
     fs: FakeFilesystem, sample_rules: list[ExtractedRule]
 ) -> None:
     """Test that extraction_timestamp is added and is valid ISO format."""
-    # RED: Verify timestamp is present and valid
-    pass
+    output_path = "/output/rules.yml"
+    generate(rules=sample_rules, output_path=output_path)
+
+    with open(output_path, encoding="utf-8") as f:
+        content = f.read()
+        yaml_content = content.split("---\n", 1)[1]
+        data = yaml.safe_load(yaml_content)
+
+    assert "extraction_timestamp" in data
+    # Verify it's valid ISO 8601 format
+    datetime.fromisoformat(data["extraction_timestamp"])
 
 
 # ============================================================================
@@ -215,8 +239,18 @@ def test_generate_handles_empty_rules_list(
     fs: FakeFilesystem, empty_rules: list[ExtractedRule]
 ) -> None:
     """Test that empty rules list produces valid YAML with rules: []."""
-    # RED: Test empty list handling
-    pass
+    output_path = "/output/empty_rules.yml"
+
+    generate(rules=empty_rules, output_path=output_path)
+
+    with open(output_path, encoding="utf-8") as f:
+        content = f.read()
+        yaml_content = content.split("---\n", 1)[1] if "---\n" in content else content
+        data = yaml.safe_load(yaml_content)
+
+    assert data["rules"] == []
+    assert data["schema_version"] == "1.0"
+    assert "extraction_timestamp" in data
 
 
 # ============================================================================
@@ -229,8 +263,14 @@ def test_generate_raises_error_on_permission_denied(
     fs: FakeFilesystem, sample_rules: list[ExtractedRule]
 ) -> None:
     """Test that PermissionError raises YAMLGenerationError."""
-    # RED: Simulate permission error
-    pass
+    output_path = "/readonly/rules.yml"
+
+    # Create directory with no write permissions
+    fs.create_dir("/readonly")
+    fs.chmod("/readonly", 0o444)  # Read-only
+
+    with pytest.raises(YAMLGenerationError, match="Permission denied"):
+        generate(rules=sample_rules, output_path=output_path)
 
 
 @pytest.mark.unit
@@ -238,8 +278,15 @@ def test_generate_raises_error_on_invalid_path(
     fs: FakeFilesystem, sample_rules: list[ExtractedRule]
 ) -> None:
     """Test that invalid output path raises YAMLGenerationError."""
-    # RED: Test invalid path handling
-    pass
+    # Path to non-existent root-level directory (permission issue in fakefs)
+    output_path = "/nonexistent/deeply/nested/rules.yml"
+
+    # Make parent unwritable
+    fs.create_dir("/nonexistent")
+    fs.chmod("/nonexistent", 0o444)
+
+    with pytest.raises(YAMLGenerationError, match="Permission denied"):
+        generate(rules=sample_rules, output_path=output_path)
 
 
 @pytest.mark.unit
@@ -247,8 +294,23 @@ def test_generate_raises_error_on_verification_failure(
     fs: FakeFilesystem, sample_rules: list[ExtractedRule], monkeypatch
 ) -> None:
     """Test that corrupted file detected during verification raises error."""
-    # RED: Simulate file corruption
-    pass
+    output_path = "/output/rules.yml"
+
+    # Mock yaml.safe_load to raise YAMLError during verification
+    original_safe_load = yaml.safe_load
+    call_count = {"count": 0}
+
+    def mock_safe_load(content):
+        call_count["count"] += 1
+        if call_count["count"] == 1:  # Verification read
+            msg = "Invalid YAML syntax"
+            raise yaml.YAMLError(msg)
+        return original_safe_load(content)
+
+    monkeypatch.setattr("yaml.safe_load", mock_safe_load)
+
+    with pytest.raises(YAMLGenerationError, match="verification failed"):
+        generate(rules=sample_rules, output_path=output_path)
 
 
 @pytest.mark.unit
@@ -256,8 +318,26 @@ def test_generate_raises_error_on_file_disappears(
     fs: FakeFilesystem, sample_rules: list[ExtractedRule], monkeypatch
 ) -> None:
     """Test that file disappearing during verification raises error."""
-    # RED: Simulate race condition
-    pass
+    output_path = "/output/rules.yml"
+
+    # Track open calls to differentiate write vs read
+    original_open = open
+    open_calls = []
+
+    def tracking_open(path, mode="r", *args, **kwargs):
+        open_calls.append((str(path), mode))
+        # Allow first write, fail on verification read
+        if len(open_calls) == 2 and mode == "r":
+            # This is the verification read - simulate file vanished
+            msg = str(path)
+            raise FileNotFoundError(msg)
+        return original_open(path, mode, *args, **kwargs)
+
+    monkeypatch.setattr("builtins.open", tracking_open)
+
+    # Should raise YAMLGenerationError (wrapping FileNotFoundError)
+    with pytest.raises(YAMLGenerationError):
+        generate(rules=sample_rules, output_path=output_path)
 
 
 # ============================================================================
