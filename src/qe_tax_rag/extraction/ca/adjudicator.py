@@ -29,7 +29,9 @@ from typing import NamedTuple
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.qe_tax_rag.extraction.ca.schema import ExtractedRule
+from src.qe_tax_rag.extraction.ca.exceptions import AdjudicationError
+from src.qe_tax_rag.extraction.ca.schema import ExpertSource, ExtractedRule
+from src.qe_tax_rag.extraction.ca.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -383,6 +385,267 @@ def _build_adjudication_prompt(
         discrepancy_details=discrepancy_details,
         html_content=html_content,
     )
+
+
+def _adjudicate_item_with_llm(
+    discrepancy_type: str,
+    rule_number: int,
+    source_file: str,
+    html_content: str,
+    classic_rule: ExtractedRule | None = None,
+    llm_rule: ExtractedRule | None = None,
+) -> ExtractedRule | ManualReviewItem:
+    """
+    Adjudicate a single conflict or orphan using Gemini Pro.
+
+    Makes a synchronous API call to the LLM adjudicator with full HTML context
+    and structured prompt. Handles all error scenarios gracefully by returning
+    ManualReviewItem for failed adjudications.
+
+    Args:
+        discrepancy_type: "CONFLICT" or "ORPHAN"
+        rule_number: Rule number being adjudicated
+        source_file: Source HTML filename
+        html_content: Full or truncated HTML content
+        classic_rule: Rule from classic parser (if applicable)
+        llm_rule: Rule from LLM parser (if applicable)
+
+    Returns:
+        ExtractedRule with expert_source=ADJUDICATED on success,
+        ManualReviewItem on any failure
+
+    Example:
+        >>> result = _adjudicate_item_with_llm(
+        ...     "CONFLICT", 8523, "t4002-5.html", html, classic, llm
+        ... )
+        >>> isinstance(result, (ExtractedRule, ManualReviewItem))
+        True
+    """
+    import json
+    from datetime import datetime, timezone
+
+    import google.generativeai as genai
+    from pydantic import ValidationError
+
+    # Get anchor_id from whichever rule we have
+    anchor_id = (classic_rule or llm_rule).anchor_id if (classic_rule or llm_rule) else None
+
+    try:
+        # Truncate HTML if needed
+        truncated_html = _truncate_html_for_prompt(html_content, anchor_id)
+
+        # Build prompt
+        prompt = _build_adjudication_prompt(
+            discrepancy_type=discrepancy_type,
+            rule_number=rule_number,
+            source_file=source_file,
+            anchor_id=anchor_id,
+            html_content=truncated_html,
+            classic_rule=classic_rule,
+            llm_rule=llm_rule,
+        )
+
+        # Call Gemini API
+        genai.configure(api_key=settings.gemini_api_key)
+        model = genai.GenerativeModel(settings.adjudicator_model_name)
+
+        # 30-second timeout
+        response = model.generate_content(prompt, request_options={"timeout": 30})
+
+        # Parse JSON
+        data = json.loads(response.text)
+
+        # Check for insufficient evidence
+        if data.get("analysis", "").startswith("INSUFFICIENT_EVIDENCE:"):
+            raise AdjudicationError(f"LLM reported insufficient evidence: {data['analysis']}")
+
+        # Validate and create ExtractedRule
+        corrected_rule_data = data["corrected_rule"]
+        corrected_rule_data["expert_source"] = ExpertSource.ADJUDICATED
+        corrected_rule_data["confidence_score"] = 0.95
+
+        corrected_rule = ExtractedRule.model_validate(corrected_rule_data)
+
+        # Log success
+        logger.info(
+            f"[Adjudicator] Adjudicated rule {rule_number}: {data['analysis']}",
+            extra={
+                "reasoning": data.get("reasoning"),
+                "citation": data.get("citation"),
+                "rule_number": rule_number,
+            },
+        )
+
+        return corrected_rule
+
+    except Exception as e:
+        # Determine specific failure reason
+        failure_reason = _determine_failure_reason(e, locals())
+
+        logger.error(
+            f"[Adjudicator] Failed to adjudicate rule {rule_number}: {failure_reason}",
+            exc_info=True,
+        )
+
+        # Create ManualReviewItem
+        manual_item = ManualReviewItem(
+            rule_number=rule_number,
+            discrepancy_type=discrepancy_type,
+            failure_reason=failure_reason,
+            source_file=source_file,
+            timestamp=datetime.now(timezone.utc).isoformat(),
+        )
+
+        if discrepancy_type == "CONFLICT" and classic_rule and llm_rule:
+            manual_item.classic_version = classic_rule.model_dump(
+                exclude={"expert_source", "confidence_score", "anchor_id"}
+            )
+            manual_item.llm_version = llm_rule.model_dump(
+                exclude={"expert_source", "confidence_score", "anchor_id"}
+            )
+        else:
+            orphan_rule = classic_rule or llm_rule
+            if orphan_rule:
+                manual_item.orphan_version = orphan_rule.model_dump(
+                    exclude={"expert_source", "confidence_score", "anchor_id"}
+                )
+                manual_item.found_by = "classic" if classic_rule else "llm"
+
+        return manual_item
+
+
+def _determine_failure_reason(exception: Exception, local_vars: dict[str, object]) -> str:
+    """Determine specific failure reason from exception type."""
+    import json
+
+    if "TimeoutError" in str(type(exception)):
+        return "API timeout after 30s"
+    elif isinstance(exception, json.JSONDecodeError):
+        response_text = local_vars.get("response")
+        if response_text and hasattr(response_text, "text"):
+            logger.error(f"[Adjudicator] Raw LLM response: {response_text.text[:500]}")
+        return f"Failed to parse LLM JSON response: {str(exception)}"
+    elif "ValidationError" in str(type(exception)):
+        return f"LLM response failed schema validation: {str(exception)}"
+    elif isinstance(exception, AdjudicationError):
+        return str(exception)
+    else:
+        return f"Unexpected error: {type(exception).__name__}: {str(exception)}"
+
+
+def adjudicate(
+    classic_rules: list[ExtractedRule],
+    llm_rules: list[ExtractedRule],
+    source_html_content: str,
+    source_file: str,
+) -> tuple[list[ExtractedRule], list[ManualReviewItem], dict[str, int]]:
+    """
+    Merge, adjudicate, and self-correct rules from classic and LLM parsers.
+
+    Uses a Mixture-of-Experts approach with grounded LLM adjudication:
+    1. Triage rules into perfect matches, conflicts, and orphans
+    2. Trust classic parser for perfect matches (deterministic source of truth)
+    3. Use Gemini Pro to resolve conflicts/orphans with full HTML context
+    4. Return clean list of rules plus manual review items for failed adjudications
+
+    Args:
+        classic_rules: Rules extracted by classic HTML parser
+        llm_rules: Rules extracted by LLM-based parser
+        source_html_content: Full HTML content for grounding
+        source_file: Source filename for audit trail
+
+    Returns:
+        Tuple of:
+        - Resolved rules (sorted by rule_number)
+        - Manual review items (failed adjudications)
+        - Statistics dict with counts
+
+    Raises:
+        AdjudicationError: Only for catastrophic failures (not individual items)
+
+    Example:
+        >>> resolved, manual, stats = adjudicate(
+        ...     classic_rules, llm_rules, html_content, "t4002-5.html"
+        ... )
+        >>> stats["perfect_matches"] + stats["auto_corrected"] + stats["manual_review"]
+        len(resolved) + len(manual)
+    """
+    logger.info("[Adjudicator] Starting adjudication process...")
+
+    # Step 1: Triage
+    triage_result = _triage_rules(classic_rules, llm_rules)
+
+    # Step 2: Start with perfect matches
+    final_rules: list[ExtractedRule] = list(triage_result.perfect_matches)
+    manual_review_items: list[ManualReviewItem] = []
+
+    stats = {
+        "perfect_matches": len(triage_result.perfect_matches),
+        "auto_corrected": 0,
+        "manual_review": 0,
+    }
+
+    # Step 3: Adjudicate conflicts
+    logger.info(f"[Adjudicator] Adjudicating {len(triage_result.conflicts)} conflicts...")
+    for classic_rule, llm_rule in triage_result.conflicts:
+        result = _adjudicate_item_with_llm(
+            discrepancy_type="CONFLICT",
+            rule_number=classic_rule.rule_number,
+            source_file=source_file,
+            html_content=source_html_content,
+            classic_rule=classic_rule,
+            llm_rule=llm_rule,
+        )
+
+        if isinstance(result, ExtractedRule):
+            final_rules.append(result)
+            stats["auto_corrected"] += 1
+        else:
+            manual_review_items.append(result)
+            stats["manual_review"] += 1
+            logger.warning(
+                f"[Adjudicator] Added rule {result.rule_number} to manual review: "
+                f"{result.failure_reason}"
+            )
+
+    # Step 4: Adjudicate orphans
+    logger.info(f"[Adjudicator] Adjudicating {len(triage_result.orphans)} orphans...")
+    for orphan_rule in triage_result.orphans:
+        # Determine which parser found it
+        is_classic = orphan_rule.expert_source == ExpertSource.CLASSIC
+
+        result = _adjudicate_item_with_llm(
+            discrepancy_type="ORPHAN",
+            rule_number=orphan_rule.rule_number,
+            source_file=source_file,
+            html_content=source_html_content,
+            classic_rule=orphan_rule if is_classic else None,
+            llm_rule=orphan_rule if not is_classic else None,
+        )
+
+        if isinstance(result, ExtractedRule):
+            final_rules.append(result)
+            stats["auto_corrected"] += 1
+        else:
+            manual_review_items.append(result)
+            stats["manual_review"] += 1
+            logger.warning(
+                f"[Adjudicator] Added rule {result.rule_number} to manual review: "
+                f"{result.failure_reason}"
+            )
+
+    # Step 5: Sort and log final summary
+    final_rules_sorted = sorted(final_rules, key=lambda r: r.rule_number)
+
+    total_rules = len(final_rules_sorted)
+    manual_count = len(manual_review_items)
+
+    logger.info(
+        f"[Adjudicator] Adjudication complete: {total_rules} rules in output, "
+        f"{manual_count} sent for manual review"
+    )
+
+    return final_rules_sorted, manual_review_items, stats
 
 
 def _normalize_rule_for_comparison(rule: ExtractedRule) -> dict[str, str | list[str]]:
