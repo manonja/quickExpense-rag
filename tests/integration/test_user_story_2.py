@@ -28,7 +28,7 @@ import numpy as np
 import pytest
 from qe_tax_rag.data.builder import IndexBuilder
 from qe_tax_rag.search.models import SourceFile
-from scripts.parser.schema import Metadata, ParsedDocument, Section, TextChunk
+from qe_tax_rag.parser.schema import Metadata, ParsedDocument, Section, TextChunk
 
 
 class TestUserStory2:
