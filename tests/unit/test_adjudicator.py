@@ -7,7 +7,6 @@ from src.qe_tax_rag.extraction.ca.schema import (
     ExtractedRule,
 )
 
-
 # ============================================================================
 # Test Fixtures
 # ============================================================================
@@ -343,7 +342,9 @@ class TestTriage:
     """Tests for _triage_rules function."""
 
     def test_triage_perfect_match_identical_rules(
-        self, sample_rule_classic: ExtractedRule, sample_rule_llm_identical: ExtractedRule
+        self,
+        sample_rule_classic: ExtractedRule,
+        sample_rule_llm_identical: ExtractedRule,
     ) -> None:
         """Perfect match when normalized rules are identical."""
         from src.qe_tax_rag.extraction.ca.adjudicator import _triage_rules
@@ -357,7 +358,9 @@ class TestTriage:
         assert result.perfect_matches[0].expert_source == ExpertSource.CLASSIC
 
     def test_triage_perfect_match_prefers_classic_parser(
-        self, sample_rule_classic: ExtractedRule, sample_rule_llm_identical: ExtractedRule
+        self,
+        sample_rule_classic: ExtractedRule,
+        sample_rule_llm_identical: ExtractedRule,
     ) -> None:
         """On perfect match, should use classic parser version (deterministic)."""
         from src.qe_tax_rag.extraction.ca.adjudicator import _triage_rules
@@ -369,7 +372,9 @@ class TestTriage:
         assert perfect_match.confidence_score == 1.0  # Classic parser confidence
 
     def test_triage_conflict_when_title_differs(
-        self, sample_rule_classic: ExtractedRule, sample_rule_llm_diff_title: ExtractedRule
+        self,
+        sample_rule_classic: ExtractedRule,
+        sample_rule_llm_diff_title: ExtractedRule,
     ) -> None:
         """Conflict when title differs between parsers."""
         from src.qe_tax_rag.extraction.ca.adjudicator import _triage_rules
@@ -403,7 +408,9 @@ class TestTriage:
         assert len(classic_rule.applies_to) == 1
         assert len(llm_rule.applies_to) == 2
 
-    def test_triage_orphan_classic_only(self, sample_rule_classic: ExtractedRule) -> None:
+    def test_triage_orphan_classic_only(
+        self, sample_rule_classic: ExtractedRule
+    ) -> None:
         """Orphan when only classic parser found the rule."""
         from src.qe_tax_rag.extraction.ca.adjudicator import _triage_rules
 
@@ -486,9 +493,7 @@ class TestTriage:
 
         # Check for triage log messages
         assert any("Triage complete" in record.message for record in caplog.records)
-        assert any(
-            "1 perfect matches" in record.message for record in caplog.records
-        )
+        assert any("1 perfect matches" in record.message for record in caplog.records)
 
 
 # ============================================================================
@@ -503,7 +508,9 @@ class TestHTMLTruncation:
         """Small HTML content should not be truncated."""
         from src.qe_tax_rag.extraction.ca.adjudicator import _truncate_html_for_prompt
 
-        small_html = "<html><body><h3>Line 8523 – Meals</h3><p>Content here</p></body></html>"
+        small_html = (
+            "<html><body><h3>Line 8523 – Meals</h3><p>Content here</p></body></html>"
+        )
 
         result = _truncate_html_for_prompt(small_html, anchor_id="tocch3ln8523")
 
@@ -520,12 +527,12 @@ class TestHTMLTruncation:
         large_html = (
             "<html><body>"
             + f"<p>{filler}</p>" * 20  # 200K chars of filler
-            + '<h2>Part 4 – Net income</h2>'
-            + '<p>Section intro</p>'
+            + "<h2>Part 4 – Net income</h2>"
+            + "<p>Section intro</p>"
             + '<h3 id="tocch3ln8523"><a id="tocch3ln8523"></a>Line 8523 – Meals</h3>'
-            + '<p>You can deduct meals.</p>'
-            + '<ul><li>Item 1</li></ul>'
-            + '<h3>Line 8910 – Vehicle</h3>'
+            + "<p>You can deduct meals.</p>"
+            + "<ul><li>Item 1</li></ul>"
+            + "<h3>Line 8910 – Vehicle</h3>"
             + f"<p>{filler}</p>" * 20  # Another 200K chars
             + "</body></html>"
         )
@@ -542,9 +549,11 @@ class TestHTMLTruncation:
         assert "Line 8523 – Meals" in result
         # Should NOT include all the filler (context extraction should work)
         # Count how many 'x' chars are in result vs original
-        x_count_in_result = result.count('x')
-        x_count_in_original = large_html.count('x')
-        assert x_count_in_result < x_count_in_original * 0.5, "Should have removed most filler"
+        x_count_in_result = result.count("x")
+        x_count_in_original = large_html.count("x")
+        assert x_count_in_result < x_count_in_original * 0.5, (
+            "Should have removed most filler"
+        )
 
     def test_truncate_html_without_anchor_id_takes_first_and_last(self) -> None:
         """Large HTML without anchor_id should take first and last chunks."""
@@ -575,9 +584,7 @@ class TestHTMLTruncation:
             + "<h1>End</h1></body></html>"
         )
 
-        result = _truncate_html_for_prompt(
-            large_html, anchor_id="nonexistent_anchor"
-        )
+        result = _truncate_html_for_prompt(large_html, anchor_id="nonexistent_anchor")
 
         # Should fall back to first/last chunks
         assert "TRUNCATED" in result

@@ -28,7 +28,6 @@ import re
 from typing import NamedTuple
 
 from pydantic import BaseModel, ConfigDict, Field
-
 from src.qe_tax_rag.extraction.ca.exceptions import AdjudicationError
 from src.qe_tax_rag.extraction.ca.schema import ExpertSource, ExtractedRule
 from src.qe_tax_rag.extraction.ca.settings import settings
@@ -126,6 +125,7 @@ def _triage_rules(
         1
         >>> len(result.orphans)  # rule2 and rule3
         2
+
     """
     logger.info("[Adjudicator] Starting triage...")
 
@@ -197,6 +197,7 @@ def _truncate_html_for_prompt(
         >>> truncated = _truncate_html_for_prompt(large_html, "tocch3ln8523")
         >>> "[...CONTENT TRUNCATED...]" in truncated
         True
+
     """
     # Safe character limit (roughly <100k tokens)
     MAX_CHARS = 300_000
@@ -214,7 +215,11 @@ def _truncate_html_for_prompt(
 
             if target_tag:
                 # Find h3: either the target itself or its parent
-                h3_tag = target_tag if target_tag.name == "h3" else target_tag.find_parent("h3")
+                h3_tag = (
+                    target_tag
+                    if target_tag.name == "h3"
+                    else target_tag.find_parent("h3")
+                )
                 if h3_tag:
                     # Extract contextual window
                     context_parts = []
@@ -340,11 +345,17 @@ def _build_adjudication_prompt(
 
     Example:
         >>> prompt = _build_adjudication_prompt(
-        ...     "CONFLICT", 8523, "t4002-5.html", "tocch3ln8523",
-        ...     html_content, classic_rule, llm_rule
+        ...     "CONFLICT",
+        ...     8523,
+        ...     "t4002-5.html",
+        ...     "tocch3ln8523",
+        ...     html_content,
+        ...     classic_rule,
+        ...     llm_rule,
         ... )
         >>> "CONFLICT" in prompt
         True
+
     """
     import yaml
 
@@ -366,7 +377,9 @@ def _build_adjudication_prompt(
     else:  # ORPHAN
         orphan_rule = classic_rule or llm_rule
         if not orphan_rule:
-            raise ValueError("Either classic_rule or llm_rule must be provided for ORPHAN")
+            raise ValueError(
+                "Either classic_rule or llm_rule must be provided for ORPHAN"
+            )
         found_by = "classic" if classic_rule else "llm"
         orphan_yaml = yaml.dump(
             orphan_rule.model_dump(exclude={"expert_source", "confidence_score"})
@@ -420,6 +433,7 @@ def _adjudicate_item_with_llm(
         ... )
         >>> isinstance(result, (ExtractedRule, ManualReviewItem))
         True
+
     """
     import json
     from datetime import datetime, timezone
@@ -428,7 +442,9 @@ def _adjudicate_item_with_llm(
     from pydantic import ValidationError
 
     # Get anchor_id from whichever rule we have
-    anchor_id = (classic_rule or llm_rule).anchor_id if (classic_rule or llm_rule) else None
+    anchor_id = (
+        (classic_rule or llm_rule).anchor_id if (classic_rule or llm_rule) else None
+    )
 
     try:
         # Truncate HTML if needed
@@ -457,7 +473,9 @@ def _adjudicate_item_with_llm(
 
         # Check for insufficient evidence
         if data.get("analysis", "").startswith("INSUFFICIENT_EVIDENCE:"):
-            raise AdjudicationError(f"LLM reported insufficient evidence: {data['analysis']}")
+            raise AdjudicationError(
+                f"LLM reported insufficient evidence: {data['analysis']}"
+            )
 
         # Validate and create ExtractedRule
         corrected_rule_data = data["corrected_rule"]
@@ -514,7 +532,9 @@ def _adjudicate_item_with_llm(
         return manual_item
 
 
-def _determine_failure_reason(exception: Exception, local_vars: dict[str, object]) -> str:
+def _determine_failure_reason(
+    exception: Exception, local_vars: dict[str, object]
+) -> str:
     """Determine specific failure reason from exception type."""
     import json
 
@@ -524,13 +544,13 @@ def _determine_failure_reason(exception: Exception, local_vars: dict[str, object
         response_text = local_vars.get("response")
         if response_text and hasattr(response_text, "text"):
             logger.error(f"[Adjudicator] Raw LLM response: {response_text.text[:500]}")
-        return f"Failed to parse LLM JSON response: {str(exception)}"
+        return f"Failed to parse LLM JSON response: {exception!s}"
     elif "ValidationError" in str(type(exception)):
-        return f"LLM response failed schema validation: {str(exception)}"
+        return f"LLM response failed schema validation: {exception!s}"
     elif isinstance(exception, AdjudicationError):
         return str(exception)
     else:
-        return f"Unexpected error: {type(exception).__name__}: {str(exception)}"
+        return f"Unexpected error: {type(exception).__name__}: {exception!s}"
 
 
 def adjudicate(
@@ -569,6 +589,7 @@ def adjudicate(
         ... )
         >>> stats["perfect_matches"] + stats["auto_corrected"] + stats["manual_review"]
         len(resolved) + len(manual)
+
     """
     logger.info("[Adjudicator] Starting adjudication process...")
 
@@ -586,7 +607,9 @@ def adjudicate(
     }
 
     # Step 3: Adjudicate conflicts
-    logger.info(f"[Adjudicator] Adjudicating {len(triage_result.conflicts)} conflicts...")
+    logger.info(
+        f"[Adjudicator] Adjudicating {len(triage_result.conflicts)} conflicts..."
+    )
     for classic_rule, llm_rule in triage_result.conflicts:
         result = _adjudicate_item_with_llm(
             discrepancy_type="CONFLICT",
@@ -676,6 +699,7 @@ def _normalize_rule_for_comparison(rule: ExtractedRule) -> dict[str, str | list[
         'You can deduct the cost'
         >>> normalized["applies_to"]
         ['business', 'fishing']
+
     """
     # Normalize content: collapse all consecutive whitespace to single space
     normalized_content = re.sub(r"\s+", " ", rule.content).strip()
