@@ -15,9 +15,11 @@ Modules:
 """
 
 from qe_tax_rag.extraction.ca.adjudicator import adjudicate
+from qe_tax_rag.extraction.ca.cli import app as cli_app
 from qe_tax_rag.extraction.ca.yaml_generator import generate
 
 __all__ = [
     "adjudicate",
     "generate",
+    "cli_app",
 ]
