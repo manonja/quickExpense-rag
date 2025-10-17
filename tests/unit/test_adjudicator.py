@@ -9,6 +9,83 @@ from src.qe_tax_rag.extraction.ca.schema import (
 
 
 # ============================================================================
+# Test Fixtures
+# ============================================================================
+
+
+@pytest.fixture
+def sample_rule_classic() -> ExtractedRule:
+    """Sample rule from classic parser."""
+    return ExtractedRule(
+        rule_number=8523,
+        title="Meals and entertainment",
+        content="You can deduct the cost of meals and entertainment.",
+        applies_to=[ApplicabilityType.BUSINESS],
+        source_citation="Line 8523",
+        chapter="Chapter 3 – Expenses",
+        section="Part 4 – Net income (loss) before adjustments",
+        source_file="t4002-5.html",
+        expert_source=ExpertSource.CLASSIC,
+        anchor_id="tocch3ln8523",
+        confidence_score=1.0,
+    )
+
+
+@pytest.fixture
+def sample_rule_llm_identical() -> ExtractedRule:
+    """Sample rule from LLM parser identical to classic."""
+    return ExtractedRule(
+        rule_number=8523,
+        title="Meals and entertainment",
+        content="You can deduct the cost of meals and entertainment.",
+        applies_to=[ApplicabilityType.BUSINESS],
+        source_citation="Line 8523",
+        chapter="Chapter 3 – Expenses",
+        section="Part 4 – Net income (loss) before adjustments",
+        source_file="t4002-5.html",
+        expert_source=ExpertSource.LLM,
+        anchor_id="tocch3ln8523",
+        confidence_score=0.85,
+    )
+
+
+@pytest.fixture
+def sample_rule_llm_diff_title() -> ExtractedRule:
+    """Sample rule from LLM with different title."""
+    return ExtractedRule(
+        rule_number=8523,
+        title="Meals & entertainment",  # Different
+        content="You can deduct the cost of meals and entertainment.",
+        applies_to=[ApplicabilityType.BUSINESS],
+        source_citation="Line 8523",
+        chapter="Chapter 3 – Expenses",
+        section="Part 4",
+        source_file="t4002-5.html",
+        expert_source=ExpertSource.LLM,
+        anchor_id="tocch3ln8523",
+        confidence_score=0.85,
+    )
+
+
+@pytest.fixture
+def sample_rule_llm_diff_applies_to() -> ExtractedRule:
+    """Sample rule from LLM with different applies_to."""
+    return ExtractedRule(
+        rule_number=8523,
+        title="Meals and entertainment",
+        content="You can deduct the cost of meals and entertainment.",
+        applies_to=[ApplicabilityType.BUSINESS, ApplicabilityType.FISHING],  # Different
+        source_citation="Line 8523",
+        chapter="Chapter 3 – Expenses",
+        section="Part 4",
+        source_file="t4002-5.html",
+        expert_source=ExpertSource.LLM,
+        anchor_id="tocch3ln8523",
+        confidence_score=0.85,
+    )
+
+
+# ============================================================================
 # Test Normalization
 # ============================================================================
 
@@ -255,3 +332,160 @@ class TestDataStructures:
         assert item.found_by == "llm"
         assert item.classic_version is None
         assert item.llm_version is None
+
+
+# ============================================================================
+# Test Triage
+# ============================================================================
+
+
+class TestTriage:
+    """Tests for _triage_rules function."""
+
+    def test_triage_perfect_match_identical_rules(
+        self, sample_rule_classic: ExtractedRule, sample_rule_llm_identical: ExtractedRule
+    ) -> None:
+        """Perfect match when normalized rules are identical."""
+        from src.qe_tax_rag.extraction.ca.adjudicator import _triage_rules
+
+        result = _triage_rules([sample_rule_classic], [sample_rule_llm_identical])
+
+        assert len(result.perfect_matches) == 1
+        assert len(result.conflicts) == 0
+        assert len(result.orphans) == 0
+        # Should prefer classic parser version
+        assert result.perfect_matches[0].expert_source == ExpertSource.CLASSIC
+
+    def test_triage_perfect_match_prefers_classic_parser(
+        self, sample_rule_classic: ExtractedRule, sample_rule_llm_identical: ExtractedRule
+    ) -> None:
+        """On perfect match, should use classic parser version (deterministic)."""
+        from src.qe_tax_rag.extraction.ca.adjudicator import _triage_rules
+
+        result = _triage_rules([sample_rule_classic], [sample_rule_llm_identical])
+
+        perfect_match = result.perfect_matches[0]
+        assert perfect_match.expert_source == ExpertSource.CLASSIC
+        assert perfect_match.confidence_score == 1.0  # Classic parser confidence
+
+    def test_triage_conflict_when_title_differs(
+        self, sample_rule_classic: ExtractedRule, sample_rule_llm_diff_title: ExtractedRule
+    ) -> None:
+        """Conflict when title differs between parsers."""
+        from src.qe_tax_rag.extraction.ca.adjudicator import _triage_rules
+
+        result = _triage_rules([sample_rule_classic], [sample_rule_llm_diff_title])
+
+        assert len(result.perfect_matches) == 0
+        assert len(result.conflicts) == 1
+        assert len(result.orphans) == 0
+
+        classic_rule, llm_rule = result.conflicts[0]
+        assert classic_rule.expert_source == ExpertSource.CLASSIC
+        assert llm_rule.expert_source == ExpertSource.LLM
+        assert classic_rule.title != llm_rule.title
+
+    def test_triage_conflict_when_applies_to_differs(
+        self,
+        sample_rule_classic: ExtractedRule,
+        sample_rule_llm_diff_applies_to: ExtractedRule,
+    ) -> None:
+        """Conflict when applies_to list differs between parsers."""
+        from src.qe_tax_rag.extraction.ca.adjudicator import _triage_rules
+
+        result = _triage_rules([sample_rule_classic], [sample_rule_llm_diff_applies_to])
+
+        assert len(result.perfect_matches) == 0
+        assert len(result.conflicts) == 1
+        assert len(result.orphans) == 0
+
+        classic_rule, llm_rule = result.conflicts[0]
+        assert len(classic_rule.applies_to) == 1
+        assert len(llm_rule.applies_to) == 2
+
+    def test_triage_orphan_classic_only(self, sample_rule_classic: ExtractedRule) -> None:
+        """Orphan when only classic parser found the rule."""
+        from src.qe_tax_rag.extraction.ca.adjudicator import _triage_rules
+
+        result = _triage_rules([sample_rule_classic], [])
+
+        assert len(result.perfect_matches) == 0
+        assert len(result.conflicts) == 0
+        assert len(result.orphans) == 1
+        assert result.orphans[0].expert_source == ExpertSource.CLASSIC
+
+    def test_triage_orphan_llm_only(
+        self, sample_rule_llm_identical: ExtractedRule
+    ) -> None:
+        """Orphan when only LLM parser found the rule."""
+        from src.qe_tax_rag.extraction.ca.adjudicator import _triage_rules
+
+        result = _triage_rules([], [sample_rule_llm_identical])
+
+        assert len(result.perfect_matches) == 0
+        assert len(result.conflicts) == 0
+        assert len(result.orphans) == 1
+        assert result.orphans[0].expert_source == ExpertSource.LLM
+
+    def test_triage_multiple_orphans_from_both_parsers(
+        self, sample_rule_classic: ExtractedRule
+    ) -> None:
+        """Multiple orphans from different parsers."""
+        from src.qe_tax_rag.extraction.ca.adjudicator import _triage_rules
+
+        classic_orphan = sample_rule_classic
+
+        llm_orphan = ExtractedRule(
+            rule_number=9270,
+            title="Professional fees",
+            content="You can deduct professional fees.",
+            applies_to=[ApplicabilityType.BUSINESS],
+            source_citation="Line 9270",
+            chapter="Chapter 3",
+            section="Part 4",
+            source_file="t4002-5.html",
+            expert_source=ExpertSource.LLM,
+            anchor_id="tocch3ln9270",
+            confidence_score=0.85,
+        )
+
+        result = _triage_rules([classic_orphan], [llm_orphan])
+
+        assert len(result.perfect_matches) == 0
+        assert len(result.conflicts) == 0
+        assert len(result.orphans) == 2
+
+        # Should have one from each parser
+        expert_sources = {orphan.expert_source for orphan in result.orphans}
+        assert expert_sources == {ExpertSource.CLASSIC, ExpertSource.LLM}
+
+    def test_triage_empty_input_lists(self) -> None:
+        """Triage with empty input lists should return empty results."""
+        from src.qe_tax_rag.extraction.ca.adjudicator import _triage_rules
+
+        result = _triage_rules([], [])
+
+        assert len(result.perfect_matches) == 0
+        assert len(result.conflicts) == 0
+        assert len(result.orphans) == 0
+
+    def test_triage_logs_summary_correctly(
+        self,
+        sample_rule_classic: ExtractedRule,
+        sample_rule_llm_identical: ExtractedRule,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Triage should log summary of categorization results."""
+        import logging
+
+        from src.qe_tax_rag.extraction.ca.adjudicator import _triage_rules
+
+        caplog.set_level(logging.INFO)
+
+        _triage_rules([sample_rule_classic], [sample_rule_llm_identical])
+
+        # Check for triage log messages
+        assert any("Triage complete" in record.message for record in caplog.records)
+        assert any(
+            "1 perfect matches" in record.message for record in caplog.records
+        )
