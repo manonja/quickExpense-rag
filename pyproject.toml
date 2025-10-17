@@ -55,6 +55,7 @@ indexing = [
     "beautifulsoup4>=4.12",
     "lxml>=5.0",
     "typer>=0.9",
+    "rich>=13.0",
 ]
 
 [project.urls]
