@@ -446,6 +446,13 @@ class YAMLTransformer:
         # Build hierarchical sections
         sections = self._build_sections(rules)
 
+        # Validate sections are not empty (graceful degradation)
+        if not sections:
+            raise SkippableTransformationError(
+                f"No sections generated for source_file '{source_file}'. "
+                f"Document may have structural issues."
+            )
+
         # Aggregate metadata across all rules
         metadata = self._aggregate_metadata(rules)
 

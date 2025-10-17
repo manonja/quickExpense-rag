@@ -747,14 +747,67 @@ def test_transform_rules_to_document_title_generation() -> None:
 
     transformer = YAMLTransformer()
 
+    # Minimal rule for title generation testing
+    minimal_rule = ExtractedRule(
+        rule_number=1,
+        title="Test",
+        content="Test content",
+        applies_to=[ApplicabilityType.BUSINESS],
+        source_citation="Line 1",
+        chapter="Chapter 1",
+        section=None,
+        source_file="test.html",
+        expert_source=ExpertSource.CLASSIC,
+        confidence_score=1.0,
+    )
+
     # Test various source file formats
-    doc1 = transformer._transform_rules_to_document("t4002-5.html", [])
+    doc1 = transformer._transform_rules_to_document("t4002-5.html", [minimal_rule])
     assert doc1.document_id == "t4002-5"
     assert doc1.title == "CRA T4002 - PART 5"
 
-    doc2 = transformer._transform_rules_to_document("t4002-10.html", [])
+    doc2 = transformer._transform_rules_to_document("t4002-10.html", [minimal_rule])
     assert doc2.document_id == "t4002-10"
     assert doc2.title == "CRA T4002 - PART 10"
+
+
+def test_transform_rules_to_document_empty_sections_raises_skippable_error() -> None:
+    """Empty sections should raise SkippableTransformationError."""
+    from qe_tax_rag.extraction.ca.transformer import (
+        SkippableTransformationError,
+        YAMLTransformer,
+    )
+
+    # Create a scenario where _build_sections returns empty list
+    # This can happen if rules are filtered out or malformed
+    transformer = YAMLTransformer()
+
+    # Mock _build_sections to return empty list
+    original_build_sections = transformer._build_sections
+    transformer._build_sections = lambda rules: []
+
+    rules = [
+        ExtractedRule(
+            rule_number=8523,
+            title="Rule",
+            content="Content",
+            applies_to=[ApplicabilityType.BUSINESS],
+            source_citation="Line 8523",
+            chapter="Chapter 3",
+            section=None,
+            source_file="t4002-5.html",
+            expert_source=ExpertSource.CLASSIC,
+            confidence_score=1.0,
+        ),
+    ]
+
+    with pytest.raises(
+        SkippableTransformationError, match="No sections generated"
+    ):
+        transformer._transform_rules_to_document("t4002-5.html", rules)
+
+    # Restore original method
+    transformer._build_sections = original_build_sections
 
 
 # ============================================================================
