@@ -489,3 +489,99 @@ class TestTriage:
         assert any(
             "1 perfect matches" in record.message for record in caplog.records
         )
+
+
+# ============================================================================
+# Test HTML Truncation
+# ============================================================================
+
+
+class TestHTMLTruncation:
+    """Tests for _truncate_html_for_prompt function."""
+
+    def test_truncate_html_no_truncation_for_small_content(self) -> None:
+        """Small HTML content should not be truncated."""
+        from src.qe_tax_rag.extraction.ca.adjudicator import _truncate_html_for_prompt
+
+        small_html = "<html><body><h3>Line 8523 – Meals</h3><p>Content here</p></body></html>"
+
+        result = _truncate_html_for_prompt(small_html, anchor_id="tocch3ln8523")
+
+        # Should return full content unchanged
+        assert result == small_html
+
+    def test_truncate_html_with_anchor_id_extracts_context(self) -> None:
+        """Large HTML with anchor_id should extract contextual window."""
+        from src.qe_tax_rag.extraction.ca.adjudicator import _truncate_html_for_prompt
+
+        # Create large HTML content (over 300K chars)
+        large_html = (
+            "<html><body>"
+            + "<p>Filler content</p>" * 50000  # Make it large
+            + '<h2>Part 4 – Net income</h2>'
+            + '<p>Section intro</p>'
+            + '<h3 id="tocch3ln8523"><a id="tocch3ln8523"></a>Line 8523 – Meals</h3>'
+            + '<p>You can deduct meals.</p>'
+            + '<ul><li>Item 1</li></ul>'
+            + '<h3>Line 8910 – Vehicle</h3>'
+            + "<p>More filler</p>" * 50000
+            + "</body></html>"
+        )
+
+        result = _truncate_html_for_prompt(large_html, anchor_id="tocch3ln8523")
+
+        # Should include truncation notice
+        assert "[...CONTENT TRUNCATED...]" in result
+        # Should include the target h3
+        assert "Line 8523 – Meals" in result
+        # Should include context (preceding h2)
+        assert "Part 4" in result or "Section intro" in result
+
+    def test_truncate_html_without_anchor_id_takes_first_and_last(self) -> None:
+        """Large HTML without anchor_id should take first and last chunks."""
+        from src.qe_tax_rag.extraction.ca.adjudicator import _truncate_html_for_prompt
+
+        # Create large HTML content
+        large_html = (
+            "<html><body><h1>Start content</h1>"
+            + "<p>Filler</p>" * 100000
+            + "<h1>End content</h1></body></html>"
+        )
+
+        result = _truncate_html_for_prompt(large_html, anchor_id=None)
+
+        # Should include truncation notice
+        assert "[...CONTENT TRUNCATED" in result or "TRUNCATED" in result
+        # Should have start and end
+        assert "Start content" in result
+        assert "End content" in result
+
+    def test_truncate_html_handles_missing_anchor_id(self) -> None:
+        """Large HTML with anchor_id that doesn't exist should fall back."""
+        from src.qe_tax_rag.extraction.ca.adjudicator import _truncate_html_for_prompt
+
+        large_html = (
+            "<html><body><h1>Start</h1>"
+            + "<p>Filler</p>" * 100000
+            + "<h1>End</h1></body></html>"
+        )
+
+        result = _truncate_html_for_prompt(
+            large_html, anchor_id="nonexistent_anchor"
+        )
+
+        # Should fall back to first/last chunks
+        assert "TRUNCATED" in result
+        assert "Start" in result
+        assert "End" in result
+
+    def test_truncate_html_includes_truncation_warning(self) -> None:
+        """Truncated HTML should include warning message."""
+        from src.qe_tax_rag.extraction.ca.adjudicator import _truncate_html_for_prompt
+
+        large_html = "<p>Content</p>" * 200000
+
+        result = _truncate_html_for_prompt(large_html, anchor_id=None)
+
+        # Should have clear truncation warning
+        assert "TRUNCATED" in result.upper()
