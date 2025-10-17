@@ -1031,3 +1031,147 @@ def test_validate_jsonl_output_invalid_schema(tmp_path) -> None:
 
     with pytest.raises(CriticalTransformationError, match="Invalid JSONL"):
         transformer._validate_jsonl_output(jsonl_path)
+
+
+# ============================================================================
+# TESTS: End-to-End Transformation
+# ============================================================================
+
+
+def test_transform_yaml_to_jsonl_end_to_end(tmp_path) -> None:
+    """Full transformation pipeline should work end-to-end."""
+    from pathlib import Path
+
+    import yaml
+
+    from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
+
+    # Create test YAML
+    yaml_content = {
+        "schema_version": "1.0",
+        "extraction_timestamp": "2025-01-01T00:00:00Z",
+        "rules": [
+            {
+                "rule_number": 8523,
+                "title": "Meals and entertainment",
+                "content": "You can deduct 50% of restaurant expenses...",
+                "applies_to": ["business", "fishing"],
+                "source_citation": "Line 8523",
+                "chapter": "Chapter 3 – Expenses",
+                "section": "Part 4",
+                "source_file": "t4002-5.html",
+                "expert_source": "adjudicated",
+                "anchor_id": "tocch3ln8523",
+                "confidence_score": 0.95,
+            },
+            {
+                "rule_number": 9200,
+                "title": "Motor vehicle",
+                "content": "Car mileage fuel...",
+                "applies_to": ["business"],
+                "source_citation": "Line 9200",
+                "chapter": "Chapter 3 – Expenses",
+                "section": "Part 5",
+                "source_file": "t4002-5.html",
+                "expert_source": "classic",
+                "confidence_score": 1.0,
+            },
+        ],
+    }
+
+    yaml_path = tmp_path / "rules.yml"
+    with open(yaml_path, "w") as f:
+        yaml.dump(yaml_content, f)
+
+    jsonl_path = tmp_path / "chunks.jsonl"
+
+    # Run transformation
+    transformer = YAMLTransformer()
+    report = transformer.transform_yaml_to_jsonl(
+        yaml_path=yaml_path,
+        jsonl_path=jsonl_path,
+        continue_on_error=True,
+    )
+
+    # Verify report
+    assert report.total_rules == 2
+    assert report.successful == 2
+    assert report.skipped == 0
+    assert len(report.errors) == 0
+
+    # Verify JSONL output
+    assert jsonl_path.exists()
+    with open(jsonl_path) as f:
+        lines = f.readlines()
+        assert len(lines) == 1  # One document (grouped by source_file)
+
+        doc_data = json.loads(lines[0])
+        assert doc_data["document_id"] == "t4002-5"
+        assert set(doc_data["metadata"]["income_type"]) == {"business", "fishing"}
+        assert "meals" in doc_data["metadata"]["expense_type"]
+        assert "vehicle" in doc_data["metadata"]["expense_type"]
+
+        # Verify citations
+        chunks = doc_data["sections"][0]["content"]
+        citations = [c["citation_id"] for c in chunks]
+        assert "LINE-8523" in citations
+        assert "LINE-9200" in citations
+
+
+def test_transform_yaml_to_jsonl_with_errors(tmp_path) -> None:
+    """Should handle errors gracefully with continue_on_error."""
+    from pathlib import Path
+
+    import yaml
+
+    from qe_tax_rag.extraction.ca.transformer import (
+        CriticalTransformationError,
+        YAMLTransformer,
+    )
+
+    # Create YAML with duplicate rule_numbers
+    yaml_content = {
+        "schema_version": "1.0",
+        "extraction_timestamp": "2025-01-01T00:00:00Z",
+        "rules": [
+            {
+                "rule_number": 8523,  # Duplicate
+                "title": "Rule 1",
+                "content": "...",
+                "applies_to": ["business"],
+                "source_citation": "Line 8523",
+                "chapter": "Chapter 3",
+                "section": None,
+                "source_file": "t4002-5.html",
+                "expert_source": "classic",
+                "confidence_score": 1.0,
+            },
+            {
+                "rule_number": 8523,  # Duplicate
+                "title": "Rule 2",
+                "content": "...",
+                "applies_to": ["business"],
+                "source_citation": "Line 8523",
+                "chapter": "Chapter 3",
+                "section": None,
+                "source_file": "t4002-5.html",
+                "expert_source": "classic",
+                "confidence_score": 1.0,
+            },
+        ],
+    }
+
+    yaml_path = tmp_path / "bad_rules.yml"
+    with open(yaml_path, "w") as f:
+        yaml.dump(yaml_content, f)
+
+    jsonl_path = tmp_path / "chunks.jsonl"
+
+    # Should raise CriticalTransformationError (duplicate rule_numbers)
+    transformer = YAMLTransformer()
+    with pytest.raises(CriticalTransformationError, match="Duplicate"):
+        transformer.transform_yaml_to_jsonl(
+            yaml_path=yaml_path,
+            jsonl_path=jsonl_path,
+            continue_on_error=True,
+        )
