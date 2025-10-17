@@ -119,8 +119,15 @@ def test_generate_strips_expert_source_field(
     fs: FakeFilesystem, sample_rules: list[ExtractedRule]
 ) -> None:
     """Test that expert_source is excluded from output YAML."""
-    # RED: Verify internal metadata fields are stripped
-    pass
+    output_path = "/output/rules.yml"
+    generate(rules=sample_rules, output_path=output_path)
+
+    with open(output_path, encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+
+    # Verify expert_source is NOT in any rule
+    for rule in data["rules"]:
+        assert "expert_source" not in rule
 
 
 @pytest.mark.unit
@@ -128,7 +135,14 @@ def test_generate_strips_anchor_id_field(
     fs: FakeFilesystem, sample_rules: list[ExtractedRule]
 ) -> None:
     """Test that anchor_id is excluded from output YAML."""
-    pass
+    output_path = "/output/rules.yml"
+    generate(rules=sample_rules, output_path=output_path)
+
+    with open(output_path, encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+
+    for rule in data["rules"]:
+        assert "anchor_id" not in rule
 
 
 @pytest.mark.unit
@@ -136,7 +150,14 @@ def test_generate_strips_confidence_score_field(
     fs: FakeFilesystem, sample_rules: list[ExtractedRule]
 ) -> None:
     """Test that confidence_score is excluded from output YAML."""
-    pass
+    output_path = "/output/rules.yml"
+    generate(rules=sample_rules, output_path=output_path)
+
+    with open(output_path, encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+
+    for rule in data["rules"]:
+        assert "confidence_score" not in rule
 
 
 # ============================================================================

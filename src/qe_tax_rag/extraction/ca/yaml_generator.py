@@ -17,6 +17,9 @@ from qe_tax_rag.extraction.ca.schema import ExtractedRule, RuleSet
 
 logger = logging.getLogger(__name__)
 
+# Internal metadata fields to exclude from final YAML output
+_INTERNAL_METADATA_FIELDS = {"expert_source", "anchor_id", "confidence_score"}
+
 
 def generate(rules: list[ExtractedRule], output_path: str) -> None:
     """Generate schema-compliant YAML file from validated rules.
@@ -31,16 +34,18 @@ def generate(rules: list[ExtractedRule], output_path: str) -> None:
     # Create parent directories
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
-    # Create RuleSet with required fields
     timestamp = datetime.now(timezone.utc).isoformat()
+
+    # Create RuleSet with required fields
     rule_set = RuleSet(
         schema_version="1.0",
         extraction_timestamp=timestamp,
         rules=rules,
     )
 
-    # Convert to dict with enums as strings (via JSON roundtrip)
-    data = json.loads(rule_set.model_dump_json())
+    # Convert to dict with enums as strings, excluding internal metadata
+    # Use JSON roundtrip for enum conversion
+    data = json.loads(rule_set.model_dump_json(exclude={"rules": {"__all__": _INTERNAL_METADATA_FIELDS}}))
 
     # Serialize to YAML
     yaml_string = yaml.dump(
