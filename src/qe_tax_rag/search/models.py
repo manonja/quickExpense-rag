@@ -16,8 +16,10 @@ from pydantic import (
 
 from qe_tax_rag.search.enums import BusinessType, Province
 
-# Regex for CRA citation IDs, e.g., "S3-F2-C1-p1.25"
-CITATION_ID_PATTERN = r"S\d+-F\d+-C\d+-p\d+\.?\d*"
+# Regex for CRA citation IDs
+# Supports legacy format: "S3-F2-C1-p1.25" (S#-F#-C#-p#.#)
+# Supports LINE format: "LINE-8523" (LINE-{number})
+CITATION_ID_PATTERN = r"^(S\d+-F\d+-C\d+-p\d+\.?\d*|LINE-\d+)$"
 
 # Regex for YYYY.MM version format
 DATA_VERSION_PATTERN = r"^\d{4}\.\d{2}$"
@@ -53,7 +55,7 @@ class SearchResult(BaseModel):
     citation_id: str = Field(
         ...,
         pattern=CITATION_ID_PATTERN,
-        description="The unique CRA citation identifier for the content.",
+        description="CRA citation identifier (S-F-C-p or LINE-XXXX format).",
     )
     source_url: HttpUrl = Field(..., description="The URL of the source CRA document.")
     score: float = Field(..., ge=0.0, le=1.0, description="The search relevance score.")
