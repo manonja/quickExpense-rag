@@ -26,7 +26,7 @@ Exception handling:
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from pydantic import BaseModel, Field
 
@@ -74,6 +74,66 @@ class SkippableTransformationError(Exception):
     """
 
     pass
+
+
+# ============================================================================
+# Expense Type Classifier
+# ============================================================================
+
+
+class ExpenseTypeClassifier:
+    """
+    Keyword-based expense type classifier.
+
+    Simple, deterministic classifier using keyword matching.
+    Good enough for MVP - can be replaced with ML model later if needed.
+
+    Follows 80/20 principle: delivers immediate value without ML complexity.
+    """
+
+    # Canonical expense types from database schema
+    EXPENSE_TYPE_KEYWORDS: ClassVar[dict[str, list[str]]] = {
+        "meals": ["meal", "food", "restaurant", "dining", "entertainment"],
+        "travel": ["travel", "transportation", "airfare", "hotel", "lodging"],
+        "vehicle": ["vehicle", "automobile", "car", "motor", "mileage", "fuel"],
+        "home_office": ["home office", "workspace", "rent"],
+        "advertising": ["advertising", "marketing", "promotion"],
+        "supplies": ["supplies", "materials", "stationery"],
+        "professional_fees": ["professional fees", "legal", "accounting"],
+        "utilities": ["telephone", "utilities", "internet", "electricity"],
+        "insurance": ["insurance", "premium"],
+        "capital": ["capital cost", "cca", "depreciation", "asset"],
+        "maintenance": ["maintenance", "repair"],
+        "salaries": ["salaries", "wages", "employee"],
+        "office_equipment": ["office equipment", "furniture", "computer"],
+        "telecommunications": ["telecommunications", "phone", "mobile"],
+        "interest": ["interest", "loan", "financing"],
+        "bad_debts": ["bad debts", "uncollectible"],
+    }
+
+    def infer_expense_types(self, rule: "ExtractedRule") -> list[str]:
+        """
+        Infer expense types from rule title and content.
+
+        Args:
+            rule: ExtractedRule to classify
+
+        Returns:
+            List of expense types (can be multiple).
+            Falls back to ["general"] if no matches.
+
+        """
+        # Combine title and content for matching
+        text = (rule.title + " " + rule.content).lower()
+
+        matched: list[str] = []
+
+        for expense_type, keywords in self.EXPENSE_TYPE_KEYWORDS.items():
+            if any(keyword in text for keyword in keywords):
+                matched.append(expense_type)
+
+        # Fallback to "general" if no matches
+        return matched if matched else ["general"]
 
 
 # ============================================================================
