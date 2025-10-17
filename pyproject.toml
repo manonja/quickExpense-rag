@@ -45,6 +45,7 @@ dev = [
     "mypy>=1.7",
     "pre-commit>=3.5",
     "pyfakefs>=5.0",
+    "types-PyYAML>=6.0",
 ]
 indexing = [
     "sentence-transformers>=2.2",
@@ -108,6 +109,8 @@ ignore = ["D203", "D212"]
 "src/qe_tax_rag/extraction/ca/schema.py" = ["RUF001"]  # EN DASH in field descriptions
 "src/qe_tax_rag/extraction/ca/settings.py" = ["E501"]  # Long description line
 "src/qe_tax_rag/extraction/ca/adjudicator.py" = ["E501", "G004", "G201", "C901", "PLR0913", "PLR2004", "N806", "D301", "D413"]  # Adjudicator complexity and long prompts are intentional
+"src/qe_tax_rag/extraction/ca/yaml_generator.py" = ["PLR0915"]  # generate() function complexity is inherent to orchestration
+"tests/unit/test_yaml_generator.py" = ["ARG001"]  # pyfakefs fixture auto-use
 
 [tool.ruff.format]
 docstring-code-format = true

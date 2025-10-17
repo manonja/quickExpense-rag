@@ -1,4 +1,5 @@
-"""YAML generation module for HTML-to-YAML extraction pipeline.
+"""
+YAML generation module for HTML-to-YAML extraction pipeline.
 
 This module takes validated ExtractedRule objects and generates a
 schema-compliant YAML file with metadata stripping, RuleSet wrapping,
@@ -35,7 +36,8 @@ _YAML_LINE_WIDTH: Final[int] = 88  # Match project line length standard
 
 
 def generate(rules: list[ExtractedRule], output_path: str) -> None:
-    """Generate schema-compliant YAML file from validated rules.
+    """
+    Generate schema-compliant YAML file from validated rules.
 
     Args:
         rules: List of validated ExtractedRule objects from adjudicator.
@@ -43,6 +45,7 @@ def generate(rules: list[ExtractedRule], output_path: str) -> None:
 
     Raises:
         YAMLGenerationError: If file cannot be written or verified.
+
     """
     try:
         # Create parent directories
@@ -59,7 +62,11 @@ def generate(rules: list[ExtractedRule], output_path: str) -> None:
 
         # Convert to dict with enums as strings, excluding internal metadata
         # Use JSON roundtrip for enum conversion
-        data = json.loads(rule_set.model_dump_json(exclude={"rules": {"__all__": _INTERNAL_METADATA_FIELDS}}))
+        data = json.loads(
+            rule_set.model_dump_json(
+                exclude={"rules": {"__all__": _INTERNAL_METADATA_FIELDS}}
+            )
+        )
 
         # Serialize to YAML
         yaml_string = yaml.dump(
@@ -96,7 +103,10 @@ def generate(rules: list[ExtractedRule], output_path: str) -> None:
         with open(output_path, encoding="utf-8") as f:
             content = f.read()
             # Skip header lines (everything before ---)
-            yaml_content = content.split("---\n", 1)[1] if "---\n" in content else content
+            if "---\n" in content:
+                yaml_content = content.split("---\n", 1)[1]
+            else:
+                yaml_content = content
             read_back_data = yaml.safe_load(yaml_content)
 
         # Basic validation: Check structure exists
@@ -107,7 +117,10 @@ def generate(rules: list[ExtractedRule], output_path: str) -> None:
             msg = f"YAML verification failed - missing 'rules' key in {output_path}"
             raise YAMLGenerationError(msg)
         if "schema_version" not in read_back_data:
-            msg = f"YAML verification failed - missing 'schema_version' key in {output_path}"
+            msg = (
+                f"YAML verification failed - missing 'schema_version' key "
+                f"in {output_path}"
+            )
             raise YAMLGenerationError(msg)
 
         logger.info(
@@ -117,21 +130,21 @@ def generate(rules: list[ExtractedRule], output_path: str) -> None:
 
     except PermissionError as e:
         msg = f"Failed to write YAML file to {output_path}: Permission denied"
-        logger.error(msg, exc_info=True)
-        raise YAMLGenerationError(msg) from e
-    except OSError as e:
-        msg = f"Failed to write YAML file to {output_path}: {e}"
-        logger.error(msg, exc_info=True)
+        logger.exception(msg)
         raise YAMLGenerationError(msg) from e
     except FileNotFoundError as e:
         msg = f"File disappeared during verification: {output_path}"
-        logger.error(msg, exc_info=True)
+        logger.exception(msg)
+        raise YAMLGenerationError(msg) from e
+    except OSError as e:
+        msg = f"Failed to write YAML file to {output_path}: {e}"
+        logger.exception(msg)
         raise YAMLGenerationError(msg) from e
     except yaml.YAMLError as e:
         msg = f"YAML verification failed - invalid syntax in {output_path}"
-        logger.error(msg, exc_info=True)
+        logger.exception(msg)
         raise YAMLGenerationError(msg) from e
     except ValidationError as e:
         msg = f"YAML verification failed - schema mismatch in {output_path}: {e}"
-        logger.error(msg, exc_info=True)
+        logger.exception(msg)
         raise YAMLGenerationError(msg) from e

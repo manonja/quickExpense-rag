@@ -1,4 +1,5 @@
-"""Unit tests for YAML generation module.
+"""
+Unit tests for YAML generation module.
 
 Tests cover:
 - Happy path: Valid rules → valid YAML file
@@ -14,18 +15,16 @@ from pathlib import Path
 
 import pytest
 import yaml
-from pyfakefs.fake_filesystem import FakeFilesystem
 from pydantic import ValidationError
-
+from pyfakefs.fake_filesystem import FakeFilesystem
 from qe_tax_rag.extraction.ca.exceptions import YAMLGenerationError
 from qe_tax_rag.extraction.ca.schema import (
     ApplicabilityType,
-    ExtractedRule,
     ExpertSource,
+    ExtractedRule,
     RuleSet,
 )
 from qe_tax_rag.extraction.ca.yaml_generator import generate
-
 
 # ============================================================================
 # Fixtures
