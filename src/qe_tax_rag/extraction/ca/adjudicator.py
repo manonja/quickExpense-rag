@@ -171,6 +171,94 @@ def _triage_rules(
     )
 
 
+def _truncate_html_for_prompt(
+    html_content: str,
+    anchor_id: str | None,
+) -> str:
+    """
+    Truncate HTML content if needed, preserving context around anchor_id.
+
+    For large HTML files that would exceed the LLM's token limit, this function
+    intelligently extracts the most relevant section:
+    - If anchor_id is available: extract contextual window around the target rule
+    - Otherwise: take first and last chunks
+
+    Args:
+        html_content: Full HTML content from source file
+        anchor_id: Optional HTML anchor ID to locate the relevant section
+
+    Returns:
+        Full or truncated HTML content with context preserved
+
+    Example:
+        >>> large_html = "<html>..." + "x" * 500000 + "...</html>"
+        >>> truncated = _truncate_html_for_prompt(large_html, "tocch3ln8523")
+        >>> "[...CONTENT TRUNCATED...]" in truncated
+        True
+    """
+    # Safe character limit (roughly <100k tokens)
+    MAX_CHARS = 300_000
+    CONTEXT_WINDOW_CHARS = 150_000
+
+    if len(html_content) <= MAX_CHARS:
+        return html_content
+
+    if anchor_id:
+        try:
+            from bs4 import BeautifulSoup
+
+            soup = BeautifulSoup(html_content, "html.parser")
+            target_tag = soup.find(id=anchor_id)
+
+            if target_tag:
+                # Find h3: either the target itself or its parent
+                h3_tag = target_tag if target_tag.name == "h3" else target_tag.find_parent("h3")
+                if h3_tag:
+                    # Extract contextual window
+                    context_parts = []
+
+                    # Go back 2-3 siblings or until h2
+                    prev_count = 0
+                    for prev_sibling in h3_tag.previous_siblings:
+                        if prev_sibling.name in ["h2", "h3"] and prev_count >= 1:
+                            break
+                        if prev_sibling.name:
+                            context_parts.insert(0, str(prev_sibling))
+                            prev_count += 1
+                        if prev_count >= 3:
+                            break
+
+                    # Add the target h3
+                    context_parts.append(str(h3_tag))
+
+                    # Go forward until next h3
+                    for next_sibling in h3_tag.next_siblings:
+                        if next_sibling.name == "h3":
+                            break
+                        if next_sibling.name:
+                            context_parts.append(str(next_sibling))
+
+                    truncated_content = "\n".join(context_parts)
+                    return (
+                        "[...CONTENT TRUNCATED...]\n"
+                        "The following is the most relevant section of the HTML "
+                        "based on the rule's anchor ID.\n\n"
+                        f"{truncated_content}"
+                    )
+        except Exception as e:
+            logger.warning(
+                f"[Adjudicator] Failed to extract context for anchor {anchor_id}: {e}"
+            )
+
+    # Fallback: first and last chunks
+    half_window = CONTEXT_WINDOW_CHARS // 2
+    return (
+        f"{html_content[:half_window]}\n\n"
+        "[...CONTENT TRUNCATED - MIDDLE SECTION OMITTED...]\n\n"
+        f"{html_content[-half_window:]}"
+    )
+
+
 def _normalize_rule_for_comparison(rule: ExtractedRule) -> dict[str, str | list[str]]:
     """
     Normalize a rule for comparison between parsers.
