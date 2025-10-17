@@ -121,3 +121,62 @@ class YAMLTransformer:
             grouped[rule.source_file].append(rule)
 
         return dict(grouped)
+
+    def _rule_to_text_chunk(self, rule: "ExtractedRule") -> "TextChunk":
+        """
+        Transform ExtractedRule to TextChunk with metadata.
+
+        Args:
+            rule: ExtractedRule object from YAML
+
+        Returns:
+            TextChunk with citation ID, extraction metadata, and source anchor
+
+        """
+        # Import at runtime to avoid circular dependency
+        from qe_tax_rag.parser.schema import TextChunk
+
+        # Generate citation ID: LINE-{rule_number}
+        citation_id = f"LINE-{rule.rule_number}"
+
+        # Map expert_source enum to lowercase string
+        extraction_source = rule.expert_source.value.lower()
+
+        # Generate source anchor: {chapter}{section}ln{rule_number} (normalized)
+        # Remove spaces, lowercase, keep alphanumeric
+        chapter_part = self._normalize_anchor(rule.chapter)
+        section_part = self._normalize_anchor(rule.section) if rule.section else ""
+        source_anchor = f"{chapter_part}{section_part}ln{rule.rule_number}"
+
+        return TextChunk(
+            type="paragraph",
+            text=rule.content,
+            citation_id=citation_id,
+            extraction_source=extraction_source,
+            extraction_confidence=rule.confidence_score,
+            source_anchor=source_anchor,
+        )
+
+    def _normalize_anchor(self, text: str) -> str:
+        """
+        Normalize text for HTML anchor generation.
+
+        Args:
+            text: Text to normalize (e.g., "Chapter 1", "General Rules")
+
+        Returns:
+            Normalized text (e.g., "ch1", "generalrules")
+
+        Examples:
+            "Chapter 1" → "ch1"
+            "General Rules" → "generalrules"
+            "Chapter 2" → "ch2"
+
+        """
+        # Remove spaces and convert to lowercase
+        normalized = text.lower().replace(" ", "")
+
+        # Replace "chapter" with "ch" for brevity
+        normalized = normalized.replace("chapter", "ch")
+
+        return normalized
