@@ -167,6 +167,40 @@ def sample_rules_multiple_files() -> list[ExtractedRule]:
     ]
 
 
+@pytest.fixture
+def sample_rule_with_section() -> ExtractedRule:
+    """Create a rule with section information."""
+    return ExtractedRule(
+        rule_number=8523,
+        title="Meal expenses",
+        content="You can deduct 50% of meals and entertainment expenses.",
+        applies_to=[ApplicabilityType.BUSINESS],
+        source_citation="Line 8523",
+        chapter="Chapter 1",
+        section="General Rules",
+        source_file="t4002-5.html",
+        expert_source=ExpertSource.ADJUDICATED,
+        confidence_score=0.95,
+    )
+
+
+@pytest.fixture
+def sample_rule_without_section() -> ExtractedRule:
+    """Create a rule without section (only chapter)."""
+    return ExtractedRule(
+        rule_number=9200,
+        title="Vehicle expenses",
+        content="You can deduct motor vehicle expenses for business use.",
+        applies_to=[ApplicabilityType.BUSINESS],
+        source_citation="Line 9200",
+        chapter="Chapter 2",
+        section=None,
+        source_file="t4002-5.html",
+        expert_source=ExpertSource.LLM,
+        confidence_score=0.88,
+    )
+
+
 # ============================================================================
 # TESTS: Exception Hierarchy
 # ============================================================================
@@ -239,3 +273,139 @@ def test_group_by_source_file_empty() -> None:
     grouped = transformer._group_by_source_file([])
 
     assert grouped == {}
+
+
+# ============================================================================
+# TESTS: Rule to TextChunk Conversion
+# ============================================================================
+
+
+def test_rule_to_text_chunk_with_section(
+    sample_rule_with_section: ExtractedRule,
+) -> None:
+    """Convert ExtractedRule to TextChunk with all metadata."""
+    from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
+
+    transformer = YAMLTransformer()
+    chunk = transformer._rule_to_text_chunk(sample_rule_with_section)
+
+    # Verify basic structure
+    assert chunk.type == "paragraph"
+    assert chunk.text == "You can deduct 50% of meals and entertainment expenses."
+
+    # Verify citation ID format: LINE-{rule_number}
+    assert chunk.citation_id == "LINE-8523"
+
+    # Verify extraction metadata
+    assert chunk.extraction_source == "adjudicated"
+    assert chunk.extraction_confidence == 0.95
+
+    # Verify source anchor format: {chapter}{section}ln{rule_number} (normalized)
+    # "Chapter 1" → "ch1", "General Rules" → "generalrules", line → "ln8523"
+    assert chunk.source_anchor == "ch1generalrulesln8523"
+
+
+def test_rule_to_text_chunk_without_section(
+    sample_rule_without_section: ExtractedRule,
+) -> None:
+    """Convert rule without section (only chapter)."""
+    from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
+
+    transformer = YAMLTransformer()
+    chunk = transformer._rule_to_text_chunk(sample_rule_without_section)
+
+    # Verify basic structure
+    assert chunk.type == "paragraph"
+    assert chunk.text == "You can deduct motor vehicle expenses for business use."
+
+    # Verify citation ID
+    assert chunk.citation_id == "LINE-9200"
+
+    # Verify extraction metadata
+    assert chunk.extraction_source == "llm"
+    assert chunk.extraction_confidence == 0.88
+
+    # Verify source anchor without section: {chapter}ln{rule_number}
+    # "Chapter 2" → "ch2", no section, line → "ln9200"
+    assert chunk.source_anchor == "ch2ln9200"
+
+
+def test_rule_to_text_chunk_expert_source_mapping() -> None:
+    """Verify expert_source enum values map to extraction_source strings."""
+    from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
+
+    transformer = YAMLTransformer()
+
+    # Test CLASSIC → "classic"
+    rule_classic = ExtractedRule(
+        rule_number=1000,
+        title="Test",
+        content="Content",
+        applies_to=[ApplicabilityType.BUSINESS],
+        source_citation="Line 1000",
+        chapter="Chapter 1",
+        section=None,
+        source_file="test.html",
+        expert_source=ExpertSource.CLASSIC,
+        confidence_score=1.0,
+    )
+    chunk = transformer._rule_to_text_chunk(rule_classic)
+    assert chunk.extraction_source == "classic"
+
+    # Test LLM → "llm"
+    rule_llm = ExtractedRule(
+        rule_number=2000,
+        title="Test",
+        content="Content",
+        applies_to=[ApplicabilityType.BUSINESS],
+        source_citation="Line 2000",
+        chapter="Chapter 1",
+        section=None,
+        source_file="test.html",
+        expert_source=ExpertSource.LLM,
+        confidence_score=0.8,
+    )
+    chunk = transformer._rule_to_text_chunk(rule_llm)
+    assert chunk.extraction_source == "llm"
+
+    # Test ADJUDICATED → "adjudicated"
+    rule_adj = ExtractedRule(
+        rule_number=3000,
+        title="Test",
+        content="Content",
+        applies_to=[ApplicabilityType.BUSINESS],
+        source_citation="Line 3000",
+        chapter="Chapter 1",
+        section=None,
+        source_file="test.html",
+        expert_source=ExpertSource.ADJUDICATED,
+        confidence_score=0.95,
+    )
+    chunk = transformer._rule_to_text_chunk(rule_adj)
+    assert chunk.extraction_source == "adjudicated"
+
+
+def test_rule_to_text_chunk_preserves_confidence_score() -> None:
+    """Confidence scores should be preserved exactly (no rounding)."""
+    from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
+
+    transformer = YAMLTransformer()
+
+    # Test various confidence scores
+    test_scores = [0.0, 0.5, 0.88, 0.95, 1.0, 0.123456]
+
+    for score in test_scores:
+        rule = ExtractedRule(
+            rule_number=1000,
+            title="Test",
+            content="Content",
+            applies_to=[ApplicabilityType.BUSINESS],
+            source_citation="Line 1000",
+            chapter="Chapter 1",
+            section=None,
+            source_file="test.html",
+            expert_source=ExpertSource.CLASSIC,
+            confidence_score=score,
+        )
+        chunk = transformer._rule_to_text_chunk(rule)
+        assert chunk.extraction_confidence == score
