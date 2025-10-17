@@ -194,3 +194,18 @@ def test_parsed_document_optional_document_id():
     doc = ParsedDocument(title="Test Doc", metadata=Metadata(), sections=[])
 
     assert doc.document_id is None
+
+
+# --- NEW TESTS FOR TICKET T1.2 ---
+
+
+def test_metadata_without_income_type() -> None:
+    """Metadata should work without income_type (backward compat)."""
+    from scripts.parser.schema import Metadata
+
+    metadata = Metadata(
+        province=["BC"],
+        business_type=["sole_proprietorship"],
+        expense_type=["meals"],
+    )
+    assert metadata.income_type == []  # Default empty list
