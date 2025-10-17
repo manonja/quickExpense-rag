@@ -267,8 +267,32 @@ def test_generate_raises_error_on_file_disappears(
 
 @pytest.mark.unit
 def test_generate_performs_readback_verification(
-    fs: FakeFilesystem, sample_rules: list[ExtractedRule]
+    fs: FakeFilesystem, sample_rules: list[ExtractedRule], monkeypatch
 ) -> None:
     """Test that generate() reads back and validates the written file."""
-    # RED: Verify read-back validation occurs
-    pass
+    output_path = "/output/rules.yml"
+
+    # First call should succeed
+    generate(rules=sample_rules, output_path=output_path)
+
+    # Verify file was created
+    assert Path(output_path).exists()
+
+    # Now simulate file corruption during read-back by monkey-patching
+    original_open = open
+    call_count = {"count": 0}
+
+    def mock_open(*args, **kwargs):
+        call_count["count"] += 1
+        # First call: write (succeeds)
+        # Second call: read-back (return corrupted content)
+        if call_count["count"] == 2:
+            from io import StringIO
+            return StringIO("invalid: yaml: [syntax")
+        return original_open(*args, **kwargs)
+
+    monkeypatch.setattr("builtins.open", mock_open)
+
+    # This should fail during verification
+    with pytest.raises(YAMLGenerationError, match="verification failed"):
+        generate(rules=sample_rules, output_path=output_path)
