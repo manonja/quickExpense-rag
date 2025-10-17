@@ -996,6 +996,68 @@ def test_validate_yaml_input_valid() -> None:
     transformer._validate_yaml_input(rule_set)
 
 
+def test_validate_yaml_input_unsupported_schema_version() -> None:
+    """Should raise error on unsupported schema version."""
+    from qe_tax_rag.extraction.ca.transformer import (
+        CriticalTransformationError,
+        YAMLTransformer,
+    )
+
+    rule_set = RuleSet(
+        schema_version="2.0",  # Unsupported version
+        extraction_timestamp="2025-01-01T00:00:00Z",
+        rules=[
+            ExtractedRule(
+                rule_number=8523,
+                title="Rule 1",
+                content="...",
+                applies_to=[ApplicabilityType.BUSINESS],
+                source_citation="Line 8523",
+                chapter="Chapter 3",
+                section=None,
+                source_file="t4002-5.html",
+                expert_source=ExpertSource.CLASSIC,
+                confidence_score=1.0,
+            ),
+        ],
+    )
+
+    transformer = YAMLTransformer()
+
+    with pytest.raises(
+        CriticalTransformationError, match="Unsupported schema version"
+    ):
+        transformer._validate_yaml_input(rule_set)
+
+
+def test_validate_yaml_input_supported_schema_version() -> None:
+    """Should accept schema version 1.0."""
+    from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
+
+    rule_set = RuleSet(
+        schema_version="1.0",  # Supported version
+        extraction_timestamp="2025-01-01T00:00:00Z",
+        rules=[
+            ExtractedRule(
+                rule_number=8523,
+                title="Rule 1",
+                content="...",
+                applies_to=[ApplicabilityType.BUSINESS],
+                source_citation="Line 8523",
+                chapter="Chapter 3",
+                section=None,
+                source_file="t4002-5.html",
+                expert_source=ExpertSource.CLASSIC,
+                confidence_score=1.0,
+            ),
+        ],
+    )
+
+    transformer = YAMLTransformer()
+    # Should not raise
+    transformer._validate_yaml_input(rule_set)
+
+
 # ============================================================================
 # TESTS: Output Validation
 # ============================================================================

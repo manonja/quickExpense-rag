@@ -256,6 +256,13 @@ class YAMLTransformer:
             CriticalTransformationError: If validation fails
 
         """
+        # Check schema version
+        if rule_set.schema_version != "1.0":
+            raise CriticalTransformationError(
+                f"Unsupported schema version: '{rule_set.schema_version}'. "
+                f"This transformer requires version '1.0'."
+            )
+
         # Check for duplicate rule_numbers
         rule_numbers = [r.rule_number for r in rule_set.rules]
         duplicates = [n for n in set(rule_numbers) if rule_numbers.count(n) > 1]
