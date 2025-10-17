@@ -146,7 +146,14 @@ class ParsedDocument(BaseModel):
         return chunks
 
     def _create_chunk_dict(
-        self, content: str, citation_id: str | None, section_title: str, source_url: str
+        self,
+        content: str,
+        citation_id: str | None,
+        section_title: str,
+        source_url: str,
+        extraction_source: str | None = None,
+        extraction_confidence: float | None = None,
+        source_anchor: str | None = None,
     ) -> dict:
         """Create a chunk dictionary with all metadata."""
         return {
@@ -154,11 +161,17 @@ class ParsedDocument(BaseModel):
             "citation_id": citation_id,
             "source_url": source_url,
             "metadata": {
+                # Document-level metadata
                 "province": self.metadata.province,
                 "business_type": self.metadata.business_type,
                 "expense_type": self.metadata.expense_type,
+                "income_type": self.metadata.income_type,
                 "section_title": section_title,
                 "document_id": self.document_id,
+                # Chunk-level metadata
+                "extraction_source": extraction_source,
+                "extraction_confidence": extraction_confidence,
+                "source_anchor": source_anchor,
             },
         }
 
