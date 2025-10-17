@@ -81,8 +81,23 @@ def test_generate_creates_valid_yaml_file(
     fs: FakeFilesystem, sample_rules: list[ExtractedRule]
 ) -> None:
     """Test that generate() creates a valid YAML file."""
-    # RED: This test will fail because yaml_generator.py doesn't exist yet
-    pass
+    output_path = "/output/rules.yml"
+
+    # Call the function
+    generate(rules=sample_rules, output_path=output_path)
+
+    # Verify file exists
+    assert Path(output_path).exists()
+
+    # Verify file is valid YAML
+    with open(output_path, encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+
+    # Verify structure
+    assert "rules" in data
+    assert len(data["rules"]) == 2
+    assert data["rules"][0]["rule_number"] == 8523
+    assert data["rules"][1]["rule_number"] == 9270
 
 
 @pytest.mark.unit
