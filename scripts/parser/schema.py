@@ -119,6 +119,9 @@ class ParsedDocument(BaseModel):
                             citation_id=content_item.citation_id,
                             section_title=section.section_title,
                             source_url=source_url,
+                            extraction_source=content_item.extraction_source,
+                            extraction_confidence=content_item.extraction_confidence,
+                            source_anchor=content_item.source_anchor,
                         )
                     )
                 elif isinstance(content_item, ListChunk):
