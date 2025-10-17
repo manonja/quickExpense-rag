@@ -25,10 +25,70 @@ Usage:
 
 import logging
 import re
+from typing import NamedTuple
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.qe_tax_rag.extraction.ca.schema import ExtractedRule
 
 logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# Data Structures
+# ============================================================================
+
+
+class TriageResult(NamedTuple):
+    """
+    Results from the triage phase of adjudication.
+
+    Categorizes rules into three groups based on comparison between
+    classic and LLM parser outputs.
+    """
+
+    perfect_matches: list[ExtractedRule]
+    """Rules where both parsers produced identical normalized output."""
+
+    conflicts: list[tuple[ExtractedRule, ExtractedRule]]
+    """Rules where parsers disagree (classic_rule, llm_rule)."""
+
+    orphans: list[ExtractedRule]
+    """Rules found by only one parser."""
+
+
+class ManualReviewItem(BaseModel):
+    """
+    Represents a failed adjudication requiring manual review.
+
+    When the LLM adjudicator cannot resolve a conflict or orphan
+    (due to API failures, validation errors, or insufficient evidence),
+    this structure captures all relevant information for human review.
+    """
+
+    model_config = ConfigDict(frozen=False, extra="forbid")
+
+    rule_number: int = Field(description="Rule number requiring review")
+    discrepancy_type: str = Field(description="CONFLICT or ORPHAN")
+    failure_reason: str = Field(description="Why adjudication failed")
+    source_file: str = Field(description="Source HTML filename")
+    timestamp: str = Field(description="ISO 8601 timestamp of failure")
+
+    # For conflicts: both versions
+    classic_version: dict[str, object] | None = Field(
+        default=None, description="Classic parser version"
+    )
+    llm_version: dict[str, object] | None = Field(
+        default=None, description="LLM parser version"
+    )
+
+    # For orphans: single version
+    orphan_version: dict[str, object] | None = Field(
+        default=None, description="Orphan rule data"
+    )
+    found_by: str | None = Field(
+        default=None, description="Which parser found orphan (classic/llm)"
+    )
 
 
 # ============================================================================
