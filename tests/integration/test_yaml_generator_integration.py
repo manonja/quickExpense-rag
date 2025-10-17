@@ -6,7 +6,7 @@ import pytest
 import yaml
 
 from qe_tax_rag.extraction.ca import generate
-from src.qe_tax_rag.extraction.ca.schema import ApplicabilityType, ExtractedRule, ExpertSource
+from qe_tax_rag.extraction.ca.schema import ApplicabilityType, ExtractedRule, ExpertSource
 
 
 @pytest.mark.integration

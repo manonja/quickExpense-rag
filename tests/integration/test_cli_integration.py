@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from src.qe_tax_rag.extraction.ca.cli import app
+from qe_tax_rag.extraction.ca.cli import app
 
 runner = CliRunner()
 
