@@ -208,6 +208,29 @@ class YAMLTransformer:
                 f"Failed to parse YAML as RuleSet: {e}"
             ) from e
 
+    def _write_jsonl(
+        self,
+        documents: list["ParsedDocument"],
+        jsonl_path: Path,
+    ) -> None:
+        """
+        Write ParsedDocuments to JSONL file.
+
+        Creates parent directories if they don't exist.
+
+        Args:
+            documents: List of ParsedDocument objects to write
+            jsonl_path: Output path for JSONL file
+
+        """
+        # Create parent directories
+        jsonl_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Write JSONL (one document per line)
+        with open(jsonl_path, "w") as f:
+            for doc in documents:
+                f.write(doc.model_dump_json() + "\n")
+
     def _group_by_source_file(
         self,
         rules: list["ExtractedRule"],
