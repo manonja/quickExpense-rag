@@ -582,3 +582,91 @@ def test_aggregate_metadata() -> None:
     # Federal rules have no province/business_type
     assert metadata.province == []
     assert metadata.business_type == []
+
+
+# ============================================================================
+# TESTS: Build Sections
+# ============================================================================
+
+
+def test_build_sections_single_chapter() -> None:
+    """Rules should be organized into sections by chapter."""
+    from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
+
+    rules = [
+        ExtractedRule(
+            rule_number=8523,
+            title="Rule 1",
+            content="Content 1",
+            applies_to=[ApplicabilityType.BUSINESS],
+            source_citation="Line 8523",
+            chapter="Chapter 3 - Expenses",
+            section="Part 4",
+            source_file="t4002-5.html",
+            expert_source=ExpertSource.CLASSIC,
+            confidence_score=1.0,
+        ),
+        ExtractedRule(
+            rule_number=9200,
+            title="Rule 2",
+            content="Content 2",
+            applies_to=[ApplicabilityType.BUSINESS],
+            source_citation="Line 9200",
+            chapter="Chapter 3 - Expenses",  # Same chapter
+            section="Part 5",  # Different section
+            source_file="t4002-5.html",
+            expert_source=ExpertSource.CLASSIC,
+            confidence_score=1.0,
+        ),
+    ]
+
+    transformer = YAMLTransformer()
+    sections = transformer._build_sections(rules)
+
+    # Should have 1 section (flattened by chapter)
+    assert len(sections) == 1
+    assert sections[0].section_title == "Chapter 3 - Expenses"
+    assert sections[0].section_level == 1
+
+    # Should have 2 chunks (one per rule)
+    assert len(sections[0].content) == 2
+
+
+def test_build_sections_multiple_chapters() -> None:
+    """Multiple chapters should create multiple sections."""
+    from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
+
+    rules = [
+        ExtractedRule(
+            rule_number=8523,
+            title="Rule 1",
+            content="Content 1",
+            applies_to=[ApplicabilityType.BUSINESS],
+            source_citation="Line 8523",
+            chapter="Chapter 3",
+            section=None,
+            source_file="t4002-5.html",
+            expert_source=ExpertSource.CLASSIC,
+            confidence_score=1.0,
+        ),
+        ExtractedRule(
+            rule_number=9200,
+            title="Rule 2",
+            content="Content 2",
+            applies_to=[ApplicabilityType.BUSINESS],
+            source_citation="Line 9200",
+            chapter="Chapter 4",  # Different chapter
+            section=None,
+            source_file="t4002-5.html",
+            expert_source=ExpertSource.CLASSIC,
+            confidence_score=1.0,
+        ),
+    ]
+
+    transformer = YAMLTransformer()
+    sections = transformer._build_sections(rules)
+
+    # Should have 2 sections
+    assert len(sections) == 2
+    chapter_titles = {s.section_title for s in sections}
+    assert chapter_titles == {"Chapter 3", "Chapter 4"}
