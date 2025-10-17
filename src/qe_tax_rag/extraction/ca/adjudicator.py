@@ -259,6 +259,132 @@ def _truncate_html_for_prompt(
     )
 
 
+ADJUDICATION_PROMPT_TEMPLATE = """You are an expert adjudicator for a Canadian tax law data extraction pipeline. Two parsers (classic rule-based and LLM semantic) have extracted expense rules from CRA HTML documents, and you must resolve discrepancies.
+
+You will be given:
+1. The full HTML content from the source document
+2. Details about the discrepancy (conflict or orphan)
+
+Your task is to determine the CORRECT extraction by examining the source HTML evidence.
+
+CRITICAL REQUIREMENTS:
+- Base your decision ONLY on evidence from the provided HTML
+- Provide an exact quote (citation) from the HTML that supports your decision
+- Explain your reasoning step-by-step
+- If you cannot find sufficient evidence, say so explicitly
+
+--- DISCREPANCY DETAILS ---
+Discrepancy Type: {discrepancy_type}
+Rule Number: {rule_number}
+Source File: {source_file}
+Anchor ID: {anchor_id}
+
+{discrepancy_details}
+
+--- FULL HTML SOURCE ---
+{html_content}
+
+Respond ONLY with a single JSON object (no markdown, no explanatory text):
+
+{{
+  "analysis": "<Brief 1-2 sentence explanation of what discrepancy you found>",
+  "reasoning": "<Step-by-step explanation of how you analyzed the HTML to resolve it>",
+  "citation": "<Exact quote from the HTML that justifies your decision>",
+  "corrected_rule": {{
+    "rule_number": <integer>,
+    "title": "<string>",
+    "content": "<string>",
+    "applies_to": [<list of strings: 'business', 'farming', or 'fishing'>],
+    "source_citation": "<string>",
+    "chapter": "<string>",
+    "section": "<string or null>",
+    "source_file": "<string>",
+    "anchor_id": "<string or null>"
+  }}
+}}
+
+If you cannot resolve the discrepancy with confidence, set "analysis" to start with "INSUFFICIENT_EVIDENCE:" and explain why.
+"""
+
+
+def _build_adjudication_prompt(
+    discrepancy_type: str,
+    rule_number: int,
+    source_file: str,
+    anchor_id: str | None,
+    html_content: str,
+    classic_rule: ExtractedRule | None = None,
+    llm_rule: ExtractedRule | None = None,
+) -> str:
+    """
+    Build a grounded adjudication prompt with structured details.
+
+    Creates a comprehensive prompt for the LLM adjudicator that includes:
+    - Structured metadata about the discrepancy
+    - Side-by-side comparison (for conflicts) or single rule (for orphans)
+    - Full HTML source for evidence-based resolution
+
+    Args:
+        discrepancy_type: "CONFLICT" or "ORPHAN"
+        rule_number: The rule number being adjudicated
+        source_file: Source HTML filename
+        anchor_id: Optional anchor ID for HTML navigation
+        html_content: Full or truncated HTML content
+        classic_rule: Rule from classic parser (for conflicts or classic orphans)
+        llm_rule: Rule from LLM parser (for conflicts or LLM orphans)
+
+    Returns:
+        Formatted prompt string ready for LLM
+
+    Example:
+        >>> prompt = _build_adjudication_prompt(
+        ...     "CONFLICT", 8523, "t4002-5.html", "tocch3ln8523",
+        ...     html_content, classic_rule, llm_rule
+        ... )
+        >>> "CONFLICT" in prompt
+        True
+    """
+    import yaml
+
+    if discrepancy_type == "CONFLICT" and classic_rule and llm_rule:
+        classic_yaml = yaml.dump(
+            classic_rule.model_dump(exclude={"expert_source", "confidence_score"})
+        )
+        llm_yaml = yaml.dump(
+            llm_rule.model_dump(exclude={"expert_source", "confidence_score"})
+        )
+
+        discrepancy_details = f"""A conflict was found for this rule. Here are the two versions.
+
+[CLASSIC PARSER VERSION]
+{classic_yaml}
+
+[LLM PARSER VERSION]
+{llm_yaml}"""
+    else:  # ORPHAN
+        orphan_rule = classic_rule or llm_rule
+        if not orphan_rule:
+            raise ValueError("Either classic_rule or llm_rule must be provided for ORPHAN")
+        found_by = "classic" if classic_rule else "llm"
+        orphan_yaml = yaml.dump(
+            orphan_rule.model_dump(exclude={"expert_source", "confidence_score"})
+        )
+
+        discrepancy_details = f"""This rule was found only by the {found_by} parser. Please verify if it is a valid rule based on the HTML source.
+
+[ORPHAN RULE DATA]
+{orphan_yaml}"""
+
+    return ADJUDICATION_PROMPT_TEMPLATE.format(
+        discrepancy_type=discrepancy_type,
+        rule_number=rule_number,
+        source_file=source_file,
+        anchor_id=anchor_id or "N/A",
+        discrepancy_details=discrepancy_details,
+        html_content=html_content,
+    )
+
+
 def _normalize_rule_for_comparison(rule: ExtractedRule) -> dict[str, str | list[str]]:
     """
     Normalize a rule for comparison between parsers.
