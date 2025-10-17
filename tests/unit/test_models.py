@@ -195,6 +195,54 @@ class TestSearchResultValidation:
             )
             assert result.citation_id == citation
 
+    @pytest.mark.parametrize(
+        "valid_citation",
+        [
+            "S3-F2-C1-p1",
+            "S3-F2-C1-p1.25",
+            "LINE-8523",
+            "LINE-9200",
+        ],
+    )
+    def test_citation_id_formats_pass(self, valid_citation: str) -> None:
+        """Both legacy and LINE formats should pass validation."""
+        result = SearchResult(
+            content="Test",
+            citation_id=valid_citation,
+            source_url="https://www.canada.ca/test",
+            score=0.5,
+            province=None,
+            business_type=None,
+            expense_types=[],
+            retrieved_at=datetime.now(timezone.utc),
+        )
+        assert result.citation_id == valid_citation
+
+    @pytest.mark.parametrize(
+        "invalid_citation",
+        [
+            "LINE-",  # Missing number
+            "LINE-abc",  # Non-numeric
+            "8523",  # Missing prefix
+        ],
+    )
+    def test_invalid_line_citation_formats_fail(self, invalid_citation: str) -> None:
+        """Invalid LINE formats should raise ValidationError."""
+        with pytest.raises(ValidationError) as exc_info:
+            SearchResult(
+                content="Test",
+                citation_id=invalid_citation,
+                source_url="https://www.canada.ca/test",
+                score=0.5,
+                province=None,
+                business_type=None,
+                expense_types=[],
+                retrieved_at=datetime.now(timezone.utc),
+            )
+
+        error = exc_info.value.errors()[0]
+        assert "citation_id" in error["loc"]
+
     def test_non_https_url_raises_validation_error(self) -> None:
         """Non-HTTPS URL should raise ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
@@ -411,7 +459,9 @@ class TestImmutability:
         manifest = IndexManifest(
             version="2024.12",
             schema_version="1.0",
-            source_files=(SourceFile(path="/test", hash="abc", url="https://example.com/test"),),
+            source_files=(
+                SourceFile(path="/test", hash="abc", url="https://example.com/test"),
+            ),
             embedding_model="test-model",
             chunk_count=100,
             created_at=datetime.now(timezone.utc),
@@ -426,7 +476,9 @@ class TestImmutability:
         manifest = IndexManifest(
             version="2024.12",
             schema_version="1.0",
-            source_files=(SourceFile(path="/test", hash="abc", url="https://example.com/test"),),
+            source_files=(
+                SourceFile(path="/test", hash="abc", url="https://example.com/test"),
+            ),
             embedding_model="test-model",
             chunk_count=100,
             created_at=datetime.now(timezone.utc),
@@ -435,7 +487,9 @@ class TestImmutability:
 
         # Tuple is immutable, so this should fail
         with pytest.raises(TypeError):
-            manifest.source_files[0] = SourceFile(path="/new", hash="def", url="https://example.com/new")  # type: ignore[index]
+            manifest.source_files[0] = SourceFile(
+                path="/new", hash="def", url="https://example.com/new"
+            )  # type: ignore[index]
 
 
 @pytest.mark.unit
@@ -451,7 +505,11 @@ class TestIndexManifestValidation:
                 IndexManifest(
                     version=invalid_version,
                     schema_version="1.0",
-                    source_files=(SourceFile(path="/test", hash="abc", url="https://example.com/test"),),
+                    source_files=(
+                        SourceFile(
+                            path="/test", hash="abc", url="https://example.com/test"
+                        ),
+                    ),
                     embedding_model="test",
                     chunk_count=10,
                     created_at=datetime.now(timezone.utc),
@@ -466,7 +524,9 @@ class TestIndexManifestValidation:
         manifest = IndexManifest(
             version="2024.12",
             schema_version="1.0",
-            source_files=(SourceFile(path="/test", hash="abc", url="https://example.com/test"),),
+            source_files=(
+                SourceFile(path="/test", hash="abc", url="https://example.com/test"),
+            ),
             embedding_model="test-model",
             chunk_count=100,
             created_at=datetime.now(timezone.utc),
@@ -481,7 +541,11 @@ class TestIndexManifestValidation:
             IndexManifest(
                 version="2024.12",
                 schema_version="1.0",
-                source_files=(SourceFile(path="/test", hash="abc", url="https://example.com/test"),),
+                source_files=(
+                    SourceFile(
+                        path="/test", hash="abc", url="https://example.com/test"
+                    ),
+                ),
                 embedding_model="test",
                 chunk_count=0,
                 created_at=datetime.now(timezone.utc),
@@ -498,7 +562,11 @@ class TestIndexManifestValidation:
             IndexManifest(
                 version="2024.12",
                 schema_version="1.0",
-                source_files=(SourceFile(path="/test", hash="abc", url="https://example.com/test"),),
+                source_files=(
+                    SourceFile(
+                        path="/test", hash="abc", url="https://example.com/test"
+                    ),
+                ),
                 embedding_model="test",
                 chunk_count=-10,
                 created_at=datetime.now(timezone.utc),
@@ -512,8 +580,12 @@ class TestIndexManifestValidation:
         """Valid IndexManifest should be created successfully."""
         now = datetime.now(timezone.utc)
         source_files = (
-            SourceFile(path="/data/file1.txt", hash="hash1", url="https://example.com/file1"),
-            SourceFile(path="/data/file2.txt", hash="hash2", url="https://example.com/file2"),
+            SourceFile(
+                path="/data/file1.txt", hash="hash1", url="https://example.com/file1"
+            ),
+            SourceFile(
+                path="/data/file2.txt", hash="hash2", url="https://example.com/file2"
+            ),
         )
 
         manifest = IndexManifest(
@@ -539,7 +611,11 @@ class TestSourceFile:
 
     def test_valid_source_file_creation(self) -> None:
         """Valid SourceFile should be created successfully."""
-        source = SourceFile(path="/path/to/file.txt", hash="abc123def456", url="https://example.com/file")
+        source = SourceFile(
+            path="/path/to/file.txt",
+            hash="abc123def456",
+            url="https://example.com/file",
+        )
 
         assert source.path == "/path/to/file.txt"
         assert source.hash == "abc123def456"
@@ -547,8 +623,12 @@ class TestSourceFile:
     def test_source_file_in_tuple(self) -> None:
         """SourceFile should work correctly in tuples."""
         sources = (
-            SourceFile(path="/file1.txt", hash="hash1", url="https://example.com/file1"),
-            SourceFile(path="/file2.txt", hash="hash2", url="https://example.com/file2"),
+            SourceFile(
+                path="/file1.txt", hash="hash1", url="https://example.com/file1"
+            ),
+            SourceFile(
+                path="/file2.txt", hash="hash2", url="https://example.com/file2"
+            ),
         )
 
         assert len(sources) == 2

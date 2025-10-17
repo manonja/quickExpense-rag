@@ -61,6 +61,25 @@ def test_get_citation_regex_pattern():
     assert r"p\d+" in CITATION_REGEX_PATTERN
 
 
+def test_line_citation_format_validates():
+    """LINE-{number} format should validate."""
+    from scripts.parser.validator import validate_citation_format
+
+    assert validate_citation_format("LINE-8523") is True
+    assert validate_citation_format("LINE-9200") is True
+    assert validate_citation_format("LINE-12345") is True
+
+
+def test_invalid_line_format_fails():
+    """Invalid LINE formats should fail."""
+    from scripts.parser.validator import validate_citation_format
+
+    assert validate_citation_format("LINE-") is False
+    assert validate_citation_format("LINE-abc") is False
+    assert validate_citation_format("8523") is False  # Missing prefix
+    assert validate_citation_format("line-8523") is False  # Lowercase
+
+
 # Expense Type Validation Tests
 
 
