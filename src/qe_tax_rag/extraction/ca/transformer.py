@@ -231,6 +231,41 @@ class YAMLTransformer:
             for doc in documents:
                 f.write(doc.model_dump_json() + "\n")
 
+    def _validate_yaml_input(self, rule_set: "RuleSet") -> None:
+        """
+        Run pre-transformation validation checks.
+
+        Validates structural integrity before transformation begins.
+        Uses fail-fast strategy for critical issues.
+
+        Args:
+            rule_set: RuleSet to validate
+
+        Raises:
+            CriticalTransformationError: If validation fails
+
+        """
+        # Check for duplicate rule_numbers
+        rule_numbers = [r.rule_number for r in rule_set.rules]
+        duplicates = [n for n in set(rule_numbers) if rule_numbers.count(n) > 1]
+
+        if duplicates:
+            raise CriticalTransformationError(
+                f"Duplicate rule_numbers found: {duplicates}. "
+                f"Each rule must have a unique number."
+            )
+
+        # Check all rules have required fields
+        for rule in rule_set.rules:
+            if not rule.source_file:
+                raise CriticalTransformationError(
+                    f"Rule {rule.rule_number} missing required field 'source_file'"
+                )
+            if not rule.chapter:
+                raise CriticalTransformationError(
+                    f"Rule {rule.rule_number} missing required field 'chapter'"
+                )
+
     def _group_by_source_file(
         self,
         rules: list["ExtractedRule"],

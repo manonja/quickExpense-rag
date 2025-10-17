@@ -904,7 +904,7 @@ def test_validate_yaml_input_missing_source_file() -> None:
 
     transformer = YAMLTransformer()
 
-    with pytest.raises(CriticalTransformationError, match="missing source_file"):
+    with pytest.raises(CriticalTransformationError, match="missing required field 'source_file'"):
         transformer._validate_yaml_input(rule_set)
 
 
@@ -936,7 +936,7 @@ def test_validate_yaml_input_missing_chapter() -> None:
 
     transformer = YAMLTransformer()
 
-    with pytest.raises(CriticalTransformationError, match="missing chapter"):
+    with pytest.raises(CriticalTransformationError, match="missing required field 'chapter'"):
         transformer._validate_yaml_input(rule_set)
 
 
