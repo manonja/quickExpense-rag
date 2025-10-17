@@ -9,6 +9,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Final
 
 import yaml
 from pydantic import ValidationError
@@ -17,10 +18,20 @@ from qe_tax_rag import __version__
 from qe_tax_rag.extraction.ca.exceptions import YAMLGenerationError
 from qe_tax_rag.extraction.ca.schema import ExtractedRule, RuleSet
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 # Internal metadata fields to exclude from final YAML output
-_INTERNAL_METADATA_FIELDS = {"expert_source", "anchor_id", "confidence_score"}
+_INTERNAL_METADATA_FIELDS: Final[set[str]] = {
+    "expert_source",    # Tracks which expert generated the rule
+    "anchor_id",        # HTML anchor ID for debugging
+    "confidence_score", # Adjudicator confidence metric
+}
+
+# Schema version for generated YAML files
+_SCHEMA_VERSION: Final[str] = "1.0"
+
+# YAML formatting parameters
+_YAML_LINE_WIDTH: Final[int] = 88  # Match project line length standard
 
 
 def generate(rules: list[ExtractedRule], output_path: str) -> None:
@@ -41,7 +52,7 @@ def generate(rules: list[ExtractedRule], output_path: str) -> None:
 
         # Create RuleSet with required fields
         rule_set = RuleSet(
-            schema_version="1.0",
+            schema_version=_SCHEMA_VERSION,
             extraction_timestamp=timestamp,
             rules=rules,
         )
@@ -56,7 +67,7 @@ def generate(rules: list[ExtractedRule], output_path: str) -> None:
             sort_keys=False,
             default_flow_style=False,
             allow_unicode=True,
-            width=88,
+            width=_YAML_LINE_WIDTH,
         )
 
         # Prepend header with generation metadata
