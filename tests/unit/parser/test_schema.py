@@ -209,3 +209,16 @@ def test_metadata_without_income_type() -> None:
         expense_type=["meals"],
     )
     assert metadata.income_type == []  # Default empty list
+
+
+def test_metadata_with_income_type() -> None:
+    """Metadata should accept income_type field."""
+    from scripts.parser.schema import Metadata
+
+    metadata = Metadata(
+        province=["BC"],
+        business_type=["sole_proprietorship"],
+        expense_type=["meals"],
+        income_type=["business", "fishing"],  # NEW
+    )
+    assert metadata.income_type == ["business", "fishing"]
