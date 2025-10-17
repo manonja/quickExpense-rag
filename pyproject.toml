@@ -114,6 +114,8 @@ ignore = ["D203", "D212"]
 "src/qe_tax_rag/extraction/ca/settings.py" = ["E501"]  # Long description line
 "src/qe_tax_rag/extraction/ca/adjudicator.py" = ["E501", "G004", "G201", "C901", "PLR0913", "PLR2004", "N806", "D301", "D413"]  # Adjudicator complexity and long prompts are intentional
 "src/qe_tax_rag/extraction/ca/yaml_generator.py" = ["PLR0915"]  # generate() function complexity is inherent to orchestration
+"src/qe_tax_rag/extraction/ca/cli.py" = ["E501"]  # Rich formatting naturally creates longer lines
+"src/qe_tax_rag/extraction/ca/orchestrator.py" = ["E501", "G004"]  # Orchestrator logging and formatting
 "tests/unit/test_yaml_generator.py" = ["ARG001"]  # pyfakefs fixture auto-use
 
 [tool.ruff.format]

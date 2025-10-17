@@ -48,6 +48,7 @@ def run_extraction(
         ValueError: If input_path doesn't exist or no HTML files found
         PermissionError: If output directories aren't writable
         YAMLGenerationError: If YAML generation fails
+
     """
     logger.info(f"Starting extraction pipeline for {input_path}")
 
@@ -98,7 +99,7 @@ def run_extraction(
             error_msg = f"{type(e).__name__}: {e}"
             failed_files.append((html_file.name, error_msg))
             logger.error(f"Failed to process {html_file.name}: {error_msg}")
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             # Unexpected errors
             error_msg = f"Unexpected error: {type(e).__name__}: {e}"
             failed_files.append((html_file.name, error_msg))
@@ -157,6 +158,7 @@ def _discover_html_files(input_path: Path) -> list[Path]:
 
     Raises:
         ValueError: If path doesn't exist or no HTML files found
+
     """
     if not input_path.exists():
         raise ValueError(f"Input path does not exist: {input_path}")
@@ -186,6 +188,7 @@ def _preflight_checks(output_yaml: Path, manual_review_yaml: Path) -> None:
 
     Raises:
         PermissionError: If output directories aren't writable
+
     """
     # Create output directories
     output_yaml.parent.mkdir(parents=True, exist_ok=True)

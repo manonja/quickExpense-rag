@@ -76,6 +76,7 @@ def main(
 
         # Verbose logging for debugging
         $ extract-rules cra_documents/ output.yml --verbose
+
     """
     # Setup logging
     log_level = logging.DEBUG if verbose else logging.INFO
