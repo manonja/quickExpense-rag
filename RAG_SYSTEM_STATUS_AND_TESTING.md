@@ -1,9 +1,8 @@
 # QE Tax RAG System - Current Status & Testing Guide
 
-**Date:** 2025-10-17
-**Status:** System Architecture Analysis & Testing Plan
+**Date:** 2025-10-17 **Status:** System Architecture Analysis & Testing Plan
 
----
+______________________________________________________________________
 
 ## 🎯 Executive Summary
 
@@ -11,12 +10,16 @@
 
 Your QE Tax RAG system currently has **TWO independent pipelines**:
 
-1. **Pipeline 1 (Working RAG)** ✅ - Original Gemini-based pipeline that produces a functional searchable database
-2. **Pipeline 2 (New Extraction)** ⚠️ - High-quality HTML-to-YAML extraction (TICKETS 1-6 complete) that is **NOT connected** to the RAG database
+1. **Pipeline 1 (Working RAG)** ✅ - Original Gemini-based pipeline that produces a
+   functional searchable database
+1. **Pipeline 2 (New Extraction)** ⚠️ - High-quality HTML-to-YAML extraction (TICKETS
+   1-6 complete) that is **NOT connected** to the RAG database
 
-**Bottom Line:** You can test the RAG system TODAY using Pipeline 1. The new extraction pipeline produces excellent YAML output but requires a transformer to integrate with the RAG database.
+**Bottom Line:** You can test the RAG system TODAY using Pipeline 1. The new extraction
+pipeline produces excellent YAML output but requires a transformer to integrate with the
+RAG database.
 
----
+______________________________________________________________________
 
 ## 📊 System Architecture
 
@@ -25,6 +28,7 @@ Your QE Tax RAG system currently has **TWO independent pipelines**:
 This is the **ONLY functional end-to-end RAG flow** that exists today.
 
 **Flow:**
+
 ```
 HTML/PDF Files
     ↓
@@ -43,6 +47,7 @@ HTML/PDF Files
 **Location:** `scripts/cli.py`
 
 **Commands:**
+
 - `preprocess` - HTML/PDF → clean text
 - `parse` - Text → ParsedDocument (JSONL) via Gemini
 - `build` - JSONL → SQLite database with embeddings
@@ -50,6 +55,7 @@ HTML/PDF Files
 - `pipeline` - Run all steps in sequence
 
 **User Flow (Working Today):**
+
 ```bash
 # Step 1: Set up your API key
 export GEMINI_API_KEY="your-key-here"
@@ -63,6 +69,7 @@ uv run python scripts/cli.py pipeline --input-dir cra_documents/cra_t4002e_rev24
 ```
 
 **Then you can search:**
+
 ```python
 import qe_tax_rag as qe
 
@@ -80,13 +87,16 @@ for r in results:
     print(f"Disclaimer: {r.disclaimer}")
 ```
 
----
+______________________________________________________________________
 
 ### Pipeline 2: New Extraction System ⚠️ (TICKETS 1-6 Complete, BUT Disconnected)
 
-This is a **high-quality extraction pipeline** using Mixture-of-Experts (MoE) approach with grounded adjudication, but it creates YAML files that are **NOT connected to the RAG database**.
+This is a **high-quality extraction pipeline** using Mixture-of-Experts (MoE) approach
+with grounded adjudication, but it creates YAML files that are **NOT connected to the
+RAG database**.
 
 **Flow:**
+
 ```
 HTML Files
     ↓
@@ -107,6 +117,7 @@ HTML Files
 **Location:** `src/qe_tax_rag/extraction/ca/` and `scripts/extract_rules.py`
 
 **User Flow (Creates YAML, NOT RAG database):**
+
 ```bash
 # Run the extraction pipeline
 uv run extract-rules \
@@ -121,6 +132,7 @@ uv run extract-rules \
 ```
 
 **Output Schema (ExtractedRule):**
+
 ```yaml
 rules:
   - rule_number: 8523
@@ -136,9 +148,10 @@ rules:
     confidence_score: 0.95
 ```
 
-**❌ Problem:** This YAML output is **NOT used by the RAG database**. It's currently a standalone artifact.
+**❌ Problem:** This YAML output is **NOT used by the RAG database**. It's currently a
+standalone artifact.
 
----
+______________________________________________________________________
 
 ## 🔍 The Disconnect: Schema Incompatibility
 
@@ -191,6 +204,7 @@ rules:
 **There is no transformer connecting these two schemas.**
 
 To integrate the pipelines, you would need:
+
 1. **YAML → JSONL Transformer**
    - Read ExtractedRule objects from YAML
    - Group by source_file
@@ -198,22 +212,22 @@ To integrate the pipelines, you would need:
    - Convert citation format
    - Write to JSONL for IndexBuilder
 
----
+______________________________________________________________________
 
 ## 📋 Current State Summary
 
-| Aspect | Status | Details |
-|--------|--------|---------|
-| **Working RAG Search** | ✅ **YES** | Use Pipeline 1 (`scripts/cli.py pipeline`) |
-| **High-Quality Extraction** | ✅ **YES** | Pipeline 2 complete (`extract-rules`) |
-| **Integration** | ❌ **NO** | Pipeline 2 output not consumed by RAG database |
-| **Test RAG Today** | ✅ **YES** | Use Pipeline 1 only |
-| **Database Schema** | ✅ **Valid** | SQLite with FTS5, vector search, metadata |
-| **Search API** | ✅ **Working** | `qe.init()` and `qe.search()` functional |
-| **Hybrid Search (RRF)** | ✅ **Implemented** | FTS5 + Vector with Reciprocal Rank Fusion |
-| **Legal Disclaimers** | ✅ **Enforced** | Non-suppressible disclaimers on all results |
+| Aspect                      | Status             | Details                                        |
+| --------------------------- | ------------------ | ---------------------------------------------- |
+| **Working RAG Search**      | ✅ **YES**         | Use Pipeline 1 (`scripts/cli.py pipeline`)     |
+| **High-Quality Extraction** | ✅ **YES**         | Pipeline 2 complete (`extract-rules`)          |
+| **Integration**             | ❌ **NO**          | Pipeline 2 output not consumed by RAG database |
+| **Test RAG Today**          | ✅ **YES**         | Use Pipeline 1 only                            |
+| **Database Schema**         | ✅ **Valid**       | SQLite with FTS5, vector search, metadata      |
+| **Search API**              | ✅ **Working**     | `qe.init()` and `qe.search()` functional       |
+| **Hybrid Search (RRF)**     | ✅ **Implemented** | FTS5 + Vector with Reciprocal Rank Fusion      |
+| **Legal Disclaimers**       | ✅ **Enforced**    | Non-suppressible disclaimers on all results    |
 
----
+______________________________________________________________________
 
 ## 🚀 How to Test Your RAG System TODAY
 
@@ -267,7 +281,7 @@ for r in results:
 "
 ```
 
----
+______________________________________________________________________
 
 ## 🧪 Comprehensive Testing Plan
 
@@ -278,6 +292,7 @@ for r in results:
 **Steps:**
 
 1. **Build fresh database from HTML**
+
    ```bash
    export GEMINI_API_KEY="your-key"
    uv run python scripts/cli.py pipeline \
@@ -286,17 +301,20 @@ for r in results:
      --data-version 2025.10
    ```
 
-2. **Validate database integrity**
+1. **Validate database integrity**
+
    ```bash
    uv run python scripts/cli.py validate --db-path data/cra_rules.db
    ```
 
-3. **Run integration tests**
+1. **Run integration tests**
+
    ```bash
    uv run pytest tests/integration/ -v
    ```
 
-4. **Manual search testing**
+1. **Manual search testing**
+
    ```bash
    uv run python -c "
    import qe_tax_rag as qe
@@ -320,6 +338,7 @@ for r in results:
    ```
 
 **What to verify:**
+
 - ✅ Database builds successfully
 - ✅ All validation checks pass
 - ✅ Search returns relevant results
@@ -327,7 +346,7 @@ for r in results:
 - ✅ Disclaimers present on all results
 - ✅ Query latency < 250ms
 
----
+______________________________________________________________________
 
 ### Phase 2: Test Extraction Pipeline Quality
 
@@ -336,6 +355,7 @@ for r in results:
 **Steps:**
 
 1. **Run extraction on all HTML files**
+
    ```bash
    uv run extract-rules \
      cra_documents/cra_t4002e_rev24_dump/ \
@@ -344,12 +364,14 @@ for r in results:
      --verbose
    ```
 
-2. **Examine the output**
+1. **Examine the output**
+
    ```bash
    cat output/extracted_rules.yml | head -100
    ```
 
-3. **Check if manual review needed**
+1. **Check if manual review needed**
+
    ```bash
    if [ -f output/manual_review.yml ]; then
      echo "Manual review items found:"
@@ -358,13 +380,14 @@ for r in results:
    ```
 
 **What to verify:**
+
 - ✅ Extraction completes without errors
 - ✅ YAML schema is valid (rule_number, title, content, applies_to)
 - ✅ Chapter/section fields populated correctly
 - ✅ Adjudication statistics reasonable (high % perfect matches)
 - ✅ Manual review items are legitimate edge cases
 
----
+______________________________________________________________________
 
 ### Phase 3: Search Quality Testing
 
@@ -436,11 +459,12 @@ print("="*50)
 ```
 
 **Run:**
+
 ```bash
 uv run python tests/manual/test_search_quality.py
 ```
 
----
+______________________________________________________________________
 
 ### Phase 4: Performance Benchmarking
 
@@ -495,13 +519,14 @@ else:
 ```
 
 **Run:**
+
 ```bash
 uv run python tests/manual/benchmark.py
 ```
 
 **Target:** Average latency < 250ms
 
----
+______________________________________________________________________
 
 ### Phase 5: Citation Accuracy Spot Check
 
@@ -533,7 +558,7 @@ print(f'Business Type: {r.business_type}')
 
 **Spot check at least 5-10 results across different queries**
 
----
+______________________________________________________________________
 
 ### Phase 6: End-to-End User Workflow
 
@@ -597,11 +622,12 @@ print("="*60)
 ```
 
 **Run:**
+
 ```bash
 uv run python tests/manual/user_workflow.py
 ```
 
----
+______________________________________________________________________
 
 ## 🔧 What's NOT Testable Today
 
@@ -611,67 +637,74 @@ uv run python tests/manual/user_workflow.py
 - ❌ Comparing quality: GeminiParser vs. Classic+LLM+Adjudicator parsers
 - ❌ End-to-end flow: HTML → extract-rules → RAG database
 
-**Why:** The YAML → JSONL transformer is missing (ExtractedRule → ParsedDocument schema conversion)
+**Why:** The YAML → JSONL transformer is missing (ExtractedRule → ParsedDocument schema
+conversion)
 
----
+______________________________________________________________________
 
 ## 📊 Success Criteria
 
 ### Must Pass ✅
 
 1. Database builds from HTML without errors
-2. Validation checks all pass (schema, row counts, embeddings)
-3. Search returns results for common queries
-4. All results have valid citations and disclaimers
-5. Average query latency < 250ms
-6. No SQL injection vulnerabilities (parameterized queries verified)
+1. Validation checks all pass (schema, row counts, embeddings)
+1. Search returns results for common queries
+1. All results have valid citations and disclaimers
+1. Average query latency < 250ms
+1. No SQL injection vulnerabilities (parameterized queries verified)
 
 ### Should Pass 👍
 
 1. Hybrid search (RRF) outperforms keyword-only or vector-only
-2. Filtering (province, business_type, expense_types) works correctly
-3. Extraction pipeline produces valid YAML with reasonable adjudication stats
-4. Manual review items are genuine edge cases (not systematic failures)
-5. Search results are semantically relevant (not just keyword matches)
+1. Filtering (province, business_type, expense_types) works correctly
+1. Extraction pipeline produces valid YAML with reasonable adjudication stats
+1. Manual review items are genuine edge cases (not systematic failures)
+1. Search results are semantically relevant (not just keyword matches)
 
 ### Nice to Have 💡
 
 1. Support for French-language CRA documents
-2. Real-time search result explanations (why this result ranked high)
-3. Integration with the new extraction pipeline via transformer
-4. Automated regression tests with golden dataset
+1. Real-time search result explanations (why this result ranked high)
+1. Integration with the new extraction pipeline via transformer
+1. Automated regression tests with golden dataset
 
----
+______________________________________________________________________
 
 ## 🎯 Recommended Testing Order
 
 1. **Phase 1** - Build database and validate **(30 minutes)**
+
    - Creates fresh database from HTML files
    - Validates schema and integrity
 
-2. **Phase 3** - Search quality tests **(15 minutes)**
+1. **Phase 3** - Search quality tests **(15 minutes)**
+
    - Tests exact match, semantic search, filtering
    - Validates result schema
 
-3. **Phase 4** - Performance benchmarks **(10 minutes)**
+1. **Phase 4** - Performance benchmarks **(10 minutes)**
+
    - Measures query latency
    - Verifies target < 250ms
 
-4. **Phase 6** - End-to-end workflow **(10 minutes)**
+1. **Phase 6** - End-to-end workflow **(10 minutes)**
+
    - Simulates real user journey
    - Tests all API functions
 
-5. **Phase 2** - Extraction quality **(20 minutes, optional)**
+1. **Phase 2** - Extraction quality **(20 minutes, optional)**
+
    - Tests new extraction pipeline
    - Not required for RAG testing but good for quality validation
 
-6. **Phase 5** - Citation spot checks **(15 minutes, manual)**
+1. **Phase 5** - Citation spot checks **(15 minutes, manual)**
+
    - Verify no hallucinations
    - Check source URL validity
 
 **Total estimated time: ~1.5 hours for comprehensive testing**
 
----
+______________________________________________________________________
 
 ## 📝 Next Steps (Future Integration Work)
 
@@ -682,37 +715,45 @@ If you want to integrate the new extraction pipeline with the RAG database:
 **Location:** `src/qe_tax_rag/extraction/ca/yaml_to_jsonl.py`
 
 **Responsibilities:**
+
 1. Load ExtractedRule objects from YAML
-2. Transform to ParsedDocument schema:
+1. Transform to ParsedDocument schema:
    - Map `rule_number` → `citation_id` (format: "L{rule_number}" or similar)
    - Map `title` + `content` → Section with TextChunk
    - Map `applies_to` → Metadata.business_type and/or expense_type
    - Generate province metadata (extract from source or default)
-3. Write ParsedDocument objects to JSONL
+1. Write ParsedDocument objects to JSONL
 
 **Key Mapping Decisions Needed:**
-- **Citation ID format:** Current schema expects `S\d+-F\d+-C\d+-p\d+\.?\d*` pattern. Options:
+
+- **Citation ID format:** Current schema expects `S\d+-F\d+-C\d+-p\d+\.?\d*` pattern.
+  Options:
+
   - Create simpler format like "L8523" for Line 8523
   - Map rule_number to fake section/form/chapter pattern
   - Relax the schema pattern validation
 
 - **Province metadata:** ExtractedRule has no province field. Options:
+
   - Default to null (applies to all provinces)
   - Infer from source_file or chapter
   - Add province extraction to the extraction pipeline
 
-- **Expense type mapping:** How to map `applies_to` (business/farming/fishing) to `expense_type` list (meals, travel, vehicle, etc.)?
+- **Expense type mapping:** How to map `applies_to` (business/farming/fishing) to
+  `expense_type` list (meals, travel, vehicle, etc.)?
+
   - Use rule title/content to infer expense categories
   - Create manual mapping table
   - Use LLM-based classification
 
-**CLI Integration:**
-Add new command to `scripts/extract_rules.py`:
+**CLI Integration:** Add new command to `scripts/extract_rules.py`:
+
 ```bash
 uv run extract-rules yaml-to-jsonl INPUT_YAML OUTPUT_JSONL
 ```
 
 Then the integrated flow would be:
+
 ```bash
 # Step 1: Extract to YAML
 uv run extract-rules HTML_DIR OUTPUT.yml
@@ -724,11 +765,12 @@ uv run extract-rules yaml-to-jsonl OUTPUT.yml CHUNKS.jsonl
 uv run python scripts/cli.py build --input-file CHUNKS.jsonl --output-db cra_rules.db
 ```
 
----
+______________________________________________________________________
 
 ## 🔗 Key Files Reference
 
 ### Pipeline 1 (Working RAG)
+
 - `scripts/cli.py` - Main CLI orchestrator
 - `src/qe_tax_rag/data/builder.py` - IndexBuilder (JSONL → SQLite)
 - `src/qe_tax_rag/api.py` - Public API (init, search)
@@ -736,6 +778,7 @@ uv run python scripts/cli.py build --input-file CHUNKS.jsonl --output-db cra_rul
 - `scripts/parser/schema.py` - ParsedDocument schema
 
 ### Pipeline 2 (New Extraction)
+
 - `scripts/extract_rules.py` - Extraction CLI
 - `src/qe_tax_rag/extraction/ca/orchestrator.py` - Extraction orchestrator
 - `src/qe_tax_rag/extraction/ca/classic_parser.py` - Rule-based parser
@@ -744,14 +787,17 @@ uv run python scripts/cli.py build --input-file CHUNKS.jsonl --output-db cra_rul
 - `src/qe_tax_rag/extraction/ca/schema.py` - ExtractedRule schema
 
 ### Database Schema
+
 - `src/qe_tax_rag/data/schema.py` - SQLite schema definition
-- Tables: metadata, rules, rules_fts (FTS5), rules_vec (sqlite-vec), expense_types, rule_expense_type_links
+- Tables: metadata, rules, rules_fts (FTS5), rules_vec (sqlite-vec), expense_types,
+  rule_expense_type_links
 
 ### Search Models
+
 - `src/qe_tax_rag/search/models.py` - ExpenseQuery, SearchResult, IndexManifest
 - `src/qe_tax_rag/search/enums.py` - Province, BusinessType enums
 
----
+______________________________________________________________________
 
 ## 📚 Additional Resources
 
@@ -761,8 +807,6 @@ uv run python scripts/cli.py build --input-file CHUNKS.jsonl --output-db cra_rul
 - **Test Fixtures:** `/tests/fixtures/`
 - **Test Database:** `/tests/fixtures/test_database.db`
 
----
+______________________________________________________________________
 
-**Generated:** 2025-10-17
-**Author:** Claude Code Analysis with Zen MCP
-**Version:** 1.0
+**Generated:** 2025-10-17 **Author:** Claude Code Analysis with Zen MCP **Version:** 1.0

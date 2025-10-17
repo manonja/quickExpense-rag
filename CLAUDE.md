@@ -44,8 +44,7 @@ Search combines three techniques in sequence:
 
 ## Database Schema Contract
 
-The schema (defined in `src/qe_tax_rag/data/schema.py`) defines the database
-structure:
+The schema (defined in `src/qe_tax_rag/data/schema.py`) defines the database structure:
 
 **Tables**:
 

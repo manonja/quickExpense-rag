@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import pytest
-
 from src.qe_tax_rag.extraction.ca.orchestrator import run_extraction
 
 

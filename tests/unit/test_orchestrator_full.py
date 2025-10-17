@@ -1,4 +1,5 @@
-"""Comprehensive unit tests for extraction pipeline orchestrator.
+"""
+Comprehensive unit tests for extraction pipeline orchestrator.
 
 This file contains the complete test suite for Steps 4-8 of TICKET 6.
 Tests are written following TDD approach before implementation.
@@ -8,7 +9,6 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from src.qe_tax_rag.extraction.ca.exceptions import ParserError, YAMLGenerationError
 from src.qe_tax_rag.extraction.ca.orchestrator import run_extraction
 from src.qe_tax_rag.extraction.ca.schema import (
@@ -191,7 +191,9 @@ def test_yaml_generation_dry_run_skips_files(
     )
 
     # Execute
-    run_extraction(html_file, tmp_path / "out.yml", tmp_path / "manual.yml", dry_run=True)
+    run_extraction(
+        html_file, tmp_path / "out.yml", tmp_path / "manual.yml", dry_run=True
+    )
 
     # Assert
     mock_generate.assert_not_called()

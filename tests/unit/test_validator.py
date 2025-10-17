@@ -143,9 +143,9 @@ def test_check_search_executes_without_error(fixture_db_path: Path) -> None:
 
     result = validator.check_search()
 
-    assert result["passed"] is True, (
-        f"Search failed: {result.get('error', 'unknown error')}"
-    )
+    assert (
+        result["passed"] is True
+    ), f"Search failed: {result.get('error', 'unknown error')}"
     assert result["query"] == "what is an expense"
     assert "result_count" in result
     # Search might return 0 results if query doesn't match, that's ok

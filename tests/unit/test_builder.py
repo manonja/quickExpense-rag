@@ -1070,9 +1070,9 @@ class TestBuildFromJsonl:
             cursor = conn.execute("SELECT COUNT(*) FROM rules")
             rule_count = cursor.fetchone()[0]
             conn.close()
-            assert rule_count == 0, (
-                "Transaction should have rolled back, no rules should be inserted"
-            )
+            assert (
+                rule_count == 0
+            ), "Transaction should have rolled back, no rules should be inserted"
 
         # Manifest should not be created
         assert not manifest_path.exists()
