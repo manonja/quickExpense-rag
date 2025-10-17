@@ -231,6 +231,50 @@ class YAMLTransformer:
             income_type=sorted(income_types),
         )
 
+    def _build_sections(
+        self,
+        rules: list["ExtractedRule"],
+    ) -> list["Section"]:
+        """
+        Build hierarchical section structure.
+
+        Groups rules by chapter, flattening subsections since ParsedDocument
+        doesn't support nested sections.
+
+        Args:
+            rules: List of ExtractedRule objects
+
+        Returns:
+            List of Section objects, one per chapter
+
+        """
+        from qe_tax_rag.parser.schema import Section
+
+        # Group by chapter
+        chapters: dict[str, list["ExtractedRule"]] = defaultdict(list)
+        for rule in rules:
+            chapters[rule.chapter].append(rule)
+
+        sections: list["Section"] = []
+
+        for chapter_title, chapter_rules in chapters.items():
+            # Convert all rules to TextChunks
+            # Note: We flatten subsections because ParsedDocument
+            # schema doesn't support nested sections
+            chapter_content = [
+                self._rule_to_text_chunk(rule) for rule in chapter_rules
+            ]
+
+            sections.append(
+                Section(
+                    section_title=chapter_title,
+                    section_level=1,
+                    content=chapter_content,
+                )
+            )
+
+        return sections
+
     def _rule_to_text_chunk(self, rule: "ExtractedRule") -> "TextChunk":
         """
         Transform ExtractedRule to TextChunk with metadata.
