@@ -24,7 +24,7 @@ Exception handling:
 """
 
 from collections import defaultdict
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
@@ -496,3 +496,83 @@ class YAMLTransformer:
         normalized = normalized.replace("chapter", "ch")
 
         return normalized
+
+    def transform_yaml_to_jsonl(
+        self,
+        yaml_path: Path,
+        jsonl_path: Path,
+        continue_on_error: bool = True,
+    ) -> TransformationReport:
+        """
+        Transform YAML to JSONL.
+
+        Orchestrates the full transformation pipeline:
+        1. Load and validate YAML
+        2. Group rules by source_file
+        3. Transform each group to ParsedDocument
+        4. Write JSONL
+        5. Validate output
+        6. Generate report
+
+        Args:
+            yaml_path: Input YAML file from extract-rules
+            jsonl_path: Output JSONL file for IndexBuilder
+            continue_on_error: Skip errors and continue (default: True)
+
+        Returns:
+            TransformationReport with success/error counts
+
+        Raises:
+            CriticalTransformationError: For fatal errors (invalid YAML, etc.)
+
+        """
+        # 1. Load and validate YAML
+        rule_set = self._load_yaml(yaml_path)
+
+        # 2. Pre-transformation validation
+        self._validate_yaml_input(rule_set)
+
+        # 3. Group rules by source_file
+        grouped = self._group_by_source_file(rule_set.rules)
+
+        # 4. Transform each group to ParsedDocument
+        documents: list["ParsedDocument"] = []
+        errors: list[dict[str, str]] = []
+        successful = 0
+        skipped = 0
+
+        for source_file, rules in grouped.items():
+            try:
+                doc = self._transform_rules_to_document(source_file, rules)
+                documents.append(doc)
+                successful += len(rules)
+            except SkippableTransformationError as e:
+                if continue_on_error:
+                    errors.append(
+                        {
+                            "source_file": source_file,
+                            "error": str(e),
+                            "severity": "skippable",
+                            "action": "Skipped this document, continued processing",
+                        }
+                    )
+                    skipped += len(rules)
+                else:
+                    raise
+
+        # 5. Write JSONL
+        self._write_jsonl(documents, jsonl_path)
+
+        # 6. Post-transformation validation
+        self._validate_jsonl_output(jsonl_path)
+
+        # 7. Generate report
+        return TransformationReport(
+            timestamp=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+            input_file=str(yaml_path),
+            output_file=str(jsonl_path),
+            total_rules=len(rule_set.rules),
+            successful=successful,
+            skipped=skipped,
+            errors=errors,
+        )
