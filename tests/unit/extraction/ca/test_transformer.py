@@ -966,3 +966,68 @@ def test_validate_yaml_input_valid() -> None:
     transformer = YAMLTransformer()
     # Should not raise
     transformer._validate_yaml_input(rule_set)
+
+
+# ============================================================================
+# TESTS: Output Validation
+# ============================================================================
+
+
+def test_validate_jsonl_output_valid(tmp_path) -> None:
+    """Should pass validation for valid JSONL."""
+    from pathlib import Path
+
+    from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
+
+    # Create valid JSONL file
+    jsonl_path = tmp_path / "valid.jsonl"
+    doc = ParsedDocument(
+        title="Test",
+        document_id="test-1",
+        metadata=Metadata(),
+        sections=[],
+    )
+    with open(jsonl_path, "w") as f:
+        f.write(doc.model_dump_json() + "\n")
+
+    # Should not raise
+    transformer = YAMLTransformer()
+    transformer._validate_jsonl_output(jsonl_path)
+
+
+def test_validate_jsonl_output_invalid_json(tmp_path) -> None:
+    """Should raise error for invalid JSON."""
+    from pathlib import Path
+
+    from qe_tax_rag.extraction.ca.transformer import (
+        CriticalTransformationError,
+        YAMLTransformer,
+    )
+
+    # Create invalid JSONL file
+    jsonl_path = tmp_path / "invalid.jsonl"
+    jsonl_path.write_text('{"invalid": "json"\n')  # Missing closing brace
+
+    transformer = YAMLTransformer()
+
+    with pytest.raises(CriticalTransformationError, match="Invalid JSONL"):
+        transformer._validate_jsonl_output(jsonl_path)
+
+
+def test_validate_jsonl_output_invalid_schema(tmp_path) -> None:
+    """Should raise error for invalid schema."""
+    from pathlib import Path
+
+    from qe_tax_rag.extraction.ca.transformer import (
+        CriticalTransformationError,
+        YAMLTransformer,
+    )
+
+    # Create JSONL with invalid schema
+    jsonl_path = tmp_path / "invalid_schema.jsonl"
+    jsonl_path.write_text('{"wrong": "schema"}\n')
+
+    transformer = YAMLTransformer()
+
+    with pytest.raises(CriticalTransformationError, match="Invalid JSONL"):
+        transformer._validate_jsonl_output(jsonl_path)
