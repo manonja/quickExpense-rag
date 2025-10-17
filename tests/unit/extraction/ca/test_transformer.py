@@ -730,3 +730,49 @@ def test_transform_rules_to_document_title_generation() -> None:
     doc2 = transformer._transform_rules_to_document("t4002-10.html", [])
     assert doc2.document_id == "t4002-10"
     assert doc2.title == "CRA T4002 - PART 10"
+
+
+# ============================================================================
+# TESTS: YAML Loading
+# ============================================================================
+
+
+def test_load_yaml(tmp_path) -> None:
+    """Should load and parse YAML file to RuleSet."""
+    from pathlib import Path
+
+    import yaml
+
+    from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
+
+    # Create test YAML file
+    yaml_content = {
+        "schema_version": "1.0",
+        "extraction_timestamp": "2025-01-01T00:00:00Z",
+        "rules": [
+            {
+                "rule_number": 8523,
+                "title": "Meals",
+                "content": "Test content",
+                "applies_to": ["business"],
+                "source_citation": "Line 8523",
+                "chapter": "Chapter 3",
+                "section": None,
+                "source_file": "t4002-5.html",
+                "expert_source": "classic",
+                "confidence_score": 1.0,
+            }
+        ],
+    }
+
+    yaml_path = tmp_path / "test_rules.yml"
+    with open(yaml_path, "w") as f:
+        yaml.dump(yaml_content, f)
+
+    # Load YAML
+    transformer = YAMLTransformer()
+    rule_set = transformer._load_yaml(yaml_path)
+
+    assert rule_set.schema_version == "1.0"
+    assert len(rule_set.rules) == 1
+    assert rule_set.rules[0].rule_number == 8523
