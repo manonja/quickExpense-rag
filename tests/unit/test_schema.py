@@ -1,5 +1,6 @@
 """Unit tests for database schema."""
 
+import json
 import sqlite3
 from pathlib import Path
 
@@ -250,5 +251,70 @@ def test_fts5_external_content_configuration(tmp_path: Path) -> None:
     assert "content='rules'" in sql
     assert "content_rowid='id'" in sql
     assert "tokenize='porter unicode61'" in sql
+
+    conn.close()
+
+
+def test_extraction_metadata_storage(tmp_path: Path) -> None:
+    """Extraction metadata should store and retrieve correctly in metadata_json."""
+    db_path = tmp_path / "test.db"
+    conn = _create_test_connection(db_path)
+    conn.executescript(CREATE_TABLES_SQL)
+
+    # 1. Define sample extraction metadata
+    metadata = {
+        "income_type": ["business", "fishing"],
+        "extraction_source": "adjudicated",
+        "extraction_confidence": 0.95,
+        "source_anchor": "tocch3ln8523",
+        "section_title": "Chapter 3",
+        "document_id": "t4002-5",
+    }
+
+    # 2. Insert a rule with the metadata serialized as JSON
+    conn.execute(
+        """
+        INSERT INTO rules (content, citation_id, source_url, source_hash,
+                           metadata_json, retrieved_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            "Test content with metadata",
+            "LINE-8523",
+            "https://canada.ca/test",
+            "abc123",
+            json.dumps(metadata),
+            "2024-01-01T00:00:00Z",
+        ),
+    )
+    conn.commit()
+
+    # 3. Retrieve the rule and deserialize the metadata
+    cursor = conn.execute(
+        "SELECT metadata_json FROM rules WHERE citation_id = ?", ("LINE-8523",)
+    )
+    row = cursor.fetchone()
+    assert row is not None
+    stored_json = row[0]
+    stored_metadata = json.loads(stored_json)
+
+    # 4. Verify values and data types are preserved
+    assert stored_metadata["income_type"] == ["business", "fishing"]
+    assert isinstance(stored_metadata["income_type"], list)
+
+    assert stored_metadata["extraction_source"] == "adjudicated"
+    assert isinstance(stored_metadata["extraction_source"], str)
+
+    assert stored_metadata["extraction_confidence"] == 0.95
+    assert isinstance(stored_metadata["extraction_confidence"], float)
+
+    assert stored_metadata["source_anchor"] == "tocch3ln8523"
+    assert isinstance(stored_metadata["source_anchor"], str)
+
+    assert stored_metadata["section_title"] == "Chapter 3"
+    assert isinstance(stored_metadata["section_title"], str)
+
+    assert stored_metadata["document_id"] == "t4002-5"
+    assert isinstance(stored_metadata["document_id"], str)
 
     conn.close()
