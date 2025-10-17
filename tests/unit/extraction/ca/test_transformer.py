@@ -531,3 +531,54 @@ def test_expense_type_case_insensitive() -> None:
     types = classifier.infer_expense_types(rule)
 
     assert "meals" in types
+
+
+# ============================================================================
+# TESTS: Metadata Aggregation
+# ============================================================================
+
+
+def test_aggregate_metadata() -> None:
+    """Metadata should aggregate from all rules in document."""
+    from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
+
+    rules = [
+        ExtractedRule(
+            rule_number=8523,
+            title="Meals",
+            content="restaurant dining",
+            applies_to=[ApplicabilityType.BUSINESS, ApplicabilityType.FISHING],
+            source_citation="Line 8523",
+            chapter="Chapter 3",
+            section=None,
+            source_file="t4002-5.html",
+            expert_source=ExpertSource.CLASSIC,
+            confidence_score=1.0,
+        ),
+        ExtractedRule(
+            rule_number=9200,
+            title="Vehicle",
+            content="car mileage fuel",
+            applies_to=[ApplicabilityType.FARMING],
+            source_citation="Line 9200",
+            chapter="Chapter 3",
+            section=None,
+            source_file="t4002-5.html",
+            expert_source=ExpertSource.CLASSIC,
+            confidence_score=1.0,
+        ),
+    ]
+
+    transformer = YAMLTransformer()
+    metadata = transformer._aggregate_metadata(rules)
+
+    # income_type from applies_to
+    assert set(metadata.income_type) == {"business", "fishing", "farming"}
+
+    # expense_type from inference
+    assert "meals" in metadata.expense_type
+    assert "vehicle" in metadata.expense_type
+
+    # Federal rules have no province/business_type
+    assert metadata.province == []
+    assert metadata.business_type == []
