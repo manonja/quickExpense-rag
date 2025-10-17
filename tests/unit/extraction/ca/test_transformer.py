@@ -132,6 +132,42 @@ SAMPLE_PARSED_DOCUMENT_LINE1 = {
 
 
 # ============================================================================
+# PYTEST FIXTURES: Test data for transformer tests
+# ============================================================================
+
+
+@pytest.fixture
+def sample_rules_multiple_files() -> list[ExtractedRule]:
+    """Create rules from multiple source files."""
+    return [
+        ExtractedRule(
+            rule_number=8523,
+            title="Meals",
+            content="...",
+            applies_to=[ApplicabilityType.BUSINESS],
+            source_citation="Line 8523",
+            chapter="Chapter 3",
+            section=None,
+            source_file="t4002-5.html",
+            expert_source=ExpertSource.CLASSIC,
+            confidence_score=1.0,
+        ),
+        ExtractedRule(
+            rule_number=9200,
+            title="Travel",
+            content="...",
+            applies_to=[ApplicabilityType.BUSINESS],
+            source_citation="Line 9200",
+            chapter="Chapter 3",
+            section=None,
+            source_file="t4002-6.html",  # Different file
+            expert_source=ExpertSource.CLASSIC,
+            confidence_score=1.0,
+        ),
+    ]
+
+
+# ============================================================================
 # TESTS: Exception Hierarchy
 # ============================================================================
 
@@ -167,3 +203,39 @@ def test_transformation_errors_can_be_raised_with_message():
     with pytest.raises(SkippableTransformationError) as exc_info:
         raise SkippableTransformationError(skippable_msg)
     assert skippable_msg in str(exc_info.value)
+
+
+# ============================================================================
+# TESTS: Group By Source File
+# ============================================================================
+
+
+def test_group_by_source_file(sample_rules_multiple_files: list[ExtractedRule]) -> None:
+    """Rules should be grouped by source_file."""
+    from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
+
+    transformer = YAMLTransformer()
+    grouped = transformer._group_by_source_file(sample_rules_multiple_files)
+
+    # Should have 2 groups
+    assert len(grouped) == 2
+    assert "t4002-5.html" in grouped
+    assert "t4002-6.html" in grouped
+
+    # Each group should have 1 rule
+    assert len(grouped["t4002-5.html"]) == 1
+    assert len(grouped["t4002-6.html"]) == 1
+
+    # Verify correct rules in each group
+    assert grouped["t4002-5.html"][0].rule_number == 8523
+    assert grouped["t4002-6.html"][0].rule_number == 9200
+
+
+def test_group_by_source_file_empty() -> None:
+    """Empty rules list should return empty dict."""
+    from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
+
+    transformer = YAMLTransformer()
+    grouped = transformer._group_by_source_file([])
+
+    assert grouped == {}
