@@ -776,3 +776,52 @@ def test_load_yaml(tmp_path) -> None:
     assert rule_set.schema_version == "1.0"
     assert len(rule_set.rules) == 1
     assert rule_set.rules[0].rule_number == 8523
+
+
+# ============================================================================
+# TESTS: JSONL Writing
+# ============================================================================
+
+
+def test_write_jsonl(tmp_path) -> None:
+    """Should write ParsedDocuments to JSONL file."""
+    from pathlib import Path
+
+    from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
+
+    # Create test documents
+    documents = [
+        ParsedDocument(
+            title="Test Doc 1",
+            document_id="test-1",
+            metadata=Metadata(),
+            sections=[],
+        ),
+        ParsedDocument(
+            title="Test Doc 2",
+            document_id="test-2",
+            metadata=Metadata(),
+            sections=[],
+        ),
+    ]
+
+    jsonl_path = tmp_path / "output" / "test.jsonl"
+
+    # Write JSONL
+    transformer = YAMLTransformer()
+    transformer._write_jsonl(documents, jsonl_path)
+
+    # Verify file exists
+    assert jsonl_path.exists()
+
+    # Verify content
+    with open(jsonl_path) as f:
+        lines = f.readlines()
+        assert len(lines) == 2
+
+        # Verify each line is valid JSON
+        doc1 = json.loads(lines[0])
+        assert doc1["document_id"] == "test-1"
+
+        doc2 = json.loads(lines[1])
+        assert doc2["document_id"] == "test-2"
