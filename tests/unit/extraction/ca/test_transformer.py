@@ -26,4 +26,106 @@ Test Coverage:
     - Edge cases (empty files, malformed data, missing fields)
 """
 
+import json
+
 import pytest
+from pydantic import ValidationError
+
+from qe_tax_rag.extraction.ca.schema import (
+    ApplicabilityType,
+    ExpertSource,
+    ExtractedRule,
+    Ruleset,
+)
+from qe_tax_rag.parser.schema import Metadata, ParsedDocument, Section, TextChunk
+
+
+# ============================================================================
+# FIXTURES: Sample YAML input data (ExtractedRule schema)
+# ============================================================================
+
+SAMPLE_EXTRACTED_RULES_YAML = """
+rules:
+  - line_number: 8523
+    section_title: "Chapter 1 - General Rules"
+    title: "Meal expenses"
+    content: "You can deduct 50% of meals and entertainment expenses."
+    applies_to:
+      - business
+    expert_source: adjudicated
+    confidence_score: 0.95
+
+  - line_number: 8524
+    section_title: "Chapter 1 - General Rules"
+    title: "Long-haul truck drivers"
+    content: "Long-haul truck drivers may deduct 80% of meal expenses."
+    applies_to:
+      - business
+    expert_source: adjudicated
+    confidence_score: 0.92
+
+  - line_number: 9200
+    section_title: "Chapter 2 - Vehicle Expenses"
+    title: "Motor vehicle expenses"
+    content: "You can deduct motor vehicle expenses if you use your vehicle for business purposes."
+    applies_to:
+      - business
+      - farming
+    expert_source: llm
+    confidence_score: 0.88
+
+metadata:
+  document_id: t4002-1
+  source_url: https://www.canada.ca/en/revenue-agency/services/forms-publications/publications/t4002.html
+  extraction_date: "2024-12-15T10:30:00Z"
+"""
+
+# Expected JSONL output (ParsedDocument schema) - line by line
+SAMPLE_PARSED_DOCUMENT_LINE1 = {
+    "title": "t4002-1 - Tax Rules",
+    "document_id": "t4002-1",
+    "metadata": {
+        "province": [],
+        "business_type": [],
+        "expense_type": ["meals"],
+        "income_type": ["business"],
+    },
+    "sections": [
+        {
+            "section_title": "Chapter 1 - General Rules",
+            "section_level": 1,
+            "content": [
+                {
+                    "type": "paragraph",
+                    "text": "You can deduct 50% of meals and entertainment expenses.",
+                    "citation_id": "LINE-8523",
+                    "extraction_source": "adjudicated",
+                    "extraction_confidence": 0.95,
+                    "source_anchor": "tocch1ln8523",
+                },
+                {
+                    "type": "paragraph",
+                    "text": "Long-haul truck drivers may deduct 80% of meal expenses.",
+                    "citation_id": "LINE-8524",
+                    "extraction_source": "adjudicated",
+                    "extraction_confidence": 0.92,
+                    "source_anchor": "tocch1ln8524",
+                },
+            ],
+        },
+        {
+            "section_title": "Chapter 2 - Vehicle Expenses",
+            "section_level": 1,
+            "content": [
+                {
+                    "type": "paragraph",
+                    "text": "You can deduct motor vehicle expenses if you use your vehicle for business purposes.",
+                    "citation_id": "LINE-9200",
+                    "extraction_source": "llm",
+                    "extraction_confidence": 0.88,
+                    "source_anchor": "tocch2ln9200",
+                }
+            ],
+        },
+    ],
+}
