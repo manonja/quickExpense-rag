@@ -41,12 +41,49 @@ def run_extraction(
         ValueError: If input_path doesn't exist or no HTML files found
         PermissionError: If output directories aren't writable
     """
-    # TODO: Implement
+    logger.info(f"Starting extraction pipeline for {input_path}")
+
+    # Step 1: File discovery
+    html_files = _discover_html_files(input_path)
+
+    # TODO: Implement processing logic
+
     return {
-        "total_files": 0,
+        "total_files": len(html_files),
         "processed_files": 0,
         "failed_files": [],
         "total_rules": 0,
         "stats": {"perfect_matches": 0, "auto_corrected": 0, "manual_review": 0},
         "manual_review_count": 0,
     }
+
+
+def _discover_html_files(input_path: Path) -> list[Path]:
+    """
+    Discover HTML files from input path.
+
+    Args:
+        input_path: Path to single file or directory
+
+    Returns:
+        Sorted list of HTML file paths
+
+    Raises:
+        ValueError: If path doesn't exist or no HTML files found
+    """
+    if not input_path.exists():
+        raise ValueError(f"Input path does not exist: {input_path}")
+
+    if input_path.is_file():
+        if input_path.suffix.lower() != ".html":
+            raise ValueError(f"Input file is not an HTML file: {input_path}")
+        return [input_path]
+
+    if input_path.is_dir():
+        html_files = sorted(input_path.glob("*.html"))
+        if not html_files:
+            raise ValueError(f"No HTML files found in directory: {input_path}")
+        logger.info(f"Discovered {len(html_files)} HTML files")
+        return html_files
+
+    raise ValueError(f"Input path is neither file nor directory: {input_path}")
