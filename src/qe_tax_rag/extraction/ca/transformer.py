@@ -266,6 +266,31 @@ class YAMLTransformer:
                     f"Rule {rule.rule_number} missing required field 'chapter'"
                 )
 
+    def _validate_jsonl_output(self, jsonl_path: Path) -> None:
+        """
+        Post-transformation validation.
+
+        Validates JSONL format and schema compliance.
+
+        Args:
+            jsonl_path: Path to JSONL file to validate
+
+        Raises:
+            CriticalTransformationError: If validation fails
+
+        """
+        from qe_tax_rag.parser.schema import ParsedDocument
+
+        # Verify JSONL format
+        with open(jsonl_path) as f:
+            for i, line in enumerate(f, 1):
+                try:
+                    ParsedDocument.model_validate_json(line)
+                except Exception as e:
+                    raise CriticalTransformationError(
+                        f"Invalid JSONL at line {i}: {e}"
+                    ) from e
+
     def _group_by_source_file(
         self,
         rules: list["ExtractedRule"],
