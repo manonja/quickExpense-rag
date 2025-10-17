@@ -1316,3 +1316,134 @@ def test_transform_yaml_to_jsonl_with_errors(tmp_path) -> None:
             jsonl_path=jsonl_path,
             continue_on_error=True,
         )
+
+
+def test_continue_on_error_flag(tmp_path) -> None:
+    """continue_on_error should allow skipping failed documents."""
+    import yaml
+    from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
+
+    # Create YAML with two source files
+    # One valid, one that will trigger SkippableTransformationError
+    yaml_content = {
+        "schema_version": "1.0",
+        "extraction_timestamp": "2025-01-01T00:00:00Z",
+        "rules": [
+            # Valid document
+            {
+                "rule_number": 8523,
+                "title": "Valid Rule",
+                "content": "This is a valid rule.",
+                "applies_to": ["business"],
+                "source_citation": "Line 8523",
+                "chapter": "Chapter 1",
+                "section": None,
+                "source_file": "valid_doc.html",
+                "expert_source": "classic",
+                "confidence_score": 1.0,
+            },
+            # Document that will fail (different source_file)
+            {
+                "rule_number": 9999,
+                "title": "Rule to be skipped",
+                "content": "This rule's document will fail.",
+                "applies_to": ["business"],
+                "source_citation": "Line 9999",
+                "chapter": "Chapter 1",
+                "section": None,
+                "source_file": "skippable_doc.html",
+                "expert_source": "classic",
+                "confidence_score": 1.0,
+            },
+        ],
+    }
+
+    yaml_path = tmp_path / "rules.yml"
+    with open(yaml_path, "w") as f:
+        yaml.dump(yaml_content, f)
+
+    jsonl_path = tmp_path / "chunks.jsonl"
+    transformer = YAMLTransformer()
+
+    # Mock _build_sections to return empty list for skippable_doc.html
+    original_build_sections = transformer._build_sections
+
+    def mock_build_sections(rules):
+        if any(r.rule_number == 9999 for r in rules):
+            return []  # This will trigger SkippableTransformationError
+        return original_build_sections(rules)
+
+    transformer._build_sections = mock_build_sections
+
+    # Test with continue_on_error=True (default)
+    report = transformer.transform_yaml_to_jsonl(
+        yaml_path=yaml_path,
+        jsonl_path=jsonl_path,
+        continue_on_error=True,
+    )
+
+    # Verify report counts
+    assert report.total_rules == 2
+    assert report.successful == 1  # valid_doc.html succeeded
+    assert report.skipped == 1  # skippable_doc.html was skipped
+    assert len(report.errors) == 1
+    assert "No sections generated" in report.errors[0]["error"]
+    assert report.errors[0]["source_file"] == "skippable_doc.html"
+    assert report.errors[0]["severity"] == "skippable"
+
+    # Verify output contains only the successful document
+    assert jsonl_path.exists()
+    with open(jsonl_path) as f:
+        lines = f.readlines()
+        assert len(lines) == 1
+        doc = json.loads(lines[0])
+        assert doc["document_id"] == "valid_doc"
+
+    # Restore original method
+    transformer._build_sections = original_build_sections
+
+
+def test_continue_on_error_false_raises_on_skippable(tmp_path) -> None:
+    """continue_on_error=False should raise on SkippableTransformationError."""
+    import yaml
+    from qe_tax_rag.extraction.ca.transformer import (
+        SkippableTransformationError,
+        YAMLTransformer,
+    )
+
+    yaml_content = {
+        "schema_version": "1.0",
+        "extraction_timestamp": "2025-01-01T00:00:00Z",
+        "rules": [
+            {
+                "rule_number": 9999,
+                "title": "Rule",
+                "content": "Content",
+                "applies_to": ["business"],
+                "source_citation": "Line 9999",
+                "chapter": "Chapter 1",
+                "section": None,
+                "source_file": "skippable_doc.html",
+                "expert_source": "classic",
+                "confidence_score": 1.0,
+            },
+        ],
+    }
+
+    yaml_path = tmp_path / "rules.yml"
+    with open(yaml_path, "w") as f:
+        yaml.dump(yaml_content, f)
+
+    jsonl_path = tmp_path / "chunks.jsonl"
+    transformer = YAMLTransformer()
+
+    # Mock to trigger error
+    transformer._build_sections = lambda rules: []
+
+    # Should raise when continue_on_error=False
+    with pytest.raises(SkippableTransformationError):
+        transformer.transform_yaml_to_jsonl(
+            yaml_path=yaml_path,
+            jsonl_path=jsonl_path,
+            continue_on_error=False,
+        )
