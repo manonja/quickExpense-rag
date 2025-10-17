@@ -194,3 +194,116 @@ def test_parsed_document_optional_document_id():
     doc = ParsedDocument(title="Test Doc", metadata=Metadata(), sections=[])
 
     assert doc.document_id is None
+
+
+# --- NEW TESTS FOR TICKET T1.2 ---
+
+
+def test_metadata_without_income_type() -> None:
+    """Metadata should work without income_type (backward compat)."""
+    from scripts.parser.schema import Metadata
+
+    metadata = Metadata(
+        province=["BC"],
+        business_type=["sole_proprietorship"],
+        expense_type=["meals"],
+    )
+    assert metadata.income_type == []  # Default empty list
+
+
+def test_metadata_with_income_type() -> None:
+    """Metadata should accept income_type field."""
+    from scripts.parser.schema import Metadata
+
+    metadata = Metadata(
+        province=["BC"],
+        business_type=["sole_proprietorship"],
+        expense_type=["meals"],
+        income_type=["business", "fishing"],  # NEW
+    )
+    assert metadata.income_type == ["business", "fishing"]
+
+
+def test_text_chunk_without_extraction_metadata() -> None:
+    """TextChunk should work without extraction metadata (backward compat)."""
+    from scripts.parser.schema import TextChunk
+
+    chunk = TextChunk(type="paragraph", text="Test content", citation_id="S3-F2-C1-p1")
+    assert chunk.extraction_source is None
+    assert chunk.extraction_confidence is None
+    assert chunk.source_anchor is None
+
+
+def test_text_chunk_with_extraction_metadata() -> None:
+    """TextChunk should accept extraction metadata."""
+    from scripts.parser.schema import TextChunk
+
+    chunk = TextChunk(
+        type="paragraph",
+        text="Test content",
+        citation_id="LINE-8523",
+        extraction_source="adjudicated",
+        extraction_confidence=0.95,
+        source_anchor="tocch3ln8523",
+    )
+    assert chunk.extraction_source == "adjudicated"
+    assert chunk.extraction_confidence == 0.95
+    assert chunk.source_anchor == "tocch3ln8523"
+
+
+def test_to_flat_chunks_preserves_new_metadata() -> None:
+    """Verify to_flat_chunks propagates new document and chunk metadata."""
+    from scripts.parser.schema import Metadata, ParsedDocument, Section, TextChunk
+
+    metadata = Metadata(
+        province=["ON"],
+        business_type=["corporation"],
+        expense_type=["travel"],
+        income_type=["business"],
+    )
+    sections = [
+        Section(
+            section_title="Chapter 1",
+            section_level=1,
+            content=[
+                TextChunk(
+                    type="paragraph",
+                    text="Details about travel.",
+                    citation_id="LINE-100",
+                    extraction_source="llm",
+                    extraction_confidence=0.88,
+                    source_anchor="anchor-1",
+                )
+            ],
+        )
+    ]
+    doc = ParsedDocument(
+        title="Travel Guide",
+        document_id="T-123",
+        metadata=metadata,
+        sections=sections,
+    )
+
+    flat_chunks = doc.to_flat_chunks(source_url="http://example.com")
+
+    assert len(flat_chunks) == 1
+    chunk = flat_chunks[0]
+
+    # Check content fields
+    assert chunk["content"] == "Details about travel."
+    assert chunk["citation_id"] == "LINE-100"
+    assert chunk["source_url"] == "http://example.com"
+
+    # Check metadata fields
+    chunk_meta = chunk["metadata"]
+    assert chunk_meta["province"] == ["ON"]
+    assert chunk_meta["business_type"] == ["corporation"]
+    assert chunk_meta["expense_type"] == ["travel"]
+    assert chunk_meta["income_type"] == ["business"]  # New doc-level metadata
+    assert chunk_meta["document_id"] == "T-123"
+    assert chunk_meta["section_title"] == "Chapter 1"
+
+    # Check new chunk-level metadata
+    assert chunk_meta["extraction_source"] == "llm"
+    assert chunk_meta["extraction_confidence"] == 0.88
+    assert chunk_meta["source_anchor"] == "anchor-1"
