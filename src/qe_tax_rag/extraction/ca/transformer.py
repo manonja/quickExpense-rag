@@ -275,6 +275,51 @@ class YAMLTransformer:
 
         return sections
 
+    def _transform_rules_to_document(
+        self,
+        source_file: str,
+        rules: list["ExtractedRule"],
+    ) -> "ParsedDocument":
+        """
+        Transform rules from one source file into a ParsedDocument.
+
+        Strategy:
+        - title: Derived from source_file (e.g., "CRA T4002 - PART 5")
+        - document_id: Extracted from source_file (e.g., "t4002-5")
+        - sections: Hierarchical by chapter (flattened)
+        - metadata: Aggregated from all rules
+
+        Args:
+            source_file: HTML filename (e.g., "t4002-5.html")
+            rules: List of ExtractedRule objects from this file
+
+        Returns:
+            ParsedDocument with all rules organized hierarchically
+
+        """
+        from qe_tax_rag.parser.schema import ParsedDocument
+
+        # Extract document_id from source_file
+        # e.g., "t4002-5.html" → "t4002-5"
+        document_id = source_file.replace(".html", "").replace(".pdf", "")
+
+        # Create title from document_id
+        # e.g., "t4002-5" → "CRA T4002 - PART 5"
+        title = f"CRA {document_id.upper().replace('-', ' - PART ')}"
+
+        # Build hierarchical sections
+        sections = self._build_sections(rules)
+
+        # Aggregate metadata across all rules
+        metadata = self._aggregate_metadata(rules)
+
+        return ParsedDocument(
+            title=title,
+            document_id=document_id,
+            metadata=metadata,
+            sections=sections,
+        )
+
     def _rule_to_text_chunk(self, rule: "ExtractedRule") -> "TextChunk":
         """
         Transform ExtractedRule to TextChunk with metadata.
