@@ -234,3 +234,20 @@ def test_text_chunk_without_extraction_metadata() -> None:
     assert chunk.extraction_source is None
     assert chunk.extraction_confidence is None
     assert chunk.source_anchor is None
+
+
+def test_text_chunk_with_extraction_metadata() -> None:
+    """TextChunk should accept extraction metadata."""
+    from scripts.parser.schema import TextChunk
+
+    chunk = TextChunk(
+        type="paragraph",
+        text="Test content",
+        citation_id="LINE-8523",
+        extraction_source="adjudicated",
+        extraction_confidence=0.95,
+        source_anchor="tocch3ln8523",
+    )
+    assert chunk.extraction_source == "adjudicated"
+    assert chunk.extraction_confidence == 0.95
+    assert chunk.source_anchor == "tocch3ln8523"
