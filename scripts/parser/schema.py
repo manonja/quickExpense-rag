@@ -13,6 +13,9 @@ class Metadata(BaseModel):
     province: list[str] = Field(default_factory=list)
     business_type: list[str] = Field(default_factory=list)
     expense_type: list[str] = Field(default_factory=list)
+    income_type: list[str] = Field(
+        default_factory=list, description="Income types: business, farming, fishing"
+    )
 
 
 class TextChunk(BaseModel):
