@@ -228,9 +228,7 @@ def test_text_chunk_without_extraction_metadata() -> None:
     """TextChunk should work without extraction metadata (backward compat)."""
     from scripts.parser.schema import TextChunk
 
-    chunk = TextChunk(
-        type="paragraph", text="Test content", citation_id="S3-F2-C1-p1"
-    )
+    chunk = TextChunk(type="paragraph", text="Test content", citation_id="S3-F2-C1-p1")
     assert chunk.extraction_source is None
     assert chunk.extraction_confidence is None
     assert chunk.source_anchor is None

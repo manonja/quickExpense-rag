@@ -96,7 +96,7 @@ class ParsedDocument(BaseModel):
     metadata: Metadata
     sections: list[Section]
 
-    def to_flat_chunks(self, source_url: str = "") -> list[dict]:
+    def to_flat_chunks(self, source_url: str = "") -> list[dict[str, object]]:
         """
         Convert hierarchical ParsedDocument to flat list of chunk dictionaries.
 
@@ -107,7 +107,7 @@ class ParsedDocument(BaseModel):
             List of chunk dictionaries compatible with TICKET 9C indexing format
 
         """
-        chunks: list[dict] = []
+        chunks: list[dict[str, object]] = []
 
         for section in self.sections:
             for content_item in section.content:
@@ -148,7 +148,7 @@ class ParsedDocument(BaseModel):
 
         return chunks
 
-    def _create_chunk_dict(
+    def _create_chunk_dict(  # noqa: PLR0913
         self,
         content: str,
         citation_id: str | None,
@@ -157,7 +157,7 @@ class ParsedDocument(BaseModel):
         extraction_source: str | None = None,
         extraction_confidence: float | None = None,
         source_anchor: str | None = None,
-    ) -> dict:
+    ) -> dict[str, object]:
         """Create a chunk dictionary with all metadata."""
         return {
             "content": content,
@@ -180,9 +180,9 @@ class ParsedDocument(BaseModel):
 
     def _flatten_list_item(
         self, item: ListItem, section_title: str, source_url: str
-    ) -> list[dict]:
+    ) -> list[dict[str, object]]:
         """Recursively flatten a ListItem and its sub-items."""
-        chunks: list[dict] = []
+        chunks: list[dict[str, object]] = []
 
         # Add the parent item
         chunks.append(
