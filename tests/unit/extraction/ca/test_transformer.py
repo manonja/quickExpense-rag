@@ -825,3 +825,144 @@ def test_write_jsonl(tmp_path) -> None:
 
         doc2 = json.loads(lines[1])
         assert doc2["document_id"] == "test-2"
+
+
+# ============================================================================
+# TESTS: Input Validation
+# ============================================================================
+
+
+def test_validate_yaml_input_duplicate_rule_numbers() -> None:
+    """Should raise error on duplicate rule_numbers."""
+    from qe_tax_rag.extraction.ca.transformer import (
+        CriticalTransformationError,
+        YAMLTransformer,
+    )
+
+    rule_set = RuleSet(
+        schema_version="1.0",
+        extraction_timestamp="2025-01-01T00:00:00Z",
+        rules=[
+            ExtractedRule(
+                rule_number=8523,  # Duplicate
+                title="Rule 1",
+                content="...",
+                applies_to=[ApplicabilityType.BUSINESS],
+                source_citation="Line 8523",
+                chapter="Chapter 3",
+                section=None,
+                source_file="t4002-5.html",
+                expert_source=ExpertSource.CLASSIC,
+                confidence_score=1.0,
+            ),
+            ExtractedRule(
+                rule_number=8523,  # Duplicate
+                title="Rule 2",
+                content="...",
+                applies_to=[ApplicabilityType.BUSINESS],
+                source_citation="Line 8523",
+                chapter="Chapter 3",
+                section=None,
+                source_file="t4002-5.html",
+                expert_source=ExpertSource.CLASSIC,
+                confidence_score=1.0,
+            ),
+        ],
+    )
+
+    transformer = YAMLTransformer()
+
+    with pytest.raises(CriticalTransformationError, match="Duplicate rule_numbers"):
+        transformer._validate_yaml_input(rule_set)
+
+
+def test_validate_yaml_input_missing_source_file() -> None:
+    """Should raise error on missing source_file."""
+    from qe_tax_rag.extraction.ca.transformer import (
+        CriticalTransformationError,
+        YAMLTransformer,
+    )
+
+    rule_set = RuleSet(
+        schema_version="1.0",
+        extraction_timestamp="2025-01-01T00:00:00Z",
+        rules=[
+            ExtractedRule(
+                rule_number=8523,
+                title="Rule 1",
+                content="...",
+                applies_to=[ApplicabilityType.BUSINESS],
+                source_citation="Line 8523",
+                chapter="Chapter 3",
+                section=None,
+                source_file="",  # Empty source_file
+                expert_source=ExpertSource.CLASSIC,
+                confidence_score=1.0,
+            ),
+        ],
+    )
+
+    transformer = YAMLTransformer()
+
+    with pytest.raises(CriticalTransformationError, match="missing source_file"):
+        transformer._validate_yaml_input(rule_set)
+
+
+def test_validate_yaml_input_missing_chapter() -> None:
+    """Should raise error on missing chapter."""
+    from qe_tax_rag.extraction.ca.transformer import (
+        CriticalTransformationError,
+        YAMLTransformer,
+    )
+
+    rule_set = RuleSet(
+        schema_version="1.0",
+        extraction_timestamp="2025-01-01T00:00:00Z",
+        rules=[
+            ExtractedRule(
+                rule_number=8523,
+                title="Rule 1",
+                content="...",
+                applies_to=[ApplicabilityType.BUSINESS],
+                source_citation="Line 8523",
+                chapter="",  # Empty chapter
+                section=None,
+                source_file="t4002-5.html",
+                expert_source=ExpertSource.CLASSIC,
+                confidence_score=1.0,
+            ),
+        ],
+    )
+
+    transformer = YAMLTransformer()
+
+    with pytest.raises(CriticalTransformationError, match="missing chapter"):
+        transformer._validate_yaml_input(rule_set)
+
+
+def test_validate_yaml_input_valid() -> None:
+    """Should pass validation for valid RuleSet."""
+    from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
+
+    rule_set = RuleSet(
+        schema_version="1.0",
+        extraction_timestamp="2025-01-01T00:00:00Z",
+        rules=[
+            ExtractedRule(
+                rule_number=8523,
+                title="Rule 1",
+                content="...",
+                applies_to=[ApplicabilityType.BUSINESS],
+                source_citation="Line 8523",
+                chapter="Chapter 3",
+                section=None,
+                source_file="t4002-5.html",
+                expert_source=ExpertSource.CLASSIC,
+                confidence_score=1.0,
+            ),
+        ],
+    )
+
+    transformer = YAMLTransformer()
+    # Should not raise
+    transformer._validate_yaml_input(rule_set)
