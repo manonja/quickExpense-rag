@@ -191,3 +191,23 @@ def test_return_empty_list_for_files_without_line_patterns(tmp_path: Path) -> No
 
     # Assertions
     assert result == [], "Should return empty list for files without line patterns"
+
+
+@pytest.mark.unit
+def test_parse_rule_with_no_space_after_dash(fixture_html_path: Path) -> None:
+    """Test parser handles titles with no space after en dash.
+
+    Edge case from real CRA HTML where BeautifulSoup's text extraction produces:
+    "Line 8521 –Advertising" (no space between – and Advertising)
+
+    This happens when title text is not wrapped in same tag as the dash.
+    """
+    rules = parse(str(fixture_html_path))
+
+    # Find Line 8521 (Advertising)
+    rule = next((r for r in rules if r.rule_number == 8521), None)
+
+    assert rule is not None, "Line 8521 should be extracted despite missing space"
+    assert rule.title == "Advertising"
+    assert "advertising" in rule.content.lower()
+    assert rule.applies_to == [ApplicabilityType.BUSINESS]

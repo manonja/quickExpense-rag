@@ -98,7 +98,7 @@ def parse(html_path: str) -> list[ExtractedRule]:
             header_text = header.get_text(strip=True)
             # Remove any img tag remnants from header_text for clean parsing
             clean_header = re.sub(r"<img[^>]*>", "", header_text)
-            match = re.search(r"Line (\d+) – (.+)", clean_header)
+            match = re.search(r"Line (\d+) –\s*(.+)", clean_header)
             if not match:
                 logger.warning(f"Skipping h3 with unparseable format: '{header_text}'")
                 continue
