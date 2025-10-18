@@ -16,7 +16,6 @@ from typing import Annotated
 
 import typer
 from rich.console import Console
-from rich.progress import track
 
 # Add src directory to path for imports
 # NOTE: sys.path needed because src/ is not in standard Python path for scripts
@@ -25,7 +24,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 # Import canonical orchestrator and transformer from src package
 from qe_tax_rag.extraction.ca.orchestrator import run_extraction
 from qe_tax_rag.extraction.ca.transformer import (
-    CriticalTransformationError,
     TransformationReport,
     YAMLTransformer,
 )
