@@ -770,5 +770,183 @@ def validate(
         raise typer.Exit(code=1)
 
 
+@app.command(name="pipeline-extraction")
+def pipeline_extraction(
+    input_dir: Path = typer.Option(  # noqa: B008
+        ...,
+        "--input-dir",
+        "-i",
+        help="Directory containing HTML files",
+        exists=True,
+        file_okay=False,
+        dir_okay=True,
+    ),
+    output_db: Path = typer.Option(  # noqa: B008
+        ...,
+        "--output-db",
+        "-o",
+        help="Output SQLite database path",
+    ),
+    intermediate_dir: Path | None = typer.Option(  # noqa: B008
+        None,
+        "--intermediate-dir",
+        help="Directory for intermediate files (YAML, JSONL). Default: temp dir",
+    ),
+    keep_intermediate: bool = typer.Option(
+        False,
+        "--keep-intermediate",
+        help="Keep intermediate YAML and JSONL files after completion",
+    ),
+) -> None:
+    """
+    Run complete extraction-to-database pipeline.
+
+    This command orchestrates:
+    1. Extract rules from HTML (extract-rules)
+    2. Transform YAML to JSONL (transformer)
+    3. Build RAG database (IndexBuilder)
+
+    Example:
+        uv run python scripts/cli.py pipeline-extraction \\
+          --input-dir cra_documents/cra_t4002e_rev24_dump/ \\
+          --output-db data/cra_rules.db
+
+    """
+    import shutil
+    import tempfile
+
+    # Import extraction pipeline
+    sys.path.insert(0, str(Path(__file__).parent))
+    from extract_rules import _run_extraction_pipeline
+
+    console.print("[bold blue]QE Tax RAG Extraction Pipeline[/bold blue]")
+    console.print(f"Input: {input_dir}")
+    console.print(f"Output DB: {output_db}\n")
+
+    # Setup intermediate directory
+    temp_dir_created = False
+    if intermediate_dir:
+        work_dir = intermediate_dir
+        work_dir.mkdir(parents=True, exist_ok=True)
+        console.print(f"Using intermediate directory: {work_dir}")
+    else:
+        temp_dir = tempfile.mkdtemp(prefix="qetax_extract_")
+        work_dir = Path(temp_dir)
+        temp_dir_created = True
+        console.print(f"Using temporary directory: {work_dir}")
+
+    # Define intermediate file paths
+    yml_path = work_dir / "rules.yml"
+    jsonl_path = work_dir / "chunks.jsonl"
+    manual_path = work_dir / "manual_review.yml"
+
+    pipeline_success = False
+    try:
+        # =====================================================================
+        # Stage 1/3: Extract rules from HTML
+        # =====================================================================
+        console.print("\n[bold cyan]Stage 1/3: Extracting rules from HTML[/bold cyan]")
+
+        # Find HTML files
+        html_files = sorted(input_dir.glob("*.html"))
+        if not html_files:
+            console.print(f"[red]Error: No HTML files found in {input_dir}[/red]")
+            raise typer.Exit(code=1)
+
+        console.print(f"Found {len(html_files)} HTML files to process")
+
+        # Run extraction pipeline
+        stats, report = _run_extraction_pipeline(
+            html_files=html_files,
+            output_yaml=yml_path,
+            manual_review_yaml=manual_path,
+            output_jsonl=jsonl_path,
+            verbose=False,
+        )
+
+        if report:
+            console.print(
+                f"✅ Extracted and transformed {report.successful}/{report.total_rules} rules"
+            )
+        else:
+            console.print(f"✅ Extracted {stats['total_rules']} rules to {yml_path}")
+
+        # =====================================================================
+        # Stage 2/3: Build database
+        # =====================================================================
+        console.print("\n[bold cyan]Stage 2/3: Building searchable database[/bold cyan]")
+
+        # Create manifest for extraction pipeline
+        manifest_path = work_dir / "manifest.json"
+        source_files = [
+            SourceFile(
+                path=f.name,
+                url=f"file://{f.absolute()}",
+                hash="",  # Hash not critical for extraction pipeline
+            )
+            for f in html_files
+        ]
+
+        # Build index
+        output_db.parent.mkdir(parents=True, exist_ok=True)
+        builder = IndexBuilder(db_path=str(output_db), encoder=embedding_service)
+        builder.build_from_jsonl(
+            jsonl_path=str(jsonl_path),
+            manifest_path=str(manifest_path),
+            source_files=source_files,
+            data_version="2024.12",
+            continue_on_error=False,
+        )
+
+        console.print(f"✅ Database built: {output_db}")
+
+        # Show database size
+        db_size_mb = output_db.stat().st_size / (1024 * 1024)
+        console.print(f"   Database size: {db_size_mb:.2f} MB")
+
+        # =====================================================================
+        # Stage 3/3: Validate database
+        # =====================================================================
+        console.print("\n[bold cyan]Stage 3/3: Validating database[/bold cyan]")
+
+        validator = IndexValidator(db_path=output_db)
+        validation_report = validator.validate()
+
+        if validation_report["overall_passed"]:
+            console.print("✅ Validation passed")
+        else:
+            console.print("[yellow]⚠️  Some validation checks failed[/yellow]")
+
+        pipeline_success = True
+
+    except typer.Exit:
+        # Re-raise typer.Exit to preserve exit code
+        raise
+
+    except Exception as e:
+        console.print(f"\n[red]❌ Pipeline failed: {e}[/red]")
+        logger.exception("Extraction pipeline failed")
+        raise typer.Exit(code=1) from e
+
+    finally:
+        # Cleanup intermediate files if applicable
+        if temp_dir_created:
+            if not pipeline_success:
+                console.print(
+                    f"\n[yellow]⚠️  Pipeline failed. "
+                    f"Intermediate files kept for debugging:[/yellow]"
+                )
+                console.print(f"   {work_dir}")
+            elif not keep_intermediate:
+                console.print("\n🧹 Cleaning up intermediate files")
+                shutil.rmtree(work_dir, ignore_errors=True)
+            else:
+                console.print(f"\nIntermediate files kept at: {work_dir}")
+
+    # Success summary
+    console.print("\n[bold green]🎉 Pipeline complete![/bold green]")
+    console.print(f"✅ Database: {output_db}")
+
+
 if __name__ == "__main__":
     app()
