@@ -11,6 +11,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         env_prefix="QE_TAX_RAG_EXTRACTION_",
+        extra="ignore",
     )
 
     # Gemini API Configuration
@@ -18,8 +19,8 @@ class Settings(BaseSettings):
         default="",
         description="Gemini API key for HTML-to-YAML extraction (required for operation).",
     )
-    llm_model_name: str = "gemini-1.5-flash-latest"
-    adjudicator_model_name: str = "gemini-1.5-pro-latest"
+    llm_model_name: str = "gemini-2.0-flash-exp"
+    adjudicator_model_name: str = "gemini-2.0-flash-exp"
 
 
 # Singleton instance

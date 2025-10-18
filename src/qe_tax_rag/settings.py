@@ -18,7 +18,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_prefix="QE_TAX_RAG_",
         case_sensitive=False,
-        extra="forbid",
+        extra="ignore",
         frozen=True,
     )
 
