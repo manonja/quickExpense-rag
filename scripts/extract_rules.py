@@ -199,9 +199,7 @@ def run(
     console.print("━" * 60 + "\n")
 
     # Files processed (simplified - just show total)
-    console.print(
-        f"Files Processed: [bold]{len(html_files)}[/bold] HTML file(s)"
-    )
+    console.print(f"Files Processed: [bold]{len(html_files)}[/bold] HTML file(s)")
 
     # Rules extracted
     console.print(f"Total Rules Extracted: [bold]{stats['total_rules']}[/bold]\n")
@@ -243,8 +241,7 @@ def run(
     # Check if manual review file exists and has content
     if manual_review_yaml.exists() and stats["manual_review"] > 0:
         console.print(
-            f"  ⚠️  Manual Review: {manual_review_yaml} "
-            f"({stats['manual_review']} items)"
+            f"  ⚠️  Manual Review: {manual_review_yaml} ({stats['manual_review']} items)"
         )
     if transformation_report:
         console.print(f"  📄 Transformed JSONL: {output_jsonl}")
@@ -305,12 +302,19 @@ def _run_extraction_pipeline(
     # Use the parent directory of the first file
     if not html_files:
         logger.warning("No HTML files provided to extraction pipeline")
-        return {"total_rules": 0, "perfect_matches": 0, "auto_corrected": 0, "manual_review": 0}, None
+        return {
+            "total_rules": 0,
+            "perfect_matches": 0,
+            "auto_corrected": 0,
+            "manual_review": 0,
+        }, None
 
     input_dir = html_files[0].parent
 
     # === Step 1: Call canonical orchestrator (HTML → YAML) ===
-    logger.info(f"Calling canonical orchestrator for {len(html_files)} files in {input_dir}")
+    logger.info(
+        f"Calling canonical orchestrator for {len(html_files)} files in {input_dir}"
+    )
     result = run_extraction(
         input_path=input_dir,
         output_yaml=output_yaml,
@@ -322,7 +326,9 @@ def _run_extraction_pipeline(
     # Legacy callers expect flat structure: {"total_rules": X, "perfect_matches": Y, ...}
     stats = {
         "total_rules": result["total_rules"],
-        **result["stats"],  # Unpack nested stats dict (perfect_matches, auto_corrected, manual_review)
+        **result[
+            "stats"
+        ],  # Unpack nested stats dict (perfect_matches, auto_corrected, manual_review)
     }
 
     logger.info(f"Extraction complete: {stats['total_rules']} rules extracted")
@@ -338,7 +344,9 @@ def _run_extraction_pipeline(
             jsonl_path=output_jsonl,
             continue_on_error=True,
         )
-        logger.info(f"Transformation complete: {transformation_report.successful}/{transformation_report.total_rules} rules")
+        logger.info(
+            f"Transformation complete: {transformation_report.successful}/{transformation_report.total_rules} rules"
+        )
 
     return stats, transformation_report
 
