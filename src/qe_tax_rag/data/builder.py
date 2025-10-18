@@ -25,11 +25,10 @@ import numpy as np
 import numpy.typing as npt
 from tqdm import tqdm
 
-from qe_tax_rag.parser.schema import ParsedDocument
-
 from qe_tax_rag.data.schema import CREATE_TABLES_SQL, init_metadata, optimize_database
 from qe_tax_rag.embeddings.encoder import _EmbeddingService
 from qe_tax_rag.exceptions import EmbeddingError, QeTaxRagError
+from qe_tax_rag.parser.schema import ParsedDocument
 from qe_tax_rag.search.models import IndexManifest, SourceFile
 
 logger = logging.getLogger(__name__)

@@ -801,9 +801,7 @@ def test_transform_rules_to_document_empty_sections_raises_skippable_error() -> 
         ),
     ]
 
-    with pytest.raises(
-        SkippableTransformationError, match="No sections generated"
-    ):
+    with pytest.raises(SkippableTransformationError, match="No sections generated"):
         transformer._transform_rules_to_document("t4002-5.html", rules)
 
     # Restore original method
@@ -1077,9 +1075,7 @@ def test_validate_yaml_input_unsupported_schema_version() -> None:
 
     transformer = YAMLTransformer()
 
-    with pytest.raises(
-        CriticalTransformationError, match="Unsupported schema version"
-    ):
+    with pytest.raises(CriticalTransformationError, match="Unsupported schema version"):
         transformer._validate_yaml_input(rule_set)
 
 
