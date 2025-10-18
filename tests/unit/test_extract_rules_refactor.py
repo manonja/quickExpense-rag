@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts"))
 
 @pytest.mark.unit
 @patch("extract_rules.YAMLTransformer")
-@patch("qe_tax_rag.extraction.ca.orchestrator.run_extraction")
+@patch("extract_rules.run_extraction")
 def test_run_extraction_pipeline_returns_stats_and_report(
     mock_run_extraction: MagicMock,
     mock_transformer_class: MagicMock,
@@ -83,7 +83,7 @@ def test_run_extraction_pipeline_returns_stats_and_report(
 
 
 @pytest.mark.unit
-@patch("qe_tax_rag.extraction.ca.orchestrator.run_extraction")
+@patch("extract_rules.run_extraction")
 def test_run_extraction_pipeline_without_transform(
     mock_run_extraction: MagicMock,
     tmp_path: Path,

@@ -24,20 +24,22 @@ sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 
-# Import pipeline modules (from TICKETS 1-5)
-# These will be implemented in previous tickets
-try:
-    from qe_tax_rag.extraction.ca.transformer import (
-        CriticalTransformationError,
-        TransformationReport,
-        YAMLTransformer,
-    )
+# Import canonical orchestrator and transformer from src package
+from qe_tax_rag.extraction.ca.orchestrator import run_extraction
+from qe_tax_rag.extraction.ca.transformer import (
+    CriticalTransformationError,
+    TransformationReport,
+    YAMLTransformer,
+)
 
-    from parser.adjudicator import adjudicate
-    from parser.classic_parser import parse as classic_parse
-    from parser.exceptions import PipelineError
-    from parser.generate_yaml import generate as generate_yaml
-    from parser.llm_parser import parse as llm_parse
+# Legacy imports - kept for backward compatibility of run() command
+# These are not used by _run_extraction_pipeline() anymore
+try:
+    from qe_tax_rag.extraction.ca.adjudicator import adjudicate
+    from qe_tax_rag.extraction.ca.classic_parser import parse as classic_parse
+    from qe_tax_rag.extraction.ca.exceptions import PipelineError
+    from qe_tax_rag.extraction.ca.llm_parser import parse as llm_parse
+    from qe_tax_rag.extraction.ca.yaml_generator import generate as generate_yaml
 except ImportError as e:
     # Graceful degradation for development
     print(f"Warning: Pipeline modules not yet implemented: {e}", file=sys.stderr)
@@ -46,9 +48,6 @@ except ImportError as e:
     adjudicate = None  # type: ignore
     generate_yaml = None  # type: ignore
     PipelineError = Exception  # type: ignore
-    YAMLTransformer = None  # type: ignore
-    CriticalTransformationError = Exception  # type: ignore
-    TransformationReport = None  # type: ignore
 
 # Initialize Typer app and Rich console
 app = typer.Typer(
@@ -300,10 +299,13 @@ def _run_extraction_pipeline(
     verbose: bool = False,
 ) -> tuple[dict, "TransformationReport | None"]:
     """
-    Core extraction and transformation pipeline logic.
+    Adapter for core extraction pipeline.
 
-    This function is designed to be called by other scripts.
-    Separated from CLI-specific concerns for reusability.
+    Calls the canonical orchestrator from src/qe_tax_rag/extraction/ca/orchestrator.py
+    and adapts its output to the legacy format expected by callers.
+
+    This function bridges the gap between the old script-level interface and the
+    new canonical orchestrator, ensuring backward compatibility.
 
     Args:
         html_files: List of HTML files to process
@@ -314,6 +316,8 @@ def _run_extraction_pipeline(
 
     Returns:
         Tuple of (stats dict, transformation report or None)
+        - stats: Flat dict with total_rules, perfect_matches, auto_corrected, manual_review
+        - report: TransformationReport if output_jsonl is set, None otherwise
 
     Raises:
         PipelineError: On extraction/parsing failures
@@ -324,69 +328,44 @@ def _run_extraction_pipeline(
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    # Initialize collectors
-    all_resolved_rules = []
-    all_manual_review_items = []
-    failed_files = []
+    # Orchestrator expects a path (file or directory), not a list of files
+    # Use the parent directory of the first file
+    if not html_files:
+        logger.warning("No HTML files provided to extraction pipeline")
+        return {"total_rules": 0, "perfect_matches": 0, "auto_corrected": 0, "manual_review": 0}, None
 
+    input_dir = html_files[0].parent
+
+    # === Step 1: Call canonical orchestrator (HTML → YAML) ===
+    logger.info(f"Calling canonical orchestrator for {len(html_files)} files in {input_dir}")
+    result = run_extraction(
+        input_path=input_dir,
+        output_yaml=output_yaml,
+        manual_review_yaml=manual_review_yaml,
+    )
+
+    # === Step 2: Adapt orchestrator output to legacy flat stats structure ===
+    # Orchestrator returns nested structure: {"total_rules": X, "stats": {...}}
+    # Legacy callers expect flat structure: {"total_rules": X, "perfect_matches": Y, ...}
     stats = {
-        "total_rules": 0,
-        "perfect_matches": 0,
-        "auto_corrected": 0,
-        "manual_review": 0,
+        "total_rules": result["total_rules"],
+        **result["stats"],  # Unpack nested stats dict (perfect_matches, auto_corrected, manual_review)
     }
 
-    # === Processing Loop (moved from run() lines ~227-283) ===
-    for html_file in html_files:
-        try:
-            html_content = html_file.read_text(encoding="utf-8")
+    logger.info(f"Extraction complete: {stats['total_rules']} rules extracted")
 
-            # Run parsers
-            classic_rules = classic_parse(str(html_file))
-            llm_rules = llm_parse(str(html_file))
-
-            # Adjudicate
-            resolved_rules, manual_items, file_stats = adjudicate(
-                classic_rules=classic_rules,
-                llm_rules=llm_rules,
-                source_html_content=html_content,
-            )
-
-            # Accumulate results
-            all_resolved_rules.extend(resolved_rules)
-            all_manual_review_items.extend(manual_items)
-
-            # Update statistics
-            stats["total_rules"] += file_stats.get("total", 0)
-            stats["perfect_matches"] += file_stats.get("perfect_matches", 0)
-            stats["auto_corrected"] += file_stats.get("auto_corrected", 0)
-            stats["manual_review"] += file_stats.get("manual_review", 0)
-
-        except PipelineError as e:
-            failed_files.append((html_file.name, str(e)))
-            logger.error(f"Pipeline error: {html_file.name}: {e}")
-        except Exception as e:
-            failed_files.append((html_file.name, f"Unexpected error: {e}"))
-            logger.exception(f"Unexpected error: {html_file.name}")
-
-    # === YAML Generation (moved from run() lines ~288-324) ===
-    generate_yaml(rules=all_resolved_rules, output_path=str(output_yaml))
-
-    if all_manual_review_items:
-        generate_yaml(
-            rules=all_manual_review_items,
-            output_path=str(manual_review_yaml),
-        )
-
-    # === Auto-Transformation (moved from run() lines ~329-369) ===
+    # === Step 3: Handle transformation (YAML → JSONL) ===
+    # The orchestrator doesn't do transformation, so we handle it separately
     transformation_report = None
     if output_jsonl is not None:
+        logger.info(f"Transforming YAML to JSONL: {output_yaml} → {output_jsonl}")
         transformer = YAMLTransformer()
         transformation_report = transformer.transform_yaml_to_jsonl(
             yaml_path=output_yaml,
             jsonl_path=output_jsonl,
             continue_on_error=True,
         )
+        logger.info(f"Transformation complete: {transformation_report.successful}/{transformation_report.total_rules} rules")
 
     return stats, transformation_report
 
