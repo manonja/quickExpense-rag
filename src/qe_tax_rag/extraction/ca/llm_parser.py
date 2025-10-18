@@ -12,6 +12,7 @@ from google.api_core import exceptions as google_exceptions
 
 from qe_tax_rag.extraction.ca.cache import LLMResponseCache
 from qe_tax_rag.extraction.ca.exceptions import ParserError
+from qe_tax_rag.extraction.ca.rate_limiter import RateLimiter, RateLimitError
 from qe_tax_rag.extraction.ca.schema import (
     ApplicabilityType,
     ExpertSource,
@@ -39,6 +40,17 @@ Follow these rules precisely:
 
 Respond with a single JSON object containing a "rules" key, which holds a list of the extracted rule objects.
 """
+
+# Initialize rate limiter once at the module level
+# It's stateful, so we want a single instance for the application's lifetime.
+_rate_limiter = None
+if settings.cache_dir:
+    state_file = Path(settings.cache_dir) / "rate_limiter_state.json"
+    _rate_limiter = RateLimiter(
+        rpm_limit=settings.gemini_rpm_limit,
+        rpd_limit=settings.gemini_rpd_limit,
+        state_file=state_file,
+    )
 
 
 def parse(html_path: str, cache_dir: str | Path | None = None) -> list[ExtractedRule]:
@@ -103,6 +115,13 @@ def parse(html_path: str, cache_dir: str | Path | None = None) -> list[Extracted
         logger.info(f"Cache HIT for {html_path}. Skipping API call.")
     else:
         logger.info(f"Cache MISS for {html_path}. Calling Gemini API.")
+
+        # Respect rate limits before making an API call
+        if _rate_limiter:
+            try:
+                _rate_limiter.wait_if_needed()
+            except RateLimitError as e:
+                raise ParserError(str(e)) from e
 
         # Configure Gemini
         genai.configure(api_key=settings.gemini_api_key)  # type: ignore[attr-defined]
