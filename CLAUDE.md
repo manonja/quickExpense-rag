@@ -449,3 +449,87 @@ docs/                         # Documentation (Diataxis structure)
   reference/                  # API documentation
   explanation/                # Understanding-oriented content
 ```
+
+## Extraction Pipeline (HTML to Database)
+
+The extraction pipeline transforms raw CRA HTML documents into a searchable database through a
+multi-stage process with quality validation at each step.
+
+### Pipeline Architecture
+
+The extraction workflow uses a **Mixture-of-Experts** approach with dual parsers:
+
+1. **Classic Parser** (BeautifulSoup): Fast, deterministic extraction via DOM traversal
+1. **LLM Parser** (Gemini): Semantic understanding and context-aware extraction
+1. **Adjudicator**: Grounded self-correction layer that resolves conflicts between parsers
+1. **Transformer**: Converts validated YAML to JSONL chunks with schema validation
+1. **Builder**: Generates embeddings and builds SQLite database with FTS5 + vector search
+1. **Validator**: Smoke tests to verify database integrity
+
+### Usage Options
+
+**Option 1: Full automated pipeline** (recommended)
+
+```bash
+uv run python scripts/cli.py pipeline-extraction \
+  --input-dir cra_documents/cra_t4002e_rev24_dump/ \
+  --output-db data/cra_rules.db
+```
+
+**Option 2: Pipeline with intermediate files kept** (for debugging)
+
+```bash
+uv run python scripts/cli.py pipeline-extraction \
+  --input-dir cra_documents/ \
+  --output-db data/rules.db \
+  --intermediate-dir output/ \
+  --keep-intermediate
+```
+
+**Option 3: Manual step-by-step** (for development)
+
+```bash
+# Step 1: Extract HTML → YAML (with auto-transformation to JSONL)
+uv run extract-rules run input/ output/rules.yml \
+  --auto-transform --output-jsonl output/chunks.jsonl
+
+# Step 2: Build database from JSONL
+uv run python scripts/cli.py build \
+  --input-file output/chunks.jsonl \
+  --output-db data/rules.db
+
+# Step 3: Validate database integrity
+uv run python scripts/cli.py validate --db-path data/rules.db
+```
+
+### Error Handling
+
+The pipeline uses **fail-fast** error handling with stage-specific messages:
+
+- **Stage 1/3 (Extraction)**: HTML parsing, adjudication, YAML generation, JSONL transformation
+- **Stage 2/3 (Build)**: Embedding generation, database construction, index building
+- **Stage 3/3 (Validation)**: Schema verification, row counts, embedding dimensions, search tests
+
+If a stage fails:
+
+- Error message identifies the specific stage: `❌ Stage X/3 (Name) failed: <error>`
+- Pipeline stops immediately (no cascading failures)
+- Intermediate files are preserved for debugging
+- Logs include full stack traces for troubleshooting
+
+### Intermediate File Management
+
+The pipeline uses smart cleanup:
+
+- **Temp directory created**: Automatic cleanup on success (unless `--keep-intermediate`)
+- **Custom intermediate dir**: Never deleted automatically
+- **Pipeline failure**: Always preserves intermediate files for debugging
+- **Success with `--keep-intermediate`**: Shows path to preserved files
+
+### Development Tips
+
+1. **Start with manual step-by-step** to understand each stage
+1. **Use `--keep-intermediate`** when developing or debugging
+1. **Check intermediate YAML** before transformation to catch extraction issues early
+1. **Run validation** after building to catch schema/data inconsistencies
+1. **Test with small HTML sets** first (1-5 files) before full processing

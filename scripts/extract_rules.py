@@ -16,39 +16,17 @@ from typing import Annotated
 
 import typer
 from rich.console import Console
-from rich.progress import track
 
-# Add scripts directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent))
 # Add src directory to path for imports
+# NOTE: sys.path needed because src/ is not in standard Python path for scripts
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-
-# Import pipeline modules (from TICKETS 1-5)
-# These will be implemented in previous tickets
-try:
-    from qe_tax_rag.extraction.ca.transformer import (
-        CriticalTransformationError,
-        TransformationReport,
-        YAMLTransformer,
-    )
-
-    from parser.adjudicator import adjudicate
-    from parser.classic_parser import parse as classic_parse
-    from parser.exceptions import PipelineError
-    from parser.generate_yaml import generate as generate_yaml
-    from parser.llm_parser import parse as llm_parse
-except ImportError as e:
-    # Graceful degradation for development
-    print(f"Warning: Pipeline modules not yet implemented: {e}", file=sys.stderr)
-    classic_parse = None  # type: ignore
-    llm_parse = None  # type: ignore
-    adjudicate = None  # type: ignore
-    generate_yaml = None  # type: ignore
-    PipelineError = Exception  # type: ignore
-    YAMLTransformer = None  # type: ignore
-    CriticalTransformationError = Exception  # type: ignore
-    TransformationReport = None  # type: ignore
+# Import canonical orchestrator and transformer from src package
+from qe_tax_rag.extraction.ca.orchestrator import run_extraction
+from qe_tax_rag.extraction.ca.transformer import (
+    TransformationReport,
+    YAMLTransformer,
+)
 
 # Initialize Typer app and Rich console
 app = typer.Typer(
@@ -148,14 +126,6 @@ def run(
     console.print(f"Input: {input_path}")
     console.print(f"Output: {output_yaml}\n")
 
-    # Check if pipeline modules are available
-    if classic_parse is None or YAMLTransformer is None:
-        console.print(
-            "[red]Error: Pipeline modules not implemented yet.[/red]\n"
-            "Please implement TICKETS 1-5 and T2.1-2.3 first."
-        )
-        raise typer.Exit(code=1)
-
     # -------------------------------------------------------------------------
     # Phase 1: Input Resolution
     # -------------------------------------------------------------------------
@@ -206,167 +176,18 @@ def run(
     logger.info("Pre-flight checks passed")
 
     # -------------------------------------------------------------------------
-    # Phase 3: Main Processing Loop
+    # Phase 3: Main Processing - Call helper function
     # -------------------------------------------------------------------------
     console.print(f"[cyan]Processing {len(html_files)} file(s)...[/cyan]\n")
 
-    # Initialize collectors
-    all_resolved_rules = []
-    all_manual_review_items = []
-    failed_files = []
-
-    # Statistics tracking
-    stats = {
-        "total_rules": 0,
-        "perfect_matches": 0,
-        "auto_corrected": 0,
-        "manual_review": 0,
-    }
-
-    # Process files with progress bar
-    for html_file in track(html_files, description="Extracting rules..."):
-        try:
-            logger.info(f"Processing: {html_file.name}")
-
-            # Read HTML content
-            html_content = html_file.read_text(encoding="utf-8")
-
-            # Run classic parser (TICKET 2)
-            logger.debug(f"Running classic parser on {html_file.name}")
-            classic_rules = classic_parse(str(html_file))
-
-            # Run LLM parser (TICKET 3)
-            logger.debug(f"Running LLM parser on {html_file.name}")
-            llm_rules = llm_parse(str(html_file))
-
-            # Adjudicate conflicts (TICKET 4)
-            logger.debug(f"Adjudicating {html_file.name}")
-            resolved_rules, manual_items, file_stats = adjudicate(
-                classic_rules=classic_rules,
-                llm_rules=llm_rules,
-                source_html_content=html_content,
-            )
-
-            # Accumulate results
-            all_resolved_rules.extend(resolved_rules)
-            all_manual_review_items.extend(manual_items)
-
-            # Update statistics
-            stats["total_rules"] += file_stats.get("total", 0)
-            stats["perfect_matches"] += file_stats.get("perfect_matches", 0)
-            stats["auto_corrected"] += file_stats.get("auto_corrected", 0)
-            stats["manual_review"] += file_stats.get("manual_review", 0)
-
-            logger.info(
-                f"Completed {html_file.name}: "
-                f"{file_stats.get('total', 0)} rules extracted"
-            )
-
-        except PipelineError as e:
-            # Expected pipeline errors (parser failures, validation errors)
-            failed_files.append((html_file.name, str(e)))
-            logger.error(f"Pipeline error processing {html_file.name}: {e}")
-            if verbose:
-                console.print(
-                    f"\n[yellow]⚠️  Warning: Failed to process {html_file.name}[/yellow]"
-                )
-                console.print(f"[yellow]   Error: {e}[/yellow]\n")
-
-        except Exception as e:
-            # Unexpected errors
-            failed_files.append((html_file.name, f"Unexpected error: {e}"))
-            logger.exception(f"Unexpected error processing {html_file.name}: {e}")
-            if verbose:
-                console.print(
-                    f"\n[red]❌ Error: Failed to process {html_file.name}[/red]"
-                )
-                console.print(f"[red]   {e}[/red]\n")
-
-    # -------------------------------------------------------------------------
-    # Phase 4: Output Generation
-    # -------------------------------------------------------------------------
-    console.print("\n[cyan]Generating YAML outputs...[/cyan]")
-
-    try:
-        # Generate main ruleset YAML (TICKET 5)
-        logger.info(f"Writing main ruleset to {output_yaml}")
-        generate_yaml(rules=all_resolved_rules, output_path=str(output_yaml))
-        console.print(f"[green]✓[/green] Generated: {output_yaml}")
-
-        # Generate manual review YAML if needed (TICKET 5)
-        if all_manual_review_items:
-            logger.info(
-                f"Writing {len(all_manual_review_items)} manual review items "
-                f"to {manual_review_yaml}"
-            )
-            generate_yaml(
-                rules=all_manual_review_items,
-                output_path=str(manual_review_yaml),
-            )
-            console.print(
-                f"[yellow]⚠️[/yellow]  Manual review: {manual_review_yaml} "
-                f"({len(all_manual_review_items)} items)"
-            )
-        else:
-            logger.info("No manual review items, skipping manual review file")
-            console.print("[green]✓[/green] No items require manual review")
-
-    except PipelineError as e:
-        console.print(f"\n[red]❌ Error: Failed to generate YAML output[/red]")
-        console.print(f"[red]   {e}[/red]")
-        logger.exception("YAML generation failed")
-        raise typer.Exit(code=1) from e
-
-    except Exception as e:
-        console.print(f"\n[red]❌ Error: Unexpected failure during output[/red]")
-        console.print(f"[red]   {e}[/red]")
-        logger.exception("Unexpected error during YAML generation")
-        raise typer.Exit(code=1) from e
-
-    # -------------------------------------------------------------------------
-    # Phase 4.5: Auto-Transformation (Optional)
-    # -------------------------------------------------------------------------
-    transformation_report: TransformationReport | None = None
-    if auto_transform:
-        console.print("\n[cyan]Auto-transforming YAML to JSONL...[/cyan]")
-        if not output_jsonl:
-            typer.echo(
-                "❌ Error: --output-jsonl is required when using --auto-transform",
-                err=True,
-            )
-            raise typer.Exit(code=1)
-
-        try:
-            transformer = YAMLTransformer()
-            report = transformer.transform_yaml_to_jsonl(
-                yaml_path=output_yaml,
-                jsonl_path=output_jsonl,
-                continue_on_error=True,
-            )
-            transformation_report = report
-
-            console.print(f"[green]✓[/green] Transformation complete!")
-            console.print(f"  📄 JSONL written to: {output_jsonl}")
-            console.print(
-                f"  - Rules processed: {report.successful}/{report.total_rules}"
-            )
-            if report.errors:
-                console.print(
-                    f"  [yellow]⚠️[/yellow]  Encountered {len(report.errors)} skippable errors."
-                )
-
-        except CriticalTransformationError as e:
-            console.print(
-                f"\n[red]❌ Error: Auto-transformation failed critically[/red]"
-            )
-            console.print(f"[red]   {e}[/red]")
-            raise typer.Exit(code=1) from e
-        except Exception as e:
-            console.print(
-                f"\n[red]❌ Error: Unexpected failure during auto-transformation[/red]"
-            )
-            console.print(f"[red]   {e}[/red]")
-            raise typer.Exit(code=1) from e
+    # Call the extracted pipeline logic
+    stats, transformation_report = _run_extraction_pipeline(
+        html_files=html_files,
+        output_yaml=output_yaml,
+        manual_review_yaml=manual_review_yaml,
+        output_jsonl=output_jsonl if auto_transform else None,
+        verbose=verbose,
+    )
 
     # -------------------------------------------------------------------------
     # Phase 5: Summary Report
@@ -375,17 +196,8 @@ def run(
     console.print("[bold green]  CRA Rule Extraction Complete[/bold green]")
     console.print("━" * 60 + "\n")
 
-    # Files processed
-    files_processed = len(html_files) - len(failed_files)
-    console.print(
-        f"Files Processed: [bold]{files_processed}[/bold] / {len(html_files)}"
-    )
-
-    if failed_files:
-        console.print(f"[red]Failed Files: {len(failed_files)}[/red]")
-        if verbose:
-            for filename, error in failed_files:
-                console.print(f"  [red]• {filename}:[/red] {error}")
+    # Files processed (simplified - just show total)
+    console.print(f"Files Processed: [bold]{len(html_files)}[/bold] HTML file(s)")
 
     # Rules extracted
     console.print(f"Total Rules Extracted: [bold]{stats['total_rules']}[/bold]\n")
@@ -424,19 +236,16 @@ def run(
     # Output files
     console.print("\n[bold]Outputs:[/bold]")
     console.print(f"  📄 Ruleset: {output_yaml}")
-    if all_manual_review_items:
+    # Check if manual review file exists and has content
+    if manual_review_yaml.exists() and stats["manual_review"] > 0:
         console.print(
-            f"  ⚠️  Manual Review: {manual_review_yaml} "
-            f"({len(all_manual_review_items)} items)"
+            f"  ⚠️  Manual Review: {manual_review_yaml} ({stats['manual_review']} items)"
         )
     if transformation_report:
         console.print(f"  📄 Transformed JSONL: {output_jsonl}")
 
     # Final status
     final_exit_code = 0
-    if failed_files:
-        final_exit_code = 1
-
     if transformation_report and transformation_report.errors:
         final_exit_code = 1
 
@@ -448,6 +257,96 @@ def run(
         )
 
     raise typer.Exit(code=final_exit_code)
+
+
+def _run_extraction_pipeline(
+    html_files: list[Path],
+    output_yaml: Path,
+    manual_review_yaml: Path,
+    output_jsonl: Path | None,
+    verbose: bool = False,
+) -> tuple[dict, "TransformationReport | None"]:
+    """
+    Adapter for core extraction pipeline.
+
+    Calls the canonical orchestrator from src/qe_tax_rag/extraction/ca/orchestrator.py
+    and adapts its output to the legacy format expected by callers.
+
+    This function bridges the gap between the old script-level interface and the
+    new canonical orchestrator, ensuring backward compatibility.
+
+    Args:
+        html_files: List of HTML files to process
+        output_yaml: Path for main ruleset YAML
+        manual_review_yaml: Path for manual review YAML
+        output_jsonl: Path for JSONL output (enables auto-transform if set)
+        verbose: Enable debug logging
+
+    Returns:
+        Tuple of (stats dict, transformation report or None)
+        - stats: Flat dict with total_rules, perfect_matches, auto_corrected, manual_review
+        - report: TransformationReport if output_jsonl is set, None otherwise
+
+    Raises:
+        PipelineError: On extraction/parsing failures
+        CriticalTransformationError: On transformation failures
+
+    """
+    # Configure logging
+    if verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+
+    # Orchestrator expects a path (file or directory), not a list of files
+    # Use the parent directory of the first file
+    if not html_files:
+        logger.warning("No HTML files provided to extraction pipeline")
+        return {
+            "total_rules": 0,
+            "perfect_matches": 0,
+            "auto_corrected": 0,
+            "manual_review": 0,
+        }, None
+
+    input_dir = html_files[0].parent
+
+    # === Step 1: Call canonical orchestrator (HTML → YAML) ===
+    logger.info(
+        f"Calling canonical orchestrator for {len(html_files)} files in {input_dir}"
+    )
+    result = run_extraction(
+        input_path=input_dir,
+        output_yaml=output_yaml,
+        manual_review_yaml=manual_review_yaml,
+    )
+
+    # === Step 2: Adapt orchestrator output to legacy flat stats structure ===
+    # Orchestrator returns nested structure: {"total_rules": X, "stats": {...}}
+    # Legacy callers expect flat structure: {"total_rules": X, "perfect_matches": Y, ...}
+    stats = {
+        "total_rules": result["total_rules"],
+        **result[
+            "stats"
+        ],  # Unpack nested stats dict (perfect_matches, auto_corrected, manual_review)
+    }
+
+    logger.info(f"Extraction complete: {stats['total_rules']} rules extracted")
+
+    # === Step 3: Handle transformation (YAML → JSONL) ===
+    # The orchestrator doesn't do transformation, so we handle it separately
+    transformation_report = None
+    if output_jsonl is not None:
+        logger.info(f"Transforming YAML to JSONL: {output_yaml} → {output_jsonl}")
+        transformer = YAMLTransformer()
+        transformation_report = transformer.transform_yaml_to_jsonl(
+            yaml_path=output_yaml,
+            jsonl_path=output_jsonl,
+            continue_on_error=True,
+        )
+        logger.info(
+            f"Transformation complete: {transformation_report.successful}/{transformation_report.total_rules} rules"
+        )
+
+    return stats, transformation_report
 
 
 if __name__ == "__main__":

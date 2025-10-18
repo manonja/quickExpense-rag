@@ -164,3 +164,122 @@ def test_pipeline_command_fails_fast_on_error(
     # Should fail (exit code 1 or 2 for command not existing)
     # We're testing that it doesn't continue past errors
     assert result.exit_code != 0
+
+
+# ============================================================================
+# TICKET T3.3: Pipeline-Extraction Command Integration Tests
+# ============================================================================
+
+
+@pytest.fixture
+def minimal_html_for_extraction(tmp_path: Path) -> Path:
+    """Create minimal HTML files for extraction pipeline testing."""
+    html_dir = tmp_path / "html"
+    html_dir.mkdir()
+
+    # Create simple HTML file with line-number format expected by extractor
+    test_html = html_dir / "t4002-5.html"
+    test_html.write_text(
+        """
+        <html>
+        <body>
+        <h2>Line 8523</h2>
+        <p>Meals and entertainment expenses are 50% deductible.</p>
+        </body>
+        </html>
+        """,
+        encoding="utf-8",
+    )
+
+    return html_dir
+
+
+@pytest.mark.integration
+@pytest.mark.slow
+def test_pipeline_extraction_end_to_end(
+    minimal_html_for_extraction: Path, tmp_path: Path
+) -> None:
+    """Pipeline-extraction should run all 3 stages successfully."""
+    db_path = tmp_path / "test.db"
+
+    # Execute pipeline-extraction command
+    result = runner.invoke(
+        app,
+        [
+            "pipeline-extraction",
+            "--input-dir",
+            str(minimal_html_for_extraction),
+            "--output-db",
+            str(db_path),
+        ],
+    )
+
+    # Assert
+    assert result.exit_code == 0, f"Failed: {result.stderr}\n{result.stdout}"
+    assert "Stage 1/3" in result.stdout
+    assert "Stage 2/3" in result.stdout
+    assert "Stage 3/3" in result.stdout
+    assert "Pipeline complete" in result.stdout or "Pipeline Complete" in result.stdout
+    assert db_path.exists()
+
+    # Verify database has content
+    import sqlite3
+
+    conn = sqlite3.connect(db_path)
+    cursor = conn.execute("SELECT COUNT(*) FROM rules")
+    count = cursor.fetchone()[0]
+    assert count > 0, "Database should have rules"
+    conn.close()
+
+
+@pytest.mark.integration
+def test_pipeline_extraction_with_intermediate_dir(
+    minimal_html_for_extraction: Path, tmp_path: Path
+) -> None:
+    """Should use user-provided intermediate directory."""
+    intermediate_dir = tmp_path / "intermediate"
+    db_path = tmp_path / "test.db"
+
+    result = runner.invoke(
+        app,
+        [
+            "pipeline-extraction",
+            "--input-dir",
+            str(minimal_html_for_extraction),
+            "--output-db",
+            str(db_path),
+            "--intermediate-dir",
+            str(intermediate_dir),
+        ],
+    )
+
+    assert result.exit_code == 0, f"Failed: {result.stderr}\n{result.stdout}"
+    assert intermediate_dir.exists()
+    assert (intermediate_dir / "rules.yml").exists()
+    assert (intermediate_dir / "chunks.jsonl").exists()
+
+
+@pytest.mark.integration
+def test_pipeline_extraction_keeps_intermediate_on_success(
+    minimal_html_for_extraction: Path, tmp_path: Path
+) -> None:
+    """--keep-intermediate should preserve files after success."""
+    db_path = tmp_path / "test.db"
+
+    result = runner.invoke(
+        app,
+        [
+            "pipeline-extraction",
+            "--input-dir",
+            str(minimal_html_for_extraction),
+            "--output-db",
+            str(db_path),
+            "--keep-intermediate",
+        ],
+    )
+
+    assert result.exit_code == 0, f"Failed: {result.stderr}\n{result.stdout}"
+    # Should mention where intermediate files are kept
+    assert (
+        "Intermediate files at:" in result.stdout or "kept at:" in result.stdout
+    )

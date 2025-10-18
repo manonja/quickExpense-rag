@@ -21,6 +21,8 @@ from preprocessor.text_extractor import TextExtractor
 from qe_tax_rag.data.builder import IndexBuilder
 from qe_tax_rag.data.validator import IndexValidator
 from qe_tax_rag.embeddings.encoder import embedding_service
+from qe_tax_rag.extraction.ca.orchestrator import run_extraction
+from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
 from qe_tax_rag.search.models import SourceFile
 
 # Initialize Typer app and Rich console
@@ -768,6 +770,211 @@ def validate(
             "Please review the details above.[/bold red]"
         )
         raise typer.Exit(code=1)
+
+
+@app.command(name="pipeline-extraction")
+def pipeline_extraction(
+    input_dir: Path = typer.Option(  # noqa: B008
+        ...,
+        "--input-dir",
+        "-i",
+        help="Directory containing HTML files",
+        exists=True,
+        file_okay=False,
+        dir_okay=True,
+    ),
+    output_db: Path = typer.Option(  # noqa: B008
+        ...,
+        "--output-db",
+        "-o",
+        help="Output SQLite database path",
+    ),
+    intermediate_dir: Path | None = typer.Option(  # noqa: B008
+        None,
+        "--intermediate-dir",
+        help="Directory for intermediate files (YAML, JSONL). Default: temp dir",
+    ),
+    keep_intermediate: bool = typer.Option(
+        False,
+        "--keep-intermediate",
+        help="Keep intermediate YAML and JSONL files after completion",
+    ),
+) -> None:
+    r"""
+    Run complete extraction-to-database pipeline.
+
+    This command orchestrates:
+    1. Extract rules from HTML → YAML (canonical orchestrator)
+    2. Transform YAML → JSONL (transformer)
+    3. Build RAG database (IndexBuilder)
+    4. Validate database integrity
+
+    Example:
+        uv run python scripts/cli.py pipeline-extraction \
+          --input-dir cra_documents/cra_t4002e_rev24_dump/ \
+          --output-db data/cra_rules.db
+
+    """
+    import shutil
+    import tempfile
+
+    console.print("[bold blue]QE Tax RAG Extraction Pipeline[/bold blue]")
+    console.print(f"Input: {input_dir}")
+    console.print(f"Output DB: {output_db}\n")
+
+    # Setup intermediate directory
+    temp_dir_created = False
+    if intermediate_dir:
+        work_dir = intermediate_dir
+        work_dir.mkdir(parents=True, exist_ok=True)
+        console.print(f"Using intermediate directory: {work_dir}")
+    else:
+        temp_dir = tempfile.mkdtemp(prefix="qetax_extract_")
+        work_dir = Path(temp_dir)
+        temp_dir_created = True
+        console.print(f"Using temporary directory: {work_dir}")
+
+    # Define intermediate file paths
+    yml_path = work_dir / "rules.yml"
+    jsonl_path = work_dir / "chunks.jsonl"
+    manual_path = work_dir / "manual_review.yml"
+
+    pipeline_success = False
+    try:
+        # =====================================================================
+        # Stage 1/3: Extract and Transform
+        # =====================================================================
+        try:
+            console.print(
+                "\n[bold cyan]Stage 1/3: Extracting and transforming rules[/bold cyan]"
+            )
+
+            # Find HTML files
+            html_files = sorted(input_dir.glob("*.html"))
+            if not html_files:
+                console.print(f"[red]Error: No HTML files found in {input_dir}[/red]")
+                raise typer.Exit(code=1)
+
+            console.print(f"Found {len(html_files)} HTML files to process")
+
+            # Step 1a: Run extraction (HTML → YAML) via canonical orchestrator
+            logger.info("Calling canonical orchestrator for extraction")
+            extraction_result = run_extraction(
+                input_path=input_dir,
+                output_yaml=yml_path,
+                manual_review_yaml=manual_path,
+            )
+
+            console.print(
+                f"✅ Extracted {extraction_result['total_rules']} rules to YAML"
+            )
+
+            # Step 1b: Run transformation (YAML → JSONL)
+            logger.info("Transforming YAML to JSONL")
+            transformer = YAMLTransformer()
+            transformation_report = transformer.transform_yaml_to_jsonl(
+                yaml_path=yml_path,
+                jsonl_path=jsonl_path,
+                continue_on_error=True,
+            )
+
+            console.print(
+                f"✅ Transformed {transformation_report.successful}/{transformation_report.total_rules} rules to JSONL"
+            )
+
+        except Exception as e:
+            console.print(f"\n[red]❌ Stage 1/3 (Extraction) failed: {e}[/red]")
+            logger.exception("Stage 1 (Extraction) failed")
+            raise
+
+        # =====================================================================
+        # Stage 2/3: Build database
+        # =====================================================================
+        try:
+            console.print(
+                "\n[bold cyan]Stage 2/3: Building searchable database[/bold cyan]"
+            )
+
+            # Create manifest for extraction pipeline
+            manifest_path = work_dir / "manifest.json"
+            source_files = [
+                SourceFile(
+                    path=f.name,
+                    url=f"file://{f.absolute()}",
+                    hash="",  # Hash not critical for extraction pipeline
+                )
+                for f in html_files
+            ]
+
+            # Build index
+            output_db.parent.mkdir(parents=True, exist_ok=True)
+            builder = IndexBuilder(db_path=str(output_db), encoder=embedding_service)
+            builder.build_from_jsonl(
+                jsonl_path=str(jsonl_path),
+                manifest_path=str(manifest_path),
+                source_files=source_files,
+                data_version="2024.12",
+                continue_on_error=False,
+            )
+
+            console.print(f"✅ Database built: {output_db}")
+
+            # Show database size
+            db_size_mb = output_db.stat().st_size / (1024 * 1024)
+            console.print(f"   Database size: {db_size_mb:.2f} MB")
+
+        except Exception as e:
+            console.print(f"\n[red]❌ Stage 2/3 (Build) failed: {e}[/red]")
+            logger.exception("Stage 2 (Build) failed")
+            raise
+
+        # =====================================================================
+        # Stage 3/3: Validate database
+        # =====================================================================
+        try:
+            console.print("\n[bold cyan]Stage 3/3: Validating database[/bold cyan]")
+
+            validator = IndexValidator(db_path=output_db)
+            validation_report = validator.validate()
+
+            if validation_report["overall_passed"]:
+                console.print("✅ Validation passed")
+            else:
+                console.print("[yellow]⚠️  Some validation checks failed[/yellow]")
+
+        except Exception as e:
+            console.print(f"\n[red]❌ Stage 3/3 (Validation) failed: {e}[/red]")
+            logger.exception("Stage 3 (Validation) failed")
+            raise
+
+        pipeline_success = True
+
+    except typer.Exit:
+        # Re-raise typer.Exit to preserve exit code
+        raise
+
+    except Exception as e:
+        # Stage-specific error already logged, just exit gracefully
+        raise typer.Exit(code=1) from e
+
+    finally:
+        # Cleanup intermediate files if applicable
+        if temp_dir_created:
+            if not pipeline_success:
+                console.print(
+                    f"\n[yellow]⚠️  Pipeline failed. "
+                    f"Intermediate files kept for debugging:[/yellow]"
+                )
+                console.print(f"   {work_dir}")
+            elif not keep_intermediate:
+                console.print("\n🧹 Cleaning up intermediate files")
+                shutil.rmtree(work_dir, ignore_errors=True)
+            else:
+                console.print(f"\nIntermediate files kept at: {work_dir}")
+
+    # Success summary
+    console.print("\n[bold green]🎉 Pipeline complete![/bold green]")
+    console.print(f"✅ Database: {output_db}")
 
 
 if __name__ == "__main__":
