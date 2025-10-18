@@ -21,6 +21,8 @@ from preprocessor.text_extractor import TextExtractor
 from qe_tax_rag.data.builder import IndexBuilder
 from qe_tax_rag.data.validator import IndexValidator
 from qe_tax_rag.embeddings.encoder import embedding_service
+from qe_tax_rag.extraction.ca.orchestrator import run_extraction
+from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
 from qe_tax_rag.search.models import SourceFile
 
 # Initialize Typer app and Rich console
@@ -802,9 +804,10 @@ def pipeline_extraction(
     Run complete extraction-to-database pipeline.
 
     This command orchestrates:
-    1. Extract rules from HTML (extract-rules)
-    2. Transform YAML to JSONL (transformer)
+    1. Extract rules from HTML → YAML (canonical orchestrator)
+    2. Transform YAML → JSONL (transformer)
     3. Build RAG database (IndexBuilder)
+    4. Validate database integrity
 
     Example:
         uv run python scripts/cli.py pipeline-extraction \
@@ -814,10 +817,6 @@ def pipeline_extraction(
     """
     import shutil
     import tempfile
-
-    # Import extraction pipeline
-    sys.path.insert(0, str(Path(__file__).parent))
-    from extract_rules import _run_extraction_pipeline
 
     console.print("[bold blue]QE Tax RAG Extraction Pipeline[/bold blue]")
     console.print(f"Input: {input_dir}")
@@ -843,11 +842,11 @@ def pipeline_extraction(
     pipeline_success = False
     try:
         # =====================================================================
-        # Stage 1/3: Extract rules from HTML
+        # Stage 1/3: Extract and Transform
         # =====================================================================
         try:
             console.print(
-                "\n[bold cyan]Stage 1/3: Extracting rules from HTML[/bold cyan]"
+                "\n[bold cyan]Stage 1/3: Extracting and transforming rules[/bold cyan]"
             )
 
             # Find HTML files
@@ -858,24 +857,30 @@ def pipeline_extraction(
 
             console.print(f"Found {len(html_files)} HTML files to process")
 
-            # Run extraction pipeline
-            stats, report = _run_extraction_pipeline(
-                html_files=html_files,
+            # Step 1a: Run extraction (HTML → YAML) via canonical orchestrator
+            logger.info("Calling canonical orchestrator for extraction")
+            extraction_result = run_extraction(
+                input_path=input_dir,
                 output_yaml=yml_path,
                 manual_review_yaml=manual_path,
-                output_jsonl=jsonl_path,
-                verbose=False,
             )
 
-            if report:
-                console.print(
-                    f"✅ Extracted and transformed "
-                    f"{report.successful}/{report.total_rules} rules"
-                )
-            else:
-                console.print(
-                    f"✅ Extracted {stats['total_rules']} rules to {yml_path}"
-                )
+            console.print(
+                f"✅ Extracted {extraction_result['total_rules']} rules to YAML"
+            )
+
+            # Step 1b: Run transformation (YAML → JSONL)
+            logger.info("Transforming YAML to JSONL")
+            transformer = YAMLTransformer()
+            transformation_report = transformer.transform_yaml_to_jsonl(
+                yaml_path=yml_path,
+                jsonl_path=jsonl_path,
+                continue_on_error=True,
+            )
+
+            console.print(
+                f"✅ Transformed {transformation_report.successful}/{transformation_report.total_rules} rules to JSONL"
+            )
 
         except Exception as e:
             console.print(f"\n[red]❌ Stage 1/3 (Extraction) failed: {e}[/red]")
