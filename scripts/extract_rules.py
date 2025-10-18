@@ -409,6 +409,14 @@ def run(
     else:
         console.print("  [yellow]No rules extracted[/yellow]")
 
+    # Transformation breakdown
+    if transformation_report:
+        console.print("\n[bold]Transformation Breakdown:[/bold]")
+        console.print(f"  - Total Rules: {transformation_report.total_rules}")
+        console.print(f"  - [green]Successful:[/] {transformation_report.successful}")
+        console.print(f"  - [yellow]Skipped:[/]   {transformation_report.skipped}")
+        console.print(f"  - [red]Errors:[/]    {len(transformation_report.errors)}")
+
     # Output files
     console.print("\n[bold]Outputs:[/bold]")
     console.print(f"  📄 Ruleset: {output_yaml}")
@@ -417,16 +425,23 @@ def run(
             f"  ⚠️  Manual Review: {manual_review_yaml} "
             f"({len(all_manual_review_items)} items)"
         )
+    if transformation_report:
+        console.print(f"  📄 Transformed JSONL: {output_jsonl}")
 
     # Final status
+    final_exit_code = 0
     if failed_files:
-        console.print(
-            f"\n[yellow]⚠️  Pipeline completed with {len(failed_files)} errors[/yellow]"
-        )
-        raise typer.Exit(code=1)
-    else:
+        final_exit_code = 1
+
+    if transformation_report and transformation_report.errors:
+        final_exit_code = 1
+
+    if final_exit_code == 0:
         console.print("\n[green]✅ Pipeline completed successfully![/green]")
-        raise typer.Exit(code=0)
+    else:
+        console.print("\n[yellow]⚠️  Pipeline completed with warnings or errors.[/yellow]")
+
+    raise typer.Exit(code=final_exit_code)
 
 
 if __name__ == "__main__":
