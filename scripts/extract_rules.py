@@ -322,6 +322,49 @@ def run(
         raise typer.Exit(code=1) from e
 
     # -------------------------------------------------------------------------
+    # Phase 4.5: Auto-Transformation (Optional)
+    # -------------------------------------------------------------------------
+    transformation_report: TransformationReport | None = None
+    if auto_transform:
+        console.print("\n[cyan]Auto-transforming YAML to JSONL...[/cyan]")
+        if not output_jsonl:
+            typer.echo(
+                "❌ Error: --output-jsonl is required when using --auto-transform",
+                err=True,
+            )
+            raise typer.Exit(code=1)
+
+        try:
+            transformer = YAMLTransformer()
+            report = transformer.transform_yaml_to_jsonl(
+                yaml_path=output_yaml,
+                jsonl_path=output_jsonl,
+                continue_on_error=True,
+            )
+            transformation_report = report
+
+            console.print(f"[green]✓[/green] Transformation complete!")
+            console.print(f"  📄 JSONL written to: {output_jsonl}")
+            console.print(
+                f"  - Rules processed: {report.successful}/{report.total_rules}"
+            )
+            if report.errors:
+                console.print(
+                    f"  [yellow]⚠️[/yellow]  Encountered {len(report.errors)} skippable errors."
+                )
+
+        except CriticalTransformationError as e:
+            console.print(f"\n[red]❌ Error: Auto-transformation failed critically[/red]")
+            console.print(f"[red]   {e}[/red]")
+            raise typer.Exit(code=1) from e
+        except Exception as e:
+            console.print(
+                f"\n[red]❌ Error: Unexpected failure during auto-transformation[/red]"
+            )
+            console.print(f"[red]   {e}[/red]")
+            raise typer.Exit(code=1) from e
+
+    # -------------------------------------------------------------------------
     # Phase 5: Summary Report
     # -------------------------------------------------------------------------
     console.print("\n" + "━" * 60)
