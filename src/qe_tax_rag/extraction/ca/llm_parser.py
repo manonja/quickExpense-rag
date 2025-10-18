@@ -2,6 +2,7 @@
 
 import json
 import logging
+import random
 import time
 from pathlib import Path
 
@@ -102,8 +103,8 @@ def parse(html_path: str) -> list[ExtractedRule]:
         logger.debug(f"Token counting failed for {html_path}: {e}")
 
     # Call LLM with retry logic
-    retries = 3
-    backoff_factor = 2
+    retries = 4  # Increased from 3 for better recovery
+    backoff_factor = 5  # Increased from 2 for longer delays
     last_exception = None
 
     for attempt in range(retries):
@@ -126,10 +127,11 @@ def parse(html_path: str) -> list[ExtractedRule]:
                 logger.error(msg, exc_info=True)
                 raise ParserError(msg) from e
 
-            wait_time = backoff_factor**attempt
+            # Add jitter to prevent thundering herd
+            wait_time = (backoff_factor ** attempt) + random.uniform(0, 1)
             logger.warning(
                 f"API error for {html_path}, attempt {attempt + 1}/{retries}. "
-                f"Retrying in {wait_time} seconds... Error: {e}"
+                f"Retrying in {wait_time:.2f} seconds... Error: {e}"
             )
             time.sleep(wait_time)
     else:
