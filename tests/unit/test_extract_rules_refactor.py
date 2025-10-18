@@ -12,29 +12,24 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts"))
 
 @pytest.mark.unit
 @patch("extract_rules.YAMLTransformer")
-@patch("extract_rules.generate_yaml")
-@patch("extract_rules.adjudicate")
-@patch("extract_rules.llm_parse")
-@patch("extract_rules.classic_parse")
+@patch("qe_tax_rag.extraction.ca.orchestrator.run_extraction")
 def test_run_extraction_pipeline_returns_stats_and_report(
-    mock_classic_parse: MagicMock,
-    mock_llm_parse: MagicMock,
-    mock_adjudicate: MagicMock,
-    mock_generate_yaml: MagicMock,
+    mock_run_extraction: MagicMock,
     mock_transformer_class: MagicMock,
     tmp_path: Path,
 ) -> None:
-    """_run_extraction_pipeline should return (stats, report) tuple."""
+    """_run_extraction_pipeline should adapt orchestrator output and return (stats, report)."""
     from extract_rules import _run_extraction_pipeline
 
-    # Setup mocks
-    mock_classic_parse.return_value = []
-    mock_llm_parse.return_value = []
-    mock_adjudicate.return_value = (
-        [],  # resolved_rules
-        [],  # manual_items
-        {"total": 5, "perfect_matches": 3, "auto_corrected": 1, "manual_review": 1},
-    )
+    # Mock the return value of the canonical orchestrator (new nested structure)
+    mock_run_extraction.return_value = {
+        "total_files": 1,
+        "processed_files": 1,
+        "failed_files": [],
+        "total_rules": 5,
+        "stats": {"perfect_matches": 3, "auto_corrected": 1, "manual_review": 1},
+        "manual_review_count": 1,
+    }
 
     # Mock transformer
     mock_report = MagicMock()
@@ -72,7 +67,10 @@ def test_run_extraction_pipeline_returns_stats_and_report(
         verbose=False,
     )
 
-    # Assert
+    # Assert orchestrator was called (key new assertion)
+    mock_run_extraction.assert_called_once()
+
+    # Assert output structure (adapted from orchestrator)
     assert isinstance(stats, dict)
     assert "total_rules" in stats
     assert stats["total_rules"] == 5
@@ -80,37 +78,28 @@ def test_run_extraction_pipeline_returns_stats_and_report(
     assert report is not None  # Should have report since jsonl requested
     assert report.successful == 5
 
-    # Verify mocks were called
-    assert mock_classic_parse.called
-    assert mock_llm_parse.called
-    assert mock_adjudicate.called
-    assert mock_generate_yaml.called
+    # Verify transformer was called
     assert mock_transformer.transform_yaml_to_jsonl.called
 
 
 @pytest.mark.unit
-@patch("extract_rules.generate_yaml")
-@patch("extract_rules.adjudicate")
-@patch("extract_rules.llm_parse")
-@patch("extract_rules.classic_parse")
+@patch("qe_tax_rag.extraction.ca.orchestrator.run_extraction")
 def test_run_extraction_pipeline_without_transform(
-    mock_classic_parse: MagicMock,
-    mock_llm_parse: MagicMock,
-    mock_adjudicate: MagicMock,
-    mock_generate_yaml: MagicMock,
+    mock_run_extraction: MagicMock,
     tmp_path: Path,
 ) -> None:
     """Should work without transformation (output_jsonl=None)."""
     from extract_rules import _run_extraction_pipeline
 
-    # Setup mocks
-    mock_classic_parse.return_value = []
-    mock_llm_parse.return_value = []
-    mock_adjudicate.return_value = (
-        [],  # resolved_rules
-        [],  # manual_items
-        {"total": 3, "perfect_matches": 2, "auto_corrected": 1, "manual_review": 0},
-    )
+    # Mock the return value of the canonical orchestrator (new nested structure)
+    mock_run_extraction.return_value = {
+        "total_files": 1,
+        "processed_files": 1,
+        "failed_files": [],
+        "total_rules": 3,
+        "stats": {"perfect_matches": 2, "auto_corrected": 1, "manual_review": 0},
+        "manual_review_count": 0,
+    }
 
     # Setup test files
     html_dir = tmp_path / "html"
@@ -137,15 +126,12 @@ def test_run_extraction_pipeline_without_transform(
         verbose=False,
     )
 
-    # Assert
+    # Assert orchestrator was called
+    mock_run_extraction.assert_called_once()
+
+    # Assert output structure
     assert isinstance(stats, dict)
     assert "total_rules" in stats
     assert stats["total_rules"] == 3
     assert stats["perfect_matches"] == 2
     assert report is None  # Should be None when no transformation requested
-
-    # Verify mocks were called
-    assert mock_classic_parse.called
-    assert mock_llm_parse.called
-    assert mock_adjudicate.called
-    assert mock_generate_yaml.called
