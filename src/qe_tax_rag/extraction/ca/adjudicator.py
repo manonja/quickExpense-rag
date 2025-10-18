@@ -498,7 +498,30 @@ def _adjudicate_item_with_llm(
         return corrected_rule
 
     except Exception as e:
-        # Determine specific failure reason
+        # Import API-specific exceptions for fallback logic
+        from google.api_core import exceptions as google_exceptions
+
+        # Graceful degradation: Fall back to classic parser on API failures
+        # (Tier 2 fix: avoid manual review when we have deterministic classic results)
+        is_api_failure = isinstance(
+            e,
+            (
+                google_exceptions.ResourceExhausted,  # 429 quota
+                google_exceptions.ServiceUnavailable,  # 503
+                google_exceptions.InternalServerError,  # 500
+            ),
+        ) or "TimeoutError" in str(type(e))
+
+        # Only fall back if we have a classic parser result to trust
+        if is_api_failure and classic_rule:
+            logger.warning(
+                f"[Adjudicator] API failure for rule {rule_number} ({type(e).__name__}). "
+                f"Falling back to classic parser result (deterministic source of truth)."
+            )
+            # Return classic rule unchanged (already has correct metadata)
+            return classic_rule
+
+        # Determine specific failure reason for manual review
         failure_reason = _determine_failure_reason(e, locals())
 
         logger.error(
@@ -506,7 +529,7 @@ def _adjudicate_item_with_llm(
             exc_info=True,
         )
 
-        # Create ManualReviewItem
+        # Create ManualReviewItem (for non-API failures or LLM-only orphans)
         manual_item = ManualReviewItem(
             rule_number=rule_number,
             discrepancy_type=discrepancy_type,
