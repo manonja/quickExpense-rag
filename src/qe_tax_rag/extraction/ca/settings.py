@@ -19,8 +19,8 @@ class Settings(BaseSettings):
         default="",
         description="Gemini API key for HTML-to-YAML extraction (required for operation).",
     )
-    llm_model_name: str = "gemini-2.0-flash-exp"
-    adjudicator_model_name: str = "gemini-2.0-flash-exp"
+    llm_model_name: str = "gemini-1.5-flash"
+    adjudicator_model_name: str = "gemini-1.5-flash"
 
 
 # Singleton instance
