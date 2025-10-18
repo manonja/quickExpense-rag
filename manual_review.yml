@@ -1,0 +1,203 @@
+- rule_number: 9220
+  discrepancy_type: ORPHAN
+  failure_reason: 'Failed to parse LLM JSON response: Expecting value: line 1 column
+    1 (char 0)'
+  source_file: t4002-5.html
+  timestamp: '2025-10-18T22:31:38.081500+00:00'
+  classic_version: null
+  llm_version: null
+  orphan_version:
+    rule_number: 9220
+    title: Utilities
+    content: 'You can deduct expenses for telephone and utilities, such as gas, oil,
+      electricity, water and cable, if you incurred the expenses to earn income.
+
+
+      Do not deduct the basic monthly rate of your home telephone. However, you can
+      deduct any long distance telephone calls you made on your home telephone for
+      your business. If you have a separate telephone for business calls only, you
+      can deduct its basic monthly rate.
+
+
+      You can also deduct the percentage of air-time expenses for a cellphone you
+      use to earn your business income.
+
+
+      The expenses for utilities that are related to the business use of workspace
+      in your home have to be claimed online 9945inPart 5.'
+    applies_to:
+    - !!python/object/apply:qe_tax_rag.extraction.ca.schema.ApplicabilityType
+      - business
+    source_citation: Line 9220
+    chapter: 'Self-employed Business, Professional, Commission, Farming, and Fishing
+      Income: Chapter 3 – Expenses'
+    section: null
+    source_file: t4002-5.html
+  found_by: classic
+- rule_number: 8710
+  discrepancy_type: ORPHAN
+  failure_reason: 'Failed to parse LLM JSON response: Expecting value: line 1 column
+    1 (char 0)'
+  source_file: t4002-5.html
+  timestamp: '2025-10-18T22:31:43.076649+00:00'
+  classic_version: null
+  llm_version: null
+  orphan_version:
+    rule_number: 8710
+    title: Interest and bank charges
+    content: 'You can deduct interest on money borrowed for business purposes or to
+      acquire property for business purposes. This includes fishing businesses.
+
+
+      There are limits on:
+
+
+      The interest you can deduct on money you borrow to buy a passenger vehicle or
+      a zero-emission passengervehicle (ZEPV). For more information, seeLine 9281
+      –Motor vehicle expenses (not including CCA)The amount of interest you can deduct
+      for vacant land. Usually, you can only deduct interest up to the amount of income
+      from the land that remains after you deduct all other expenses. You cannot use
+      any remaining amounts of interest to create or increase a loss, and you cannot
+      deduct them from other sources of incomeThe interest you paid on any real estate
+      mortgage you had to earn fishing income. You can deduct the interest, but you
+      cannot deduct the principal part of loan or mortgage payments. Do not deduct
+      interest on money you borrowed for personal purposes or to pay overdue income
+      taxes
+
+
+      You can deduct the fee you pay to reduce the interest rate on your loan. You
+      can also deduct any penalty or bonus a financial institution charges you to
+      pay off your loan before it is due. Treat the fee, penalty or bonus as prepaid
+      interest and deduct it over the remaining original term of your loan.
+
+
+      For example, if the term of your loan isfive yearsand in the third year you
+      pay a fee to reduce your interest rate, treat this fee as a prepaid expense
+      and deduct it over the remaining term of the loan. For more information, seePrepaid
+      expenses.
+
+
+      You can deduct certain fees you incur when you get a loan to buy or improve
+      your business property. These fees include:
+
+
+      application, appraisal, processing and insurance feesloan guarantee feesloan
+      brokerage and finder''s feeslegal fees related to financing
+
+
+      You deduct these fees over a period offive years, regardless of the term of
+      your loan. Deduct 20% (100% divided byfive yearsequals 20%) in the current tax
+      year and 20% in each of the nextfour years. The 20% limit is reduced proportionally
+      for fiscal periods of less than12 months.
+
+
+      If you repay the loan before the end of the five-year period, you can deduct
+      the remaining financing fees then. The number of years for which you can deduct
+      these fees is not related to the term of your loan.
+
+
+      If you incur standby charges, guarantee fees, service fees or any other similar
+      fees, you may be able to deduct them in full in the year you incur them. For
+      more information, seeInterpretationBulletin IT-341, Expenses of Issuing or Selling
+      Shares, Units in a Trust, Interests in a Partnership or Syndicate and Expenses
+      of Borrowing Money.
+
+
+      You may be able to deduct interest expenses for a property you used for business
+      purposes, even if you have stopped using the property for business activities
+      because you are no longer in business. For more information, seeIncome TaxFolio
+      S3-F6-C1, Interest Deductibility, orcall1-800-959-5525.
+
+
+      You can deduct interest you paid on a loan made against an insurance policy,
+      as long as the insurer didn''t add the interest you paid to the adjusted cost
+      basis of the insurance policy. To claim the interest you paid for 2024, have
+      the insurer verify the interest beforeJune 16, 2025,onForm T2210, Verification
+      of Policy Loan Interest by the Insurer.
+
+
+      You can choose to capitalize interest on money you borrow for one of the following
+      reasons:
+
+
+      to buy depreciable propertyto buy a resource propertyfor exploration and development
+
+
+      When you choose to capitalize interest, add the interest to the cost of the
+      property or exploration and development costs instead of deducting the interest
+      as an expense.
+
+
+      The interest related to business use of workspace in your home is atline 9945.'
+    applies_to:
+    - !!python/object/apply:qe_tax_rag.extraction.ca.schema.ApplicabilityType
+      - business
+    - !!python/object/apply:qe_tax_rag.extraction.ca.schema.ApplicabilityType
+      - fishing
+    source_citation: Line 8710
+    chapter: 'Self-employed Business, Professional, Commission, Farming, and Fishing
+      Income: Chapter 3 – Expenses'
+    section: null
+    source_file: t4002-5.html
+  found_by: classic
+- rule_number: 9224
+  discrepancy_type: ORPHAN
+  failure_reason: 'Failed to parse LLM JSON response: Expecting value: line 1 column
+    1 (char 0)'
+  source_file: t4002-5.html
+  timestamp: '2025-10-18T22:31:46.358760+00:00'
+  classic_version: null
+  llm_version: null
+  orphan_version:
+    rule_number: 9224
+    title: Fuel costs (except for motor vehicles)
+    content: 'You can deduct the cost of fuel used in your business, as well as for
+      your fishing boat and equipment, (including gasoline, diesel and propane), motor
+      oil and lubricants. For more information about claiming the fuel used in your
+      motor vehicle, or if you used a car or truck for your fishing business, seeLine
+      9281 –Motor vehicle expenses (not including CCA).
+
+
+      The cost of fuel related to the business use of workspace in your home has to
+      be claimed onLine 9945 –Business-use-of-home expenses.'
+    applies_to:
+    - !!python/object/apply:qe_tax_rag.extraction.ca.schema.ApplicabilityType
+      - business
+    - !!python/object/apply:qe_tax_rag.extraction.ca.schema.ApplicabilityType
+      - fishing
+    source_citation: Line 9224
+    chapter: 'Self-employed Business, Professional, Commission, Farming, and Fishing
+      Income: Chapter 3 – Expenses'
+    section: null
+    source_file: t4002-5.html
+  found_by: classic
+- rule_number: 8590
+  discrepancy_type: ORPHAN
+  failure_reason: 'Failed to parse LLM JSON response: Expecting value: line 1 column
+    1 (char 0)'
+  source_file: t4002-5.html
+  timestamp: '2025-10-18T22:31:49.540124+00:00'
+  classic_version: null
+  llm_version: null
+  orphan_version:
+    rule_number: 8590
+    title: Bad debts
+    content: 'You can generally deduct an amount for a bad debt if you meet the following
+      conditions:
+
+
+      you had already included the account receivable in incomeyou had determined
+      that an account receivable is a bad debt in the year
+
+
+      For more information, seeInterpretationBulletin IT-442, Bad Debts and Reserves
+      for Doubtful Debts.'
+    applies_to:
+    - !!python/object/apply:qe_tax_rag.extraction.ca.schema.ApplicabilityType
+      - business
+    source_citation: Line 8590
+    chapter: 'Self-employed Business, Professional, Commission, Farming, and Fishing
+      Income: Chapter 3 – Expenses'
+    section: null
+    source_file: t4002-5.html
+  found_by: classic

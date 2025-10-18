@@ -10,6 +10,7 @@ import google.generativeai as genai
 from bs4 import BeautifulSoup
 from google.api_core import exceptions as google_exceptions
 
+from qe_tax_rag.extraction.ca.cache import LLMResponseCache
 from qe_tax_rag.extraction.ca.exceptions import ParserError
 from qe_tax_rag.extraction.ca.schema import (
     ApplicabilityType,
@@ -40,7 +41,7 @@ Respond with a single JSON object containing a "rules" key, which holds a list o
 """
 
 
-def parse(html_path: str) -> list[ExtractedRule]:
+def parse(html_path: str, cache_dir: str | Path | None = None) -> list[ExtractedRule]:
     """
     Parse HTML file using text-based LLM to extract line-numbered expense rules.
 
@@ -53,6 +54,7 @@ def parse(html_path: str) -> list[ExtractedRule]:
 
     Args:
         html_path: Absolute path to the local HTML file.
+        cache_dir: Directory to cache LLM responses. If None, caching is disabled.
 
     Returns:
         List of ExtractedRule objects with expert_source set to LLM.
@@ -63,6 +65,9 @@ def parse(html_path: str) -> list[ExtractedRule]:
         ParserError: If file cannot be read or API call fails permanently.
 
     """
+    # Initialize cache if a directory is provided
+    cache = LLMResponseCache(cache_dir) if cache_dir else None
+
     # Read HTML file
     try:
         html_content = Path(html_path).read_text(encoding="utf-8")
@@ -85,64 +90,88 @@ def parse(html_path: str) -> list[ExtractedRule]:
     else:
         main_content_text = main_tag.get_text()
 
-    # Configure Gemini
-    genai.configure(api_key=settings.gemini_api_key)  # type: ignore[attr-defined]
-    model = genai.GenerativeModel(settings.llm_model_name)  # type: ignore[attr-defined]
+    # Check cache first
+    response_text = None
+    if cache:
+        response_text = cache.get(
+            prompt=EXTRACTION_PROMPT,
+            model_name=settings.llm_model_name,
+            content=main_content_text,
+        )
 
-    # Token safety check
-    try:
-        token_count = model.count_tokens(main_content_text)
-        if token_count.total_tokens > 1_000_000:
-            logger.warning(
-                f"Content of {html_path} exceeds token limit: "
-                f"{token_count.total_tokens} tokens (max: 1M). "
-                "Extraction may fail or be incomplete."
-            )
-    except Exception as e:
-        # Don't fail on token counting errors - it's a safety check
-        logger.debug(f"Token counting failed for {html_path}: {e}")
-
-    # Call LLM with retry logic
-    retries = 4  # Increased from 3 for better recovery
-    backoff_factor = 5  # Increased from 2 for longer delays
-    last_exception = None
-
-    for attempt in range(retries):
-        try:
-            response = model.generate_content(
-                [EXTRACTION_PROMPT, main_content_text],
-                generation_config=genai.types.GenerationConfig(
-                    response_mime_type="application/json"
-                ),
-            )
-            break  # Success - exit retry loop
-        except (
-            google_exceptions.ResourceExhausted,  # 429
-            google_exceptions.ServiceUnavailable,  # 503
-            google_exceptions.InternalServerError,  # 500
-        ) as e:
-            last_exception = e
-            if attempt + 1 == retries:
-                msg = f"API call failed permanently for {html_path} after {retries} attempts"
-                logger.error(msg, exc_info=True)
-                raise ParserError(msg) from e
-
-            # Add jitter to prevent thundering herd
-            wait_time = (backoff_factor ** attempt) + random.uniform(0, 1)
-            logger.warning(
-                f"API error for {html_path}, attempt {attempt + 1}/{retries}. "
-                f"Retrying in {wait_time:.2f} seconds... Error: {e}"
-            )
-            time.sleep(wait_time)
+    if response_text:
+        logger.info(f"Cache HIT for {html_path}. Skipping API call.")
     else:
-        # If we exhausted retries without success
-        msg = f"API call failed for {html_path}"
-        logger.error(msg, exc_info=True)
-        raise ParserError(msg) from last_exception
+        logger.info(f"Cache MISS for {html_path}. Calling Gemini API.")
+
+        # Configure Gemini
+        genai.configure(api_key=settings.gemini_api_key)  # type: ignore[attr-defined]
+        model = genai.GenerativeModel(settings.llm_model_name)  # type: ignore[attr-defined]
+
+        # Token safety check
+        try:
+            token_count = model.count_tokens(main_content_text)
+            if token_count.total_tokens > 1_000_000:
+                logger.warning(
+                    f"Content of {html_path} exceeds token limit: "
+                    f"{token_count.total_tokens} tokens (max: 1M). "
+                    "Extraction may fail or be incomplete."
+                )
+        except Exception as e:
+            # Don't fail on token counting errors - it's a safety check
+            logger.debug(f"Token counting failed for {html_path}: {e}")
+
+        # Call LLM with retry logic
+        retries = 4  # Increased from 3 for better recovery
+        backoff_factor = 5  # Increased from 2 for longer delays
+        last_exception = None
+
+        for attempt in range(retries):
+            try:
+                response = model.generate_content(
+                    [EXTRACTION_PROMPT, main_content_text],
+                    generation_config=genai.types.GenerationConfig(
+                        response_mime_type="application/json"
+                    ),
+                )
+                response_text = response.text
+                break  # Success - exit retry loop
+            except (
+                google_exceptions.ResourceExhausted,  # 429
+                google_exceptions.ServiceUnavailable,  # 503
+                google_exceptions.InternalServerError,  # 500
+            ) as e:
+                last_exception = e
+                if attempt + 1 == retries:
+                    msg = f"API call failed permanently for {html_path} after {retries} attempts"
+                    logger.error(msg, exc_info=True)
+                    raise ParserError(msg) from e
+
+                # Add jitter to prevent thundering herd
+                wait_time = (backoff_factor ** attempt) + random.uniform(0, 1)
+                logger.warning(
+                    f"API error for {html_path}, attempt {attempt + 1}/{retries}. "
+                    f"Retrying in {wait_time:.2f} seconds... Error: {e}"
+                )
+                time.sleep(wait_time)
+        else:
+            # If we exhausted retries without success
+            msg = f"API call failed for {html_path}"
+            logger.error(msg, exc_info=True)
+            raise ParserError(msg) from last_exception
+
+        # Store the successful response in the cache
+        if cache and response_text:
+            cache.set(
+                prompt=EXTRACTION_PROMPT,
+                model_name=settings.llm_model_name,
+                content=main_content_text,
+                response_text=response_text,
+            )
 
     # Parse JSON response
     try:
-        data = json.loads(response.text)
+        data = json.loads(response_text or "{}")
         rules_data = data.get("rules", [])
     except json.JSONDecodeError as e:
         msg = f"Failed to parse JSON response for {html_path} (malformed/truncated JSON)"

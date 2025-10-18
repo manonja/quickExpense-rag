@@ -19,8 +19,14 @@ class Settings(BaseSettings):
         default="",
         description="Gemini API key for HTML-to-YAML extraction (required for operation).",
     )
-    llm_model_name: str = "gemini-1.5-flash"
-    adjudicator_model_name: str = "gemini-1.5-flash"
+    llm_model_name: str = "gemini-2.0-flash-exp"
+    adjudicator_model_name: str = "gemini-2.0-flash-exp"
+
+    # Caching Configuration
+    cache_dir: str | None = Field(
+        default=None,
+        description="Directory to store cached LLM responses. If not set, caching is disabled.",
+    )
 
 
 # Singleton instance

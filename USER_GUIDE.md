@@ -184,17 +184,15 @@ For debugging or inspection:
 
 ```bash
 # Stage 1: Extract HTML → YAML
-uv run extract-rules run \
+uv run extract-rules extract \
   cra_documents/cra_t4002e_rev24_dump/ \
   output/rules.yml \
   --manual-review-file output/manual_review.yml
 
 # Stage 2: Transform YAML → JSONL
-uv run extract-rules run \
-  cra_documents/cra_t4002e_rev24_dump/ \
+uv run extract-rules transform \
   output/rules.yml \
-  --auto-transform \
-  --output-jsonl output/chunks.jsonl
+  output/chunks.jsonl
 
 # Stage 3: Build database from JSONL
 uv run python scripts/cli.py build \

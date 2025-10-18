@@ -25,6 +25,7 @@ def run_extraction(
     output_yaml: Path,
     manual_review_yaml: Path,
     dry_run: bool = False,
+    cache_dir: Path | None = None,
 ) -> dict[str, Any]:
     """
     Execute the HTML-to-YAML extraction pipeline.
@@ -34,6 +35,7 @@ def run_extraction(
         output_yaml: Path for output YAML file
         manual_review_yaml: Path for manual review YAML file
         dry_run: If True, skip YAML file generation
+        cache_dir: Optional directory for caching LLM responses
 
     Returns:
         Dictionary with keys:
@@ -75,7 +77,7 @@ def run_extraction(
 
             # Parse with both parsers
             classic_rules = classic_parse(str(html_file))
-            llm_rules = llm_parse(str(html_file))
+            llm_rules = llm_parse(str(html_file), cache_dir=cache_dir)
 
             # Adjudicate
             resolved_rules, manual_items, file_stats = adjudicate(

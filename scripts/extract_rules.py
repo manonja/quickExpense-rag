@@ -95,6 +95,14 @@ def run(
             resolve_path=True,
         ),
     ] = None,
+    cache_dir: Annotated[
+        Path | None,
+        typer.Option(
+            "--cache-dir",
+            help="Directory to cache LLM responses (improves performance and reduces API costs).",
+            resolve_path=True,
+        ),
+    ] = None,
 ) -> None:
     """
     Extract structured rules from CRA HTML documents into YAML format.
@@ -187,6 +195,7 @@ def run(
         manual_review_yaml=manual_review_yaml,
         output_jsonl=output_jsonl if auto_transform else None,
         verbose=verbose,
+        cache_dir=cache_dir,
     )
 
     # -------------------------------------------------------------------------
@@ -265,6 +274,7 @@ def _run_extraction_pipeline(
     manual_review_yaml: Path,
     output_jsonl: Path | None,
     verbose: bool = False,
+    cache_dir: Path | None = None,
 ) -> tuple[dict, "TransformationReport | None"]:
     """
     Adapter for core extraction pipeline.
@@ -317,6 +327,7 @@ def _run_extraction_pipeline(
         input_path=input_dir,
         output_yaml=output_yaml,
         manual_review_yaml=manual_review_yaml,
+        cache_dir=cache_dir,
     )
 
     # === Step 2: Adapt orchestrator output to legacy flat stats structure ===
