@@ -256,6 +256,13 @@ class YAMLTransformer:
             CriticalTransformationError: If validation fails
 
         """
+        # Check schema version
+        if rule_set.schema_version != "1.0":
+            raise CriticalTransformationError(
+                f"Unsupported schema version: '{rule_set.schema_version}'. "
+                f"This transformer requires version '1.0'."
+            )
+
         # Check for duplicate rule_numbers
         rule_numbers = [r.rule_number for r in rule_set.rules]
         duplicates = [n for n in set(rule_numbers) if rule_numbers.count(n) > 1]
@@ -438,6 +445,13 @@ class YAMLTransformer:
 
         # Build hierarchical sections
         sections = self._build_sections(rules)
+
+        # Validate sections are not empty (graceful degradation)
+        if not sections:
+            raise SkippableTransformationError(
+                f"No sections generated for source_file '{source_file}'. "
+                f"Document may have structural issues."
+            )
 
         # Aggregate metadata across all rules
         metadata = self._aggregate_metadata(rules)

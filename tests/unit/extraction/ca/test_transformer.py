@@ -747,14 +747,67 @@ def test_transform_rules_to_document_title_generation() -> None:
 
     transformer = YAMLTransformer()
 
+    # Minimal rule for title generation testing
+    minimal_rule = ExtractedRule(
+        rule_number=1,
+        title="Test",
+        content="Test content",
+        applies_to=[ApplicabilityType.BUSINESS],
+        source_citation="Line 1",
+        chapter="Chapter 1",
+        section=None,
+        source_file="test.html",
+        expert_source=ExpertSource.CLASSIC,
+        confidence_score=1.0,
+    )
+
     # Test various source file formats
-    doc1 = transformer._transform_rules_to_document("t4002-5.html", [])
+    doc1 = transformer._transform_rules_to_document("t4002-5.html", [minimal_rule])
     assert doc1.document_id == "t4002-5"
     assert doc1.title == "CRA T4002 - PART 5"
 
-    doc2 = transformer._transform_rules_to_document("t4002-10.html", [])
+    doc2 = transformer._transform_rules_to_document("t4002-10.html", [minimal_rule])
     assert doc2.document_id == "t4002-10"
     assert doc2.title == "CRA T4002 - PART 10"
+
+
+def test_transform_rules_to_document_empty_sections_raises_skippable_error() -> None:
+    """Empty sections should raise SkippableTransformationError."""
+    from qe_tax_rag.extraction.ca.transformer import (
+        SkippableTransformationError,
+        YAMLTransformer,
+    )
+
+    # Create a scenario where _build_sections returns empty list
+    # This can happen if rules are filtered out or malformed
+    transformer = YAMLTransformer()
+
+    # Mock _build_sections to return empty list
+    original_build_sections = transformer._build_sections
+    transformer._build_sections = lambda rules: []
+
+    rules = [
+        ExtractedRule(
+            rule_number=8523,
+            title="Rule",
+            content="Content",
+            applies_to=[ApplicabilityType.BUSINESS],
+            source_citation="Line 8523",
+            chapter="Chapter 3",
+            section=None,
+            source_file="t4002-5.html",
+            expert_source=ExpertSource.CLASSIC,
+            confidence_score=1.0,
+        ),
+    ]
+
+    with pytest.raises(
+        SkippableTransformationError, match="No sections generated"
+    ):
+        transformer._transform_rules_to_document("t4002-5.html", rules)
+
+    # Restore original method
+    transformer._build_sections = original_build_sections
 
 
 # ============================================================================
@@ -996,6 +1049,68 @@ def test_validate_yaml_input_valid() -> None:
     transformer._validate_yaml_input(rule_set)
 
 
+def test_validate_yaml_input_unsupported_schema_version() -> None:
+    """Should raise error on unsupported schema version."""
+    from qe_tax_rag.extraction.ca.transformer import (
+        CriticalTransformationError,
+        YAMLTransformer,
+    )
+
+    rule_set = RuleSet(
+        schema_version="2.0",  # Unsupported version
+        extraction_timestamp="2025-01-01T00:00:00Z",
+        rules=[
+            ExtractedRule(
+                rule_number=8523,
+                title="Rule 1",
+                content="...",
+                applies_to=[ApplicabilityType.BUSINESS],
+                source_citation="Line 8523",
+                chapter="Chapter 3",
+                section=None,
+                source_file="t4002-5.html",
+                expert_source=ExpertSource.CLASSIC,
+                confidence_score=1.0,
+            ),
+        ],
+    )
+
+    transformer = YAMLTransformer()
+
+    with pytest.raises(
+        CriticalTransformationError, match="Unsupported schema version"
+    ):
+        transformer._validate_yaml_input(rule_set)
+
+
+def test_validate_yaml_input_supported_schema_version() -> None:
+    """Should accept schema version 1.0."""
+    from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
+
+    rule_set = RuleSet(
+        schema_version="1.0",  # Supported version
+        extraction_timestamp="2025-01-01T00:00:00Z",
+        rules=[
+            ExtractedRule(
+                rule_number=8523,
+                title="Rule 1",
+                content="...",
+                applies_to=[ApplicabilityType.BUSINESS],
+                source_citation="Line 8523",
+                chapter="Chapter 3",
+                section=None,
+                source_file="t4002-5.html",
+                expert_source=ExpertSource.CLASSIC,
+                confidence_score=1.0,
+            ),
+        ],
+    )
+
+    transformer = YAMLTransformer()
+    # Should not raise
+    transformer._validate_yaml_input(rule_set)
+
+
 # ============================================================================
 # TESTS: Output Validation
 # ============================================================================
@@ -1201,3 +1316,173 @@ def test_transform_yaml_to_jsonl_with_errors(tmp_path) -> None:
             jsonl_path=jsonl_path,
             continue_on_error=True,
         )
+
+
+def test_continue_on_error_flag(tmp_path) -> None:
+    """continue_on_error should allow skipping failed documents."""
+    import yaml
+    from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
+
+    # Create YAML with two source files
+    # One valid, one that will trigger SkippableTransformationError
+    yaml_content = {
+        "schema_version": "1.0",
+        "extraction_timestamp": "2025-01-01T00:00:00Z",
+        "rules": [
+            # Valid document
+            {
+                "rule_number": 8523,
+                "title": "Valid Rule",
+                "content": "This is a valid rule.",
+                "applies_to": ["business"],
+                "source_citation": "Line 8523",
+                "chapter": "Chapter 1",
+                "section": None,
+                "source_file": "valid_doc.html",
+                "expert_source": "classic",
+                "confidence_score": 1.0,
+            },
+            # Document that will fail (different source_file)
+            {
+                "rule_number": 9999,
+                "title": "Rule to be skipped",
+                "content": "This rule's document will fail.",
+                "applies_to": ["business"],
+                "source_citation": "Line 9999",
+                "chapter": "Chapter 1",
+                "section": None,
+                "source_file": "skippable_doc.html",
+                "expert_source": "classic",
+                "confidence_score": 1.0,
+            },
+        ],
+    }
+
+    yaml_path = tmp_path / "rules.yml"
+    with open(yaml_path, "w") as f:
+        yaml.dump(yaml_content, f)
+
+    jsonl_path = tmp_path / "chunks.jsonl"
+    transformer = YAMLTransformer()
+
+    # Mock _build_sections to return empty list for skippable_doc.html
+    original_build_sections = transformer._build_sections
+
+    def mock_build_sections(rules):
+        if any(r.rule_number == 9999 for r in rules):
+            return []  # This will trigger SkippableTransformationError
+        return original_build_sections(rules)
+
+    transformer._build_sections = mock_build_sections
+
+    # Test with continue_on_error=True (default)
+    report = transformer.transform_yaml_to_jsonl(
+        yaml_path=yaml_path,
+        jsonl_path=jsonl_path,
+        continue_on_error=True,
+    )
+
+    # Verify report counts
+    assert report.total_rules == 2
+    assert report.successful == 1  # valid_doc.html succeeded
+    assert report.skipped == 1  # skippable_doc.html was skipped
+    assert len(report.errors) == 1
+    assert "No sections generated" in report.errors[0]["error"]
+    assert report.errors[0]["source_file"] == "skippable_doc.html"
+    assert report.errors[0]["severity"] == "skippable"
+
+    # Verify output contains only the successful document
+    assert jsonl_path.exists()
+    with open(jsonl_path) as f:
+        lines = f.readlines()
+        assert len(lines) == 1
+        doc = json.loads(lines[0])
+        assert doc["document_id"] == "valid_doc"
+
+    # Restore original method
+    transformer._build_sections = original_build_sections
+
+
+def test_continue_on_error_false_raises_on_skippable(tmp_path) -> None:
+    """continue_on_error=False should raise on SkippableTransformationError."""
+    import yaml
+    from qe_tax_rag.extraction.ca.transformer import (
+        SkippableTransformationError,
+        YAMLTransformer,
+    )
+
+    yaml_content = {
+        "schema_version": "1.0",
+        "extraction_timestamp": "2025-01-01T00:00:00Z",
+        "rules": [
+            {
+                "rule_number": 9999,
+                "title": "Rule",
+                "content": "Content",
+                "applies_to": ["business"],
+                "source_citation": "Line 9999",
+                "chapter": "Chapter 1",
+                "section": None,
+                "source_file": "skippable_doc.html",
+                "expert_source": "classic",
+                "confidence_score": 1.0,
+            },
+        ],
+    }
+
+    yaml_path = tmp_path / "rules.yml"
+    with open(yaml_path, "w") as f:
+        yaml.dump(yaml_content, f)
+
+    jsonl_path = tmp_path / "chunks.jsonl"
+    transformer = YAMLTransformer()
+
+    # Mock to trigger error
+    transformer._build_sections = lambda rules: []
+
+    # Should raise when continue_on_error=False
+    with pytest.raises(SkippableTransformationError):
+        transformer.transform_yaml_to_jsonl(
+            yaml_path=yaml_path,
+            jsonl_path=jsonl_path,
+            continue_on_error=False,
+        )
+
+
+def test_transform_yaml_to_jsonl_empty_rules_list(tmp_path) -> None:
+    """Empty rules list should produce empty JSONL gracefully."""
+    import yaml
+    from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
+
+    # Create YAML with no rules
+    yaml_content = {
+        "schema_version": "1.0",
+        "extraction_timestamp": "2025-01-01T00:00:00Z",
+        "rules": [],  # Empty rules list
+    }
+
+    yaml_path = tmp_path / "empty_rules.yml"
+    with open(yaml_path, "w") as f:
+        yaml.dump(yaml_content, f)
+
+    jsonl_path = tmp_path / "empty_chunks.jsonl"
+
+    # Transform
+    transformer = YAMLTransformer()
+    report = transformer.transform_yaml_to_jsonl(
+        yaml_path=yaml_path,
+        jsonl_path=jsonl_path,
+        continue_on_error=True,
+    )
+
+    # Verify report
+    assert report.total_rules == 0
+    assert report.successful == 0
+    assert report.skipped == 0
+    assert len(report.errors) == 0
+
+    # Verify JSONL is empty
+    assert jsonl_path.exists()
+    with open(jsonl_path) as f:
+        lines = f.readlines()
+        assert len(lines) == 0
