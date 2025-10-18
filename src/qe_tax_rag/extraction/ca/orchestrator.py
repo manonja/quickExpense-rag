@@ -58,11 +58,15 @@ def run_extraction(
     # Step 2: Pre-flight checks (create output directories)
     _preflight_checks(output_yaml, manual_review_yaml)
 
-    # Step 3: Process files
+    # Step 3: Process files with circuit breaker pattern
     all_resolved_rules: list[ExtractedRule] = []
     all_manual_review_items: list[ManualReviewItem] = []
     failed_files: list[tuple[str, str]] = []
     stats = {"perfect_matches": 0, "auto_corrected": 0, "manual_review": 0}
+
+    # Circuit breaker: halt after N consecutive parser failures
+    consecutive_parser_failures = 0
+    CIRCUIT_BREAKER_THRESHOLD = 3
 
     for html_file in html_files:
         try:
@@ -90,6 +94,9 @@ def run_extraction(
             stats["auto_corrected"] += file_stats["auto_corrected"]
             stats["manual_review"] += file_stats["manual_review"]
 
+            # Reset circuit breaker on success
+            consecutive_parser_failures = 0
+
             logger.info(
                 f"Processed {html_file.name}: {len(resolved_rules)} rules extracted"
             )
@@ -99,11 +106,30 @@ def run_extraction(
             error_msg = f"{type(e).__name__}: {e}"
             failed_files.append((html_file.name, error_msg))
             logger.error(f"Failed to process {html_file.name}: {error_msg}")
+
+            # Circuit breaker: increment counter for parser failures
+            from qe_tax_rag.extraction.ca.exceptions import ParserError
+            if isinstance(e, ParserError):
+                consecutive_parser_failures += 1
+                logger.warning(
+                    f"[Circuit Breaker] Parser failure {consecutive_parser_failures}/{CIRCUIT_BREAKER_THRESHOLD} "
+                    f"for {html_file.name}"
+                )
+
+                if consecutive_parser_failures >= CIRCUIT_BREAKER_THRESHOLD:
+                    logger.error(
+                        f"[Circuit Breaker] OPENED: {consecutive_parser_failures} consecutive parser failures. "
+                        f"Halting processing to avoid wasting time on sustained API quota exhaustion. "
+                        f"Remaining files: {len(html_files) - html_files.index(html_file) - 1}"
+                    )
+                    break  # Exit the for loop
+
         except Exception as e:
-            # Unexpected errors
+            # Unexpected errors (not pipeline-related)
             error_msg = f"Unexpected error: {type(e).__name__}: {e}"
             failed_files.append((html_file.name, error_msg))
             logger.exception(f"Unexpected error processing {html_file.name}")
+            # Note: Unexpected errors do NOT increment circuit breaker
 
     # Step 4: Generate YAML files (unless dry run)
     if not dry_run:
