@@ -18,11 +18,9 @@ import typer
 from rich.console import Console
 from rich.progress import track
 
-# Add scripts directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent))
 # Add src directory to path for imports
+# NOTE: sys.path needed because src/ is not in standard Python path for scripts
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
 
 # Import canonical orchestrator and transformer from src package
 from qe_tax_rag.extraction.ca.orchestrator import run_extraction
@@ -31,23 +29,6 @@ from qe_tax_rag.extraction.ca.transformer import (
     TransformationReport,
     YAMLTransformer,
 )
-
-# Legacy imports - kept for backward compatibility of run() command
-# These are not used by _run_extraction_pipeline() anymore
-try:
-    from qe_tax_rag.extraction.ca.adjudicator import adjudicate
-    from qe_tax_rag.extraction.ca.classic_parser import parse as classic_parse
-    from qe_tax_rag.extraction.ca.exceptions import PipelineError
-    from qe_tax_rag.extraction.ca.llm_parser import parse as llm_parse
-    from qe_tax_rag.extraction.ca.yaml_generator import generate as generate_yaml
-except ImportError as e:
-    # Graceful degradation for development
-    print(f"Warning: Pipeline modules not yet implemented: {e}", file=sys.stderr)
-    classic_parse = None  # type: ignore
-    llm_parse = None  # type: ignore
-    adjudicate = None  # type: ignore
-    generate_yaml = None  # type: ignore
-    PipelineError = Exception  # type: ignore
 
 # Initialize Typer app and Rich console
 app = typer.Typer(
@@ -146,14 +127,6 @@ def run(
     console.print("\n[bold blue]CRA Rule Extraction Pipeline[/bold blue]")
     console.print(f"Input: {input_path}")
     console.print(f"Output: {output_yaml}\n")
-
-    # Check if pipeline modules are available
-    if classic_parse is None or YAMLTransformer is None:
-        console.print(
-            "[red]Error: Pipeline modules not implemented yet.[/red]\n"
-            "Please implement TICKETS 1-5 and T2.1-2.3 first."
-        )
-        raise typer.Exit(code=1)
 
     # -------------------------------------------------------------------------
     # Phase 1: Input Resolution
