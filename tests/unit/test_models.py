@@ -634,3 +634,31 @@ class TestSourceFile:
         assert len(sources) == 2
         assert sources[0].path == "/file1.txt"
         assert sources[1].hash == "hash2"
+
+    def test_source_file_accepts_https_urls(self) -> None:
+        """SourceFile should accept HTTPS URLs (Gemini pipeline)."""
+        source_file = SourceFile(
+            path="t4002-5.html",
+            url="https://www.canada.ca/en/revenue-agency/services/forms-publications/guide-t4002.html",
+            hash="abc123",
+        )
+        assert str(source_file.url).startswith("https://")
+
+    def test_source_file_accepts_file_urls(self) -> None:
+        """SourceFile should accept file:// URLs (extraction pipeline)."""
+        # This test will FAIL with current HttpUrl implementation
+        source_file = SourceFile(
+            path="t4002-5.html",
+            url="file:///Users/manonjacquin/Documents_local/POCs/quickExpense-rag/cra_documents/t4002-5.html",
+            hash="abc123",
+        )
+        assert str(source_file.url).startswith("file://")
+
+    def test_source_file_rejects_invalid_urls(self) -> None:
+        """SourceFile should reject malformed URLs."""
+        with pytest.raises(ValidationError, match="URL"):
+            SourceFile(
+                path="test.html",
+                url="not-a-valid-url",
+                hash="abc123",
+            )

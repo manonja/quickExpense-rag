@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Tuple
 
 from pydantic import (
+    AnyUrl,
     BaseModel,
     ConfigDict,
     Field,
@@ -98,7 +99,7 @@ class SourceFile(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     path: str
-    url: HttpUrl
+    url: AnyUrl
     hash: str
 
 
