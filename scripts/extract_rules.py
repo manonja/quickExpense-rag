@@ -20,6 +20,9 @@ from rich.progress import track
 
 # Add scripts directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
+# Add src directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
 
 # Import pipeline modules (from TICKETS 1-5)
 # These will be implemented in previous tickets
@@ -29,6 +32,11 @@ try:
     from parser.exceptions import PipelineError
     from parser.generate_yaml import generate as generate_yaml
     from parser.llm_parser import parse as llm_parse
+    from qe_tax_rag.extraction.ca.transformer import (
+        CriticalTransformationError,
+        TransformationReport,
+        YAMLTransformer,
+    )
 except ImportError as e:
     # Graceful degradation for development
     print(f"Warning: Pipeline modules not yet implemented: {e}", file=sys.stderr)
@@ -37,6 +45,9 @@ except ImportError as e:
     adjudicate = None  # type: ignore
     generate_yaml = None  # type: ignore
     PipelineError = Exception  # type: ignore
+    YAMLTransformer = None  # type: ignore
+    CriticalTransformationError = Exception  # type: ignore
+    TransformationReport = None  # type: ignore
 
 # Initialize Typer app and Rich console
 app = typer.Typer(
@@ -90,6 +101,21 @@ def run(
             help="Enable verbose logging for debugging",
         ),
     ] = False,
+    auto_transform: Annotated[
+        bool,
+        typer.Option(
+            "--auto-transform",
+            help="Automatically transform YAML to JSONL after extraction.",
+        ),
+    ] = False,
+    output_jsonl: Annotated[
+        Path | None,
+        typer.Option(
+            "--output-jsonl",
+            help="JSONL output path (required if --auto-transform is set).",
+            resolve_path=True,
+        ),
+    ] = None,
 ) -> None:
     """
     Extract structured rules from CRA HTML documents into YAML format.
@@ -107,6 +133,8 @@ def run(
         # With custom manual review file
         uv run extract-rules input/ output.yml --manual-review-file review.yml
 
+        # Extract and auto-transform to JSONL
+        uv run extract-rules input/ rules.yml --auto-transform --output-jsonl chunks.jsonl
     """
     # Enable verbose logging if requested
     if verbose:
@@ -119,15 +147,10 @@ def run(
     console.print(f"Output: {output_yaml}\n")
 
     # Check if pipeline modules are available
-    if classic_parse is None:
+    if classic_parse is None or YAMLTransformer is None:
         console.print(
             "[red]Error: Pipeline modules not implemented yet.[/red]\n"
-            "Please implement TICKETS 1-5 first:\n"
-            "  - TICKET 1: Schema definitions\n"
-            "  - TICKET 2: Classic HTML parser\n"
-            "  - TICKET 3: LLM parser\n"
-            "  - TICKET 4: Adjudicator\n"
-            "  - TICKET 5: YAML generator"
+            "Please implement TICKETS 1-5 and T2.1-2.3 first."
         )
         raise typer.Exit(code=1)
 
@@ -157,6 +180,8 @@ def run(
     try:
         output_yaml.parent.mkdir(parents=True, exist_ok=True)
         manual_review_yaml.parent.mkdir(parents=True, exist_ok=True)
+        if output_jsonl:
+            output_jsonl.parent.mkdir(parents=True, exist_ok=True)
     except PermissionError as e:
         console.print(
             f"[red]Error: Cannot create output directory: {e}[/red]\n"
