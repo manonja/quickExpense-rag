@@ -27,16 +27,17 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 # Import pipeline modules (from TICKETS 1-5)
 # These will be implemented in previous tickets
 try:
-    from parser.adjudicator import adjudicate
-    from parser.classic_parser import parse as classic_parse
-    from parser.exceptions import PipelineError
-    from parser.generate_yaml import generate as generate_yaml
-    from parser.llm_parser import parse as llm_parse
     from qe_tax_rag.extraction.ca.transformer import (
         CriticalTransformationError,
         TransformationReport,
         YAMLTransformer,
     )
+
+    from parser.adjudicator import adjudicate
+    from parser.classic_parser import parse as classic_parse
+    from parser.exceptions import PipelineError
+    from parser.generate_yaml import generate as generate_yaml
+    from parser.llm_parser import parse as llm_parse
 except ImportError as e:
     # Graceful degradation for development
     print(f"Warning: Pipeline modules not yet implemented: {e}", file=sys.stderr)
@@ -135,6 +136,7 @@ def run(
 
         # Extract and auto-transform to JSONL
         uv run extract-rules input/ rules.yml --auto-transform --output-jsonl chunks.jsonl
+
     """
     # Enable verbose logging if requested
     if verbose:
@@ -354,7 +356,9 @@ def run(
                 )
 
         except CriticalTransformationError as e:
-            console.print(f"\n[red]❌ Error: Auto-transformation failed critically[/red]")
+            console.print(
+                f"\n[red]❌ Error: Auto-transformation failed critically[/red]"
+            )
             console.print(f"[red]   {e}[/red]")
             raise typer.Exit(code=1) from e
         except Exception as e:
@@ -439,7 +443,9 @@ def run(
     if final_exit_code == 0:
         console.print("\n[green]✅ Pipeline completed successfully![/green]")
     else:
-        console.print("\n[yellow]⚠️  Pipeline completed with warnings or errors.[/yellow]")
+        console.print(
+            "\n[yellow]⚠️  Pipeline completed with warnings or errors.[/yellow]"
+        )
 
     raise typer.Exit(code=final_exit_code)
 

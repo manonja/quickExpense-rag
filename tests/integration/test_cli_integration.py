@@ -127,4 +127,6 @@ def test_auto_transform_without_output_jsonl_fails(
     ), "Error message not found in stderr."
 
     # Assert that the YAML file was still created before the failure
-    assert yml_path.exists(), "YAML file should have been created before the transform step."
+    assert (
+        yml_path.exists()
+    ), "YAML file should have been created before the transform step."
