@@ -798,7 +798,7 @@ def pipeline_extraction(
         help="Keep intermediate YAML and JSONL files after completion",
     ),
 ) -> None:
-    """
+    r"""
     Run complete extraction-to-database pipeline.
 
     This command orchestrates:
@@ -807,8 +807,8 @@ def pipeline_extraction(
     3. Build RAG database (IndexBuilder)
 
     Example:
-        uv run python scripts/cli.py pipeline-extraction \\
-          --input-dir cra_documents/cra_t4002e_rev24_dump/ \\
+        uv run python scripts/cli.py pipeline-extraction \
+          --input-dir cra_documents/cra_t4002e_rev24_dump/ \
           --output-db data/cra_rules.db
 
     """
@@ -845,77 +845,102 @@ def pipeline_extraction(
         # =====================================================================
         # Stage 1/3: Extract rules from HTML
         # =====================================================================
-        console.print("\n[bold cyan]Stage 1/3: Extracting rules from HTML[/bold cyan]")
-
-        # Find HTML files
-        html_files = sorted(input_dir.glob("*.html"))
-        if not html_files:
-            console.print(f"[red]Error: No HTML files found in {input_dir}[/red]")
-            raise typer.Exit(code=1)
-
-        console.print(f"Found {len(html_files)} HTML files to process")
-
-        # Run extraction pipeline
-        stats, report = _run_extraction_pipeline(
-            html_files=html_files,
-            output_yaml=yml_path,
-            manual_review_yaml=manual_path,
-            output_jsonl=jsonl_path,
-            verbose=False,
-        )
-
-        if report:
+        try:
             console.print(
-                f"✅ Extracted and transformed {report.successful}/{report.total_rules} rules"
+                "\n[bold cyan]Stage 1/3: Extracting rules from HTML[/bold cyan]"
             )
-        else:
-            console.print(f"✅ Extracted {stats['total_rules']} rules to {yml_path}")
+
+            # Find HTML files
+            html_files = sorted(input_dir.glob("*.html"))
+            if not html_files:
+                console.print(f"[red]Error: No HTML files found in {input_dir}[/red]")
+                raise typer.Exit(code=1)
+
+            console.print(f"Found {len(html_files)} HTML files to process")
+
+            # Run extraction pipeline
+            stats, report = _run_extraction_pipeline(
+                html_files=html_files,
+                output_yaml=yml_path,
+                manual_review_yaml=manual_path,
+                output_jsonl=jsonl_path,
+                verbose=False,
+            )
+
+            if report:
+                console.print(
+                    f"✅ Extracted and transformed "
+                    f"{report.successful}/{report.total_rules} rules"
+                )
+            else:
+                console.print(
+                    f"✅ Extracted {stats['total_rules']} rules to {yml_path}"
+                )
+
+        except Exception as e:
+            console.print(f"\n[red]❌ Stage 1/3 (Extraction) failed: {e}[/red]")
+            logger.exception("Stage 1 (Extraction) failed")
+            raise
 
         # =====================================================================
         # Stage 2/3: Build database
         # =====================================================================
-        console.print("\n[bold cyan]Stage 2/3: Building searchable database[/bold cyan]")
-
-        # Create manifest for extraction pipeline
-        manifest_path = work_dir / "manifest.json"
-        source_files = [
-            SourceFile(
-                path=f.name,
-                url=f"file://{f.absolute()}",
-                hash="",  # Hash not critical for extraction pipeline
+        try:
+            console.print(
+                "\n[bold cyan]Stage 2/3: Building searchable database[/bold cyan]"
             )
-            for f in html_files
-        ]
 
-        # Build index
-        output_db.parent.mkdir(parents=True, exist_ok=True)
-        builder = IndexBuilder(db_path=str(output_db), encoder=embedding_service)
-        builder.build_from_jsonl(
-            jsonl_path=str(jsonl_path),
-            manifest_path=str(manifest_path),
-            source_files=source_files,
-            data_version="2024.12",
-            continue_on_error=False,
-        )
+            # Create manifest for extraction pipeline
+            manifest_path = work_dir / "manifest.json"
+            source_files = [
+                SourceFile(
+                    path=f.name,
+                    url=f"file://{f.absolute()}",
+                    hash="",  # Hash not critical for extraction pipeline
+                )
+                for f in html_files
+            ]
 
-        console.print(f"✅ Database built: {output_db}")
+            # Build index
+            output_db.parent.mkdir(parents=True, exist_ok=True)
+            builder = IndexBuilder(db_path=str(output_db), encoder=embedding_service)
+            builder.build_from_jsonl(
+                jsonl_path=str(jsonl_path),
+                manifest_path=str(manifest_path),
+                source_files=source_files,
+                data_version="2024.12",
+                continue_on_error=False,
+            )
 
-        # Show database size
-        db_size_mb = output_db.stat().st_size / (1024 * 1024)
-        console.print(f"   Database size: {db_size_mb:.2f} MB")
+            console.print(f"✅ Database built: {output_db}")
+
+            # Show database size
+            db_size_mb = output_db.stat().st_size / (1024 * 1024)
+            console.print(f"   Database size: {db_size_mb:.2f} MB")
+
+        except Exception as e:
+            console.print(f"\n[red]❌ Stage 2/3 (Build) failed: {e}[/red]")
+            logger.exception("Stage 2 (Build) failed")
+            raise
 
         # =====================================================================
         # Stage 3/3: Validate database
         # =====================================================================
-        console.print("\n[bold cyan]Stage 3/3: Validating database[/bold cyan]")
+        try:
+            console.print("\n[bold cyan]Stage 3/3: Validating database[/bold cyan]")
 
-        validator = IndexValidator(db_path=output_db)
-        validation_report = validator.validate()
+            validator = IndexValidator(db_path=output_db)
+            validation_report = validator.validate()
 
-        if validation_report["overall_passed"]:
-            console.print("✅ Validation passed")
-        else:
-            console.print("[yellow]⚠️  Some validation checks failed[/yellow]")
+            if validation_report["overall_passed"]:
+                console.print("✅ Validation passed")
+            else:
+                console.print("[yellow]⚠️  Some validation checks failed[/yellow]")
+
+        except Exception as e:
+            console.print(f"\n[red]❌ Stage 3/3 (Validation) failed: {e}[/red]")
+            logger.exception("Stage 3 (Validation) failed")
+            raise
 
         pipeline_success = True
 
@@ -924,8 +949,7 @@ def pipeline_extraction(
         raise
 
     except Exception as e:
-        console.print(f"\n[red]❌ Pipeline failed: {e}[/red]")
-        logger.exception("Extraction pipeline failed")
+        # Stage-specific error already logged, just exit gracefully
         raise typer.Exit(code=1) from e
 
     finally:
