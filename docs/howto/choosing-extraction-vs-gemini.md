@@ -12,7 +12,9 @@
 
 ## Pipeline Comparison
 
-### Extraction Pipeline (Recommended for Production)
+### Extraction Pipeline (✅ Primary & Recommended)
+
+**Status**: Production-ready, fully integrated
 
 **Architecture**: Classic Parser → LLM Parser → Adjudicator → Transformer → Database
 
@@ -23,29 +25,33 @@
 - ✅ Precise LINE-{number} citations (e.g., "LINE-8523")
 - ✅ ~247 focused chunks per document (T4002)
 - ✅ Extraction provenance tracking (classic/llm/adjudicated)
+- ✅ Faster build times (~3-5 minutes vs ~10 minutes)
 
 **Limitations**:
 
 - ⚠️ Less narrative context than Gemini
-- ⚠️ Keyword-based expense classification (not ML)
+- ⚠️ Keyword-based expense classification (not ML - future enhancement)
 
 **Best For**:
 
-- Production systems with uptime requirements
-- Line-item specific queries
+- **All production use cases** (primary recommendation)
+- Line-item specific queries ("Line 8523")
+- Systems requiring high precision
 - Systems needing audit trails (extraction source tracking)
 - Environments without Gemini API access
 
 ---
 
-### Gemini Pipeline (Original)
+### Gemini Pipeline (⚠️ Legacy Alternative)
+
+**Status**: Functional but deprecated for most use cases
 
 **Architecture**: HTML → Gemini LLM → JSONL → Database
 
 **Strengths**:
 
 - ✅ Rich narrative content and context
-- ✅ Better for conceptual queries
+- ✅ Better for highly conceptual queries
 - ✅ ~1000 chunks per document (T4002)
 - ✅ Natural language explanations
 
@@ -55,13 +61,13 @@
 - ⚠️ Broader, less precise chunks
 - ⚠️ No extraction provenance metadata
 - ⚠️ API rate limits and costs
+- ⚠️ Slower build times
 
 **Best For**:
 
-- Exploratory research
-- Conceptual understanding
-- Maximum coverage/recall scenarios
-- Development/prototyping
+- Search quality comparison benchmarking
+- Legacy systems already using Gemini pipeline
+- Specific use cases requiring maximum narrative context
 
 ---
 
@@ -140,23 +146,27 @@ See existing CLAUDE.md section for Gemini usage (requires `GEMINI_API_KEY`).
 
 ## Recommendation
 
-**For most production use cases, use the Extraction Pipeline**:
+**✅ Use the Extraction Pipeline for all new development and production systems:**
 
 - More reliable (no API dependency)
-- Better metadata for filtering
-- Faster build times
+- Better structured metadata for filtering
+- Faster build times (~3-5 min vs ~10 min)
 - Lower costs (no API fees)
+- Production-ready and fully integrated
 
-**Use Gemini Pipeline when**:
+**⚠️ Consider Gemini Pipeline only when:**
 
-- You need maximum conceptual coverage
-- You have Gemini API access and quota
-- Your queries are primarily exploratory/conceptual
+- Comparing search quality for benchmarking
+- You need maximum narrative context for exploratory research
+- You have existing systems dependent on the Gemini pipeline
+
+**Default Choice**: When in doubt, use `pipeline-extraction`.
 
 ---
 
 ## Questions?
 
+- See `USER_GUIDE.md` for quick start testing guide
+- See `RAG_SYSTEM_STATUS_AND_TESTING.md` for system status and architecture
 - See `CLAUDE.md` for detailed extraction pipeline documentation
-- See `TRANSFORMER_IMPLEMENTATION_PLAN.md` for technical architecture
 - File issues at GitHub if you encounter problems
