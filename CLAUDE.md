@@ -466,6 +466,70 @@ The extraction workflow uses a **Mixture-of-Experts** approach with dual parsers
 1. **Builder**: Generates embeddings and builds SQLite database with FTS5 + vector search
 1. **Validator**: Smoke tests to verify database integrity
 
+### Transformer Pipeline (YAML to JSONL)
+
+The transformer bridges the extraction pipeline (TICKETS 1-6) with the RAG database.
+
+#### What It Does
+
+- Converts ExtractedRule (YAML) to ParsedDocument (JSONL)
+- Maps `rule_number` to `LINE-{number}` citation format
+- Infers expense types from content (keyword-based classifier)
+- Preserves extraction metadata (source, confidence, anchor)
+- Groups rules hierarchically by chapter and section
+
+#### Usage Options
+
+**Option 1: Manual transformation**
+
+```bash
+uv run extract-rules transform output/rules.yml data/chunks.jsonl
+```
+
+**Option 2: Auto-transform with extraction**
+
+```bash
+uv run extract-rules run HTML_DIR output/rules.yml \
+  --auto-transform --output-jsonl data/chunks.jsonl
+```
+
+**Option 3: Full pipeline (recommended)**
+
+```bash
+uv run python scripts/cli.py pipeline-extraction \
+  --input-dir HTML_DIR --output-db data/cra_rules.db
+```
+
+#### Schema Compatibility
+
+- **Citation ID**: Accepts both `S#-F#-C#-p#` (legacy) and `LINE-{number}` (extraction) formats
+- **Metadata**: Added `income_type` field (business, farming, fishing)
+- **TextChunk**: Added extraction provenance fields:
+  - `extraction_source`: Parser that generated the rule (classic, llm, adjudicated)
+  - `extraction_confidence`: Confidence score from extraction pipeline (0.0-1.0)
+  - `source_anchor`: HTML anchor ID for debugging and traceability
+
+#### Error Handling
+
+The transformer uses fail-fast error handling:
+
+- **CriticalTransformationError**: Fatal errors (invalid YAML, duplicate rule_numbers, schema version mismatch) → Stops immediately
+- **SkippableTransformationError**: Non-fatal warnings (empty sections, optional field issues) → Logs warning, continues with `--continue-on-error`
+
+Error reports include:
+
+- Timestamp and file paths
+- Success/skipped/error counts
+- Detailed error messages with actionable suggestions
+
+#### Expense Type Classification
+
+The transformer uses a simple keyword-based classifier (good enough for MVP):
+
+- **Supported types**: meals, travel, vehicle, home_office, advertising, supplies, professional_fees, utilities, insurance, capital, maintenance, salaries, office_equipment, interest, bad_debts
+- **Fallback**: Rules without keyword matches default to "general"
+- **Future enhancement**: Can be replaced with ML classifier if needed
+
 ### Usage Options
 
 **Option 1: Full automated pipeline** (recommended)

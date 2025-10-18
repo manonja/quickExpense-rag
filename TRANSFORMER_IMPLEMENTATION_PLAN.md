@@ -1,29 +1,33 @@
 # YAML-to-JSONL Transformer: Implementation Plan
 
-**Date**: 2025-10-17 **Status**: Ready for Implementation **Based on**:
-TRANSFORMER_DESIGN_PLAN.md (Zen MCP Planner Analysis)
+**Date**: 2025-10-17 (Updated: 2025-10-18) **Status**: Phases 1-3 ✅ COMPLETE, Phases 4-5 IN PROGRESS **Based on**:
+TRANSFORMER_DESIGN_PLAN.md (Zen MCP Planner Analysis) + Zen MCP Review (2025-10-18)
 
 ______________________________________________________________________
 
 ## 🚀 Executive Summary
 
 This implementation plan breaks down the YAML-to-JSONL transformer into **13 MECE
-tickets** across **5 phases**. The transformer is the critical missing piece that
-connects the extraction pipeline (TICKETS 1-6) with the RAG database.
+tickets** across **5 phases** (scoped for 80/20 and YAGNI principles).
+
+**Current Status**: Phases 1-3 complete, ~6-8 hours remaining for scoped Phases 4-5
 
 ### Key Deliverables
 
-- **Phase 1**: Schema compatibility (3 tickets)
-- **Phase 2**: Core transformer (3 tickets)
-- **Phase 3**: CLI integration (3 tickets)
-- **Phase 4**: Testing & validation (3 tickets)
-- **Phase 5**: Documentation & rollout (1 ticket)
+- **Phase 1**: Schema compatibility (3 tickets) - ✅ **COMPLETE**
+- **Phase 2**: Core transformer (3 tickets) - ✅ **COMPLETE**
+- **Phase 3**: CLI integration (3 tickets) - ✅ **COMPLETE**
+- **Phase 4**: Testing & validation (2 tickets + 1 deferred) - 🔄 **IN PROGRESS**
+  - T4.1: Unit tests (~85% coverage on critical logic)
+  - T4.2: Integration tests (3 already passing ✅) + performance baseline
+  - T4.3: Search quality tests - ⏸️ **DEFERRED** (post-launch)
+- **Phase 5**: Documentation (MVD approach) - 🔄 **IN PROGRESS**
 
-### Timeline Estimate
+### Timeline Estimate (Updated for 80/20 Scope)
 
-- **Solo Developer**: 5-7 days (1-1.5 weeks)
-- **2-Person Team**: 3-4 days (parallel work on Phase 2 & 3)
-- **Critical Path**: T1 → T2 → T3 → T4 → T5
+- **Original Estimate**: 5-7 days (1-1.5 weeks)
+- **Actual with Scoping**: ~4 days
+- **Remaining Work**: ~6-8 hours (1 day) for Phases 4-5
 
 ______________________________________________________________________
 
@@ -1748,20 +1752,28 @@ One-command end-to-end workflow **Complexity**: Medium (orchestration logic)
 
 ______________________________________________________________________
 
-## PHASE 4: Testing & Validation
+## PHASE 4: Testing & Validation (Scoped for 80/20)
 
-**Goal**: Comprehensive testing to ensure transformer works correctly and maintains
-search quality.
+**Goal**: Essential testing to ensure transformer correctness and production readiness.
+
+**Status**: ✅ Phases 1-3 COMPLETE
+**Updated**: 2025-10-18 (Based on Zen MCP Analysis)
+
+**Philosophy**: Focus on critical logic testing (~85% coverage) rather than vanity
+metrics (≥95%). Defer search quality analysis to post-launch.
 
 ______________________________________________________________________
 
-## TICKET T4.1: Unit Tests
+## TICKET T4.1: Essential Unit Tests (~85% Coverage)
 
-**Scope**: Comprehensive unit test coverage for all transformer components
+**Scope**: Focus unit tests on critical transformation logic, not trivial code
+
+**Rationale**: Chasing 95% coverage leads to testing getters/setters with diminishing
+returns. Target 85-90% on **critical logic** only.
 
 ### Acceptance Criteria
 
-- [ ] **Test Coverage**: ≥95% for transformer module
+- [ ] **Test Coverage**: ~85% for transformer module (focus on critical logic)
 
   ```bash
   uv run pytest tests/unit/test_transformer.py --cov=src/qe_tax_rag/extraction/ca/transformer --cov-report=term --cov-report=html
@@ -1769,8 +1781,13 @@ ______________________________________________________________________
 
 - [ ] **Test File**: `tests/unit/test_transformer.py` (comprehensive suite)
 
-  - Already covered in T2.1, T2.2, T2.3
-  - Add additional edge case tests:
+  - Core tests already covered in T2.1, T2.2, T2.3
+  - Add edge case tests focusing on critical logic
+
+**TDD Approach**:
+- Write failing test → GREEN → Refactor
+- Commit after each passing test milestone
+- Focus on transformation logic, error handling, and metadata aggregation
 
   ```python
   def test_empty_rules_list() -> None:
@@ -1938,9 +1955,16 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-## TICKET T4.2: Integration Tests
+## TICKET T4.2: Integration Tests (Already Passing ✅)
 
 **Scope**: End-to-end integration tests with real YAML → JSONL → Database flow
+
+**Status**: ✅ **3 integration tests already passing** in `tests/integration/test_cli_pipeline.py`:
+- `test_pipeline_extraction_end_to_end` (lines 199-233)
+- `test_pipeline_extraction_with_intermediate_dir` (lines 236-260)
+- `test_pipeline_extraction_keeps_intermediate_on_success` (lines 263-286)
+
+**New Addition**: Add 1 slow performance baseline test
 
 ### Acceptance Criteria
 
@@ -2155,23 +2179,76 @@ ______________________________________________________________________
       assert len(results) > 0
   ```
 
+- [ ] **Performance Baseline Test** (NEW - addresses Zen recommendation):
+
+  ```python
+  @pytest.mark.integration
+  @pytest.mark.slow
+  def test_full_document_set_performance_baseline(tmp_path: Path) -> None:
+      """Establish performance baseline with full document set to detect regressions."""
+      # Use realistic full T4002 document set (~247 rules)
+      html_dir = Path("cra_documents/cra_t4002e_rev24_dump/")
+      db_path = tmp_path / "baseline.db"
+
+      import time
+      start = time.time()
+
+      result = subprocess.run(
+          [
+              "uv", "run", "python", "scripts/cli.py", "pipeline-extraction",
+              "--input-dir", str(html_dir),
+              "--output-db", str(db_path)
+          ],
+          capture_output=True,
+          text=True,
+          timeout=600  # 10 min timeout
+      )
+
+      elapsed = time.time() - start
+
+      assert result.returncode == 0, f"Pipeline failed: {result.stderr}"
+      assert db_path.exists()
+
+      # Record baseline for future regression detection
+      print(f"\n⏱️  Performance Baseline: {elapsed:.2f}s for full T4002 extraction")
+
+      # Verify database quality
+      conn = sqlite3.connect(db_path)
+      rule_count = conn.execute("SELECT COUNT(*) FROM rules").fetchone()[0]
+      assert rule_count > 200, f"Expected >200 rules, got {rule_count}"
+      conn.close()
+  ```
+
 - [ ] **Verification Commands**:
 
   ```bash
-  uv run pytest tests/integration/test_extraction_pipeline.py -v -m integration
+  # Run fast integration tests
   uv run pytest tests/integration/test_extraction_pipeline.py -v -m "integration and not slow"
+
+  # Run all integration tests including performance baseline
+  uv run pytest tests/integration/test_extraction_pipeline.py -v -m integration
   ```
 
 **Dependency**: T2.1, T2.2, T2.3, T3.1, T3.3 **Enables**: Confidence in end-to-end
-workflow **Complexity**: High (full integration testing)
+workflow + regression detection **Complexity**: High (full integration testing)
 
 ______________________________________________________________________
 
-## TICKET T4.3: Search Quality Tests
+## TICKET T4.3: Search Quality Tests (DEFERRED - Post-Launch)
 
 **Scope**: Measure search quality impact of extraction pipeline vs Gemini pipeline
 
-### Acceptance Criteria
+**Status**: ⏸️  **DEFERRED** per Zen MCP analysis
+
+**Rationale (YAGNI)**:
+- Transformer's job is **valid database structure**, not search quality analysis
+- Search quality depends on downstream RAG system, not transformer correctness
+- Testing 50 queries with MRR/precision/recall is analysis work, not production blocker
+- **Recommendation**: Defer to post-launch as optional monitoring/improvement task
+
+**If/When Implemented** (post-launch only):
+
+### Acceptance Criteria (Optional Future Work)
 
 - [ ] **Test File**: `tests/integration/test_search_quality.py`
 
@@ -2362,11 +2439,19 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-## TICKET T5.1: Documentation & Examples
+## TICKET T5.1: Documentation & Examples (MVD Approach)
 
-**Scope**: Update documentation and create examples for transformer usage
+**Scope**: Minimal Viable Documentation - Update CLAUDE.md + create pipeline guide
 
-### Acceptance Criteria
+**Rationale**: Follow 80/20 principle - focus on essential docs that unblock usage
+
+**MVD Approach**:
+- ✅ Update CLAUDE.md extraction pipeline section (already exists, needs transformer update)
+- ✅ Create "Choosing a Pipeline" guide (high-value decision doc)
+- ⏸️  DEFER: Full tutorial (users can reference CLAUDE.md)
+- ⏸️  DEFER: Programmatic examples (transformer.py docstrings suffice)
+
+### Acceptance Criteria (Scoped for MVD)
 
 - [ ] **Update CLAUDE.md**: Add transformer section
 
@@ -2412,202 +2497,61 @@ ______________________________________________________________________
 
   ```
 
-- [ ] **Create Tutorial**: `docs/tutorials/using-extraction-pipeline.md`
+- [ ] **Create "Choosing a Pipeline" Guide**: `docs/howto/choosing-extraction-vs-gemini.md`
 
   ````markdown
-  # Tutorial: Using the Extraction Pipeline
+  # How-To: Choosing Between Extraction and Gemini Pipelines
 
-  This tutorial shows how to extract CRA rules and build a searchable database
-  using the extraction pipeline (TICKETS 1-6 + Transformer).
+  ## Quick Decision Matrix
 
-  ## Prerequisites
-  - HTML files downloaded to `cra_documents/`
-  - Python 3.11+
-  - uv installed
+  | Use Case | Pipeline | Why |
+  |----------|----------|-----|
+  | Line-item queries ("Line 8523") | **Extraction** | Higher precision, metadata-rich |
+  | Conceptual queries ("What is deductible?") | **Gemini** | More context, explanatory |
+  | No API key available | **Extraction** | No runtime API dependency |
+  | Need income_type metadata | **Extraction** | Structured metadata included |
 
-  ## Step 1: Extract Rules
-  ```bash
-  uv run extract-rules run cra_documents/cra_t4002e_rev24_dump/ output/rules.yml
-  ````
+  ## Pipeline Comparison
 
-  This runs the MoE extraction pipeline:
-
-  - Classic parser extracts rules via HTML patterns
-  - LLM parser extracts rules via semantic understanding
-  - Adjudicator resolves conflicts with grounding
-
-  Output: `output/rules.yml` with ExtractedRule objects
-
-  ## Step 2: Inspect YAML (Optional)
-
-  ```bash
-  cat output/rules.yml | head -50
-  vim output/rules.yml  # Make manual corrections if needed
-  ```
-
-  ## Step 3: Transform to JSONL
-
-  ```bash
-  uv run extract-rules transform output/rules.yml data/chunks.jsonl
-  ```
-
-  This converts YAML to JSONL:
-
-  - Groups rules by source file
-  - Creates hierarchical sections (chapter → section)
-  - Infers expense types from content
-  - Generates LINE-{number} citations
-
-  ## Step 4: Build Database
-
-  ```bash
-  uv run python scripts/cli.py build \
-    --input-file data/chunks.jsonl \
-    --output-db data/cra_rules.db
-  ```
-
-  ## Step 5: Search
-
-  ```python
-  import qe_tax_rag as qe
-  qe.init(db_path="data/cra_rules.db")
-  results = qe.search("meals", top_k=5)
-
-  for result in results:
-      print(f"{result.citation_id}: {result.content[:100]}...")
-  ```
-
-  ## All-in-One Command
-
-  ```bash
-  uv run python scripts/cli.py pipeline-extraction \
-    --input-dir cra_documents/cra_t4002e_rev24_dump/ \
-    --output-db data/cra_rules.db
-  ```
-
-  ```
-
-  ```
-
-- [ ] **Create Migration Guide**: `docs/migration/extraction-vs-gemini.md`
-
-  ````markdown
-  # Migration Guide: Gemini vs Extraction Pipeline
-
-  ## When to Use Each Pipeline
+  ### Extraction Pipeline (Recommended for Production)
+  - ✅ No API key needed (after initial extraction)
+  - ✅ Structured metadata (income types, confidence scores)
+  - ✅ Precise LINE-{number} citations
+  - ✅ ~247 focused chunks (T4002)
+  - ⚠️  Less narrative context
 
   ### Gemini Pipeline (Original)
-  **Best for:**
-  - Conceptual queries ("What is a business expense?")
-  - Exploratory search
-  - Full document context
+  - ✅ Rich narrative content
+  - ✅ Better for conceptual queries
+  - ✅ ~1000 chunks (T4002)
+  - ⚠️  Requires GEMINI_API_KEY
+  - ⚠️  Broader, less precise chunks
 
-  **Strengths:**
-  - Rich document narrative
-  - Explanatory content
-  - ~1000 chunks for T4002 guide
+  ## Usage Commands
 
-  **Weaknesses:**
-  - Requires GEMINI_API_KEY
-  - Broader, less precise chunks
-
-  ### Extraction Pipeline (New)
-  **Best for:**
-  - Line-item queries ("Line 8523")
-  - Precise targeting
-  - Specific deduction rules
-
-  **Strengths:**
-  - Higher precision on line items
-  - No API dependency (after extraction)
-  - Metadata-rich (income types, confidence scores)
-  - ~247 focused chunks
-
-  **Weaknesses:**
-  - Less context
-  - Fewer chunks
-  - Rigid structure (only line items)
-
-  ## Dual Indexing Strategy (Recommended)
-
-  Build both databases and let users choose:
-
-  ```python
-  import qe_tax_rag as qe
-
-  # Use extraction DB (line-item queries)
-  qe.init(db_path="extraction_rules.db")
-  results = qe.search("meals deduction", top_k=5)
-
-  # Use Gemini DB (conceptual queries)
-  qe.init(db_path="gemini_rules.db")
-  results = qe.search("What expenses are deductible?", top_k=5)
+  **Extraction Pipeline**:
+  ```bash
+  uv run python scripts/cli.py pipeline-extraction \
+    --input-dir cra_documents/ --output-db extraction_rules.db
   ````
 
-  ## Migration Steps
+  **Gemini Pipeline**:
 
-  1. **Keep Gemini pipeline working** (don't remove)
-  1. **Build extraction database** in parallel
-  1. **Run search quality tests** (TICKET T4.3)
-  1. **Document trade-offs** in your application
-  1. **Gather user feedback** on which works better
-  1. **Decide on default** after 3 months of data
-
+  ```bash
+  # See existing CLAUDE.md section for Gemini usage
   ```
 
   ```
 
-- [ ] **Add Examples**: `examples/transformer_usage.py`
-
-  ```python
-  """Example: Using the transformer programmatically."""
-
-  from pathlib import Path
-  from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
-
-
-  def main():
-      # Initialize transformer
-      transformer = YAMLTransformer()
-
-      # Transform YAML to JSONL
-      report = transformer.transform_yaml_to_jsonl(
-          yaml_path=Path("output/cra_rules.yml"),
-          jsonl_path=Path("data/chunks.jsonl"),
-          continue_on_error=True
-      )
-
-      # Print report
-      print(f"Transformation complete!")
-      print(f"  Total rules: {report.total_rules}")
-      print(f"  Successful: {report.successful}")
-      print(f"  Skipped: {report.skipped}")
-      print(f"  Errors: {len(report.errors)}")
-
-      if report.errors:
-          print("\nErrors:")
-          for error in report.errors:
-              print(f"  - {error['source_file']}: {error['error']}")
-
-
-  if __name__ == "__main__":
-      main()
   ```
-
-- [ ] **Update README.md**: Add transformer section
-
-  - Brief explanation of two pipelines
-  - Link to tutorial
-  - Link to migration guide
 
 - [ ] **Verification**:
 
-  - All links work
-  - Code examples run without errors
-  - Documentation is clear and comprehensive
+  - CLAUDE.md transformer section is complete
+  - Choosing-a-pipeline guide is clear and actionable
+  - Command examples work as documented
 
-**Dependency**: All previous tickets **Enables**: Users can understand and use
-transformer **Complexity**: Low (documentation writing)
+**Dependency**: T4.1, T4.2 (need working transformer) **Enables**: Users can understand and choose pipelines **Complexity**: Low (MVD approach - ~1-2 hours)
 
 ______________________________________________________________________
 
@@ -2642,43 +2586,42 @@ PHASE 5: Documentation             │
 
 ______________________________________________________________________
 
-## Timeline Estimate
+## Timeline Estimate (Updated for 80/20 Scope)
 
 ### Solo Developer (Sequential)
 
-- **Phase 1**: 0.5 days (schema changes)
-- **Phase 2**: 2 days (transformer core)
-- **Phase 3**: 1 day (CLI integration)
-- **Phase 4**: 1.5 days (testing)
-- **Phase 5**: 0.5 days (documentation)
-- **Total**: 5.5 days (~1 week)
+- **Phases 1-3**: ✅ COMPLETE (schema + transformer + CLI)
+- **Phase 4**: 4-6 hours (unit tests ~85% coverage + verify integration tests)
+- **Phase 5**: 1-2 hours (MVD - update CLAUDE.md + create choosing guide)
+- **Total Remaining**: ~6-8 hours (1 day)
 
-### 2-Person Team (Parallel)
+### Original Estimates (Pre-Scoping)
 
-- **Day 1**: Phase 1 (both), start Phase 2
-- **Day 2**: Phase 2 complete, start Phase 3
-- **Day 3**: Phase 3 & 4 (parallel)
-- **Day 4**: Phase 4 complete, Phase 5
-- **Total**: 3-4 days
+- **Phase 1**: 0.5 days (schema changes) - ✅ COMPLETE
+- **Phase 2**: 2 days (transformer core) - ✅ COMPLETE
+- **Phase 3**: 1 day (CLI integration) - ✅ COMPLETE
+- **Phase 4**: 1.5 days → **Reduced to 4-6 hours** (scoped to ~85% coverage)
+- **Phase 5**: 0.5 days → **Reduced to 1-2 hours** (MVD approach)
+- **Total Original**: 5.5 days → **Actual with scoping**: ~4 days
 
 ______________________________________________________________________
 
-## Success Metrics
+## Success Metrics (Updated for 80/20)
 
-### Short-Term (1 week)
+### Short-Term (Remaining Work - 1 day)
 
-- [ ] All tickets complete
-- [ ] Unit test coverage ≥95%
-- [ ] Integration tests passing
-- [ ] Documentation complete
-- [ ] Can run: HTML → YAML → JSONL → DB → Search
+- [x] Phases 1-3 complete (schema + transformer + CLI) - ✅ DONE
+- [ ] Unit test coverage ~85% on critical logic (not ≥95% vanity metric)
+- [x] Integration tests passing (3 tests already passing) - ✅ DONE
+- [ ] MVD documentation complete (CLAUDE.md + choosing guide)
+- [x] Can run: HTML → YAML → JSONL → DB → Search - ✅ DONE
 
-### Long-Term (3 months)
+### Long-Term (Post-Launch - Optional)
 
-- [ ] Search quality baseline established
-- [ ] User feedback collected
-- [ ] Performance metrics tracked
-- [ ] Pipeline recommendation documented
+- [ ] Performance baseline tracked (1 slow test added)
+- [ ] Search quality analysis (T4.3 - deferred to post-launch)
+- [ ] User feedback collected on pipeline choice
+- [ ] Pipeline recommendation refined based on data
 
 ______________________________________________________________________
 
