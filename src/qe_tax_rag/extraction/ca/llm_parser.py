@@ -55,11 +55,11 @@ def parse(html_path: str) -> list[ExtractedRule]:
 
     Returns:
         List of ExtractedRule objects with expert_source set to LLM.
-        Returns empty list if no line-numbered rules are found.
+        Returns empty list if no line-numbered rules are found or if JSON
+        parsing fails (allowing fallback to Classic Parser).
 
     Raises:
-        ParserError: If file cannot be read, API call fails, or JSON response
-                     cannot be parsed.
+        ParserError: If file cannot be read or API call fails permanently.
 
     """
     # Read HTML file
@@ -143,9 +143,13 @@ def parse(html_path: str) -> list[ExtractedRule]:
         data = json.loads(response.text)
         rules_data = data.get("rules", [])
     except json.JSONDecodeError as e:
-        msg = f"Failed to parse JSON response for {html_path}"
-        logger.error(f"{msg}. Raw response: {response.text}", exc_info=True)
-        raise ParserError(msg) from e
+        msg = f"Failed to parse JSON response for {html_path} (malformed/truncated JSON)"
+        logger.warning(
+            f"{msg}. Gemini may have truncated the response for large files. "
+            "Returning empty list to allow fallback to Classic Parser results. "
+            f"Error: {e}"
+        )
+        return []
 
     # Convert to ExtractedRule objects
     rules = []
