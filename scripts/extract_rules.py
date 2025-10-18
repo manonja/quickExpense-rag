@@ -20,10 +20,19 @@ from rich.progress import track
 
 # Add scripts directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
+# Add src directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
 
 # Import pipeline modules (from TICKETS 1-5)
 # These will be implemented in previous tickets
 try:
+    from qe_tax_rag.extraction.ca.transformer import (
+        CriticalTransformationError,
+        TransformationReport,
+        YAMLTransformer,
+    )
+
     from parser.adjudicator import adjudicate
     from parser.classic_parser import parse as classic_parse
     from parser.exceptions import PipelineError
@@ -37,6 +46,9 @@ except ImportError as e:
     adjudicate = None  # type: ignore
     generate_yaml = None  # type: ignore
     PipelineError = Exception  # type: ignore
+    YAMLTransformer = None  # type: ignore
+    CriticalTransformationError = Exception  # type: ignore
+    TransformationReport = None  # type: ignore
 
 # Initialize Typer app and Rich console
 app = typer.Typer(
@@ -90,6 +102,21 @@ def run(
             help="Enable verbose logging for debugging",
         ),
     ] = False,
+    auto_transform: Annotated[
+        bool,
+        typer.Option(
+            "--auto-transform",
+            help="Automatically transform YAML to JSONL after extraction.",
+        ),
+    ] = False,
+    output_jsonl: Annotated[
+        Path | None,
+        typer.Option(
+            "--output-jsonl",
+            help="JSONL output path (required if --auto-transform is set).",
+            resolve_path=True,
+        ),
+    ] = None,
 ) -> None:
     """
     Extract structured rules from CRA HTML documents into YAML format.
@@ -107,6 +134,9 @@ def run(
         # With custom manual review file
         uv run extract-rules input/ output.yml --manual-review-file review.yml
 
+        # Extract and auto-transform to JSONL
+        uv run extract-rules input/ rules.yml --auto-transform --output-jsonl chunks.jsonl
+
     """
     # Enable verbose logging if requested
     if verbose:
@@ -119,15 +149,10 @@ def run(
     console.print(f"Output: {output_yaml}\n")
 
     # Check if pipeline modules are available
-    if classic_parse is None:
+    if classic_parse is None or YAMLTransformer is None:
         console.print(
             "[red]Error: Pipeline modules not implemented yet.[/red]\n"
-            "Please implement TICKETS 1-5 first:\n"
-            "  - TICKET 1: Schema definitions\n"
-            "  - TICKET 2: Classic HTML parser\n"
-            "  - TICKET 3: LLM parser\n"
-            "  - TICKET 4: Adjudicator\n"
-            "  - TICKET 5: YAML generator"
+            "Please implement TICKETS 1-5 and T2.1-2.3 first."
         )
         raise typer.Exit(code=1)
 
@@ -157,6 +182,8 @@ def run(
     try:
         output_yaml.parent.mkdir(parents=True, exist_ok=True)
         manual_review_yaml.parent.mkdir(parents=True, exist_ok=True)
+        if output_jsonl:
+            output_jsonl.parent.mkdir(parents=True, exist_ok=True)
     except PermissionError as e:
         console.print(
             f"[red]Error: Cannot create output directory: {e}[/red]\n"
@@ -297,6 +324,51 @@ def run(
         raise typer.Exit(code=1) from e
 
     # -------------------------------------------------------------------------
+    # Phase 4.5: Auto-Transformation (Optional)
+    # -------------------------------------------------------------------------
+    transformation_report: TransformationReport | None = None
+    if auto_transform:
+        console.print("\n[cyan]Auto-transforming YAML to JSONL...[/cyan]")
+        if not output_jsonl:
+            typer.echo(
+                "❌ Error: --output-jsonl is required when using --auto-transform",
+                err=True,
+            )
+            raise typer.Exit(code=1)
+
+        try:
+            transformer = YAMLTransformer()
+            report = transformer.transform_yaml_to_jsonl(
+                yaml_path=output_yaml,
+                jsonl_path=output_jsonl,
+                continue_on_error=True,
+            )
+            transformation_report = report
+
+            console.print(f"[green]✓[/green] Transformation complete!")
+            console.print(f"  📄 JSONL written to: {output_jsonl}")
+            console.print(
+                f"  - Rules processed: {report.successful}/{report.total_rules}"
+            )
+            if report.errors:
+                console.print(
+                    f"  [yellow]⚠️[/yellow]  Encountered {len(report.errors)} skippable errors."
+                )
+
+        except CriticalTransformationError as e:
+            console.print(
+                f"\n[red]❌ Error: Auto-transformation failed critically[/red]"
+            )
+            console.print(f"[red]   {e}[/red]")
+            raise typer.Exit(code=1) from e
+        except Exception as e:
+            console.print(
+                f"\n[red]❌ Error: Unexpected failure during auto-transformation[/red]"
+            )
+            console.print(f"[red]   {e}[/red]")
+            raise typer.Exit(code=1) from e
+
+    # -------------------------------------------------------------------------
     # Phase 5: Summary Report
     # -------------------------------------------------------------------------
     console.print("\n" + "━" * 60)
@@ -341,6 +413,14 @@ def run(
     else:
         console.print("  [yellow]No rules extracted[/yellow]")
 
+    # Transformation breakdown
+    if transformation_report:
+        console.print("\n[bold]Transformation Breakdown:[/bold]")
+        console.print(f"  - Total Rules: {transformation_report.total_rules}")
+        console.print(f"  - [green]Successful:[/] {transformation_report.successful}")
+        console.print(f"  - [yellow]Skipped:[/]   {transformation_report.skipped}")
+        console.print(f"  - [red]Errors:[/]    {len(transformation_report.errors)}")
+
     # Output files
     console.print("\n[bold]Outputs:[/bold]")
     console.print(f"  📄 Ruleset: {output_yaml}")
@@ -349,16 +429,25 @@ def run(
             f"  ⚠️  Manual Review: {manual_review_yaml} "
             f"({len(all_manual_review_items)} items)"
         )
+    if transformation_report:
+        console.print(f"  📄 Transformed JSONL: {output_jsonl}")
 
     # Final status
+    final_exit_code = 0
     if failed_files:
-        console.print(
-            f"\n[yellow]⚠️  Pipeline completed with {len(failed_files)} errors[/yellow]"
-        )
-        raise typer.Exit(code=1)
-    else:
+        final_exit_code = 1
+
+    if transformation_report and transformation_report.errors:
+        final_exit_code = 1
+
+    if final_exit_code == 0:
         console.print("\n[green]✅ Pipeline completed successfully![/green]")
-        raise typer.Exit(code=0)
+    else:
+        console.print(
+            "\n[yellow]⚠️  Pipeline completed with warnings or errors.[/yellow]"
+        )
+
+    raise typer.Exit(code=final_exit_code)
 
 
 if __name__ == "__main__":
