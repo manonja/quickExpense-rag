@@ -74,77 +74,16 @@ def preprocess(
     console.print(f"Input: {input_dir}")
     console.print(f"Output: {output_dir}\n")
 
-    # Verify input directory exists
-    if not input_dir.exists():
-        console.print(f"[red]Error: Input directory not found: {input_dir}[/red]")
-        raise typer.Exit(code=1)
+    # Run preprocessing logic via shared helper
+    file_count, _manifest_path = _run_preprocess_logic(
+        input_dir=input_dir,
+        output_dir=output_dir,
+        console=console,
+    )
 
-    # Create output directory
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    # Find all HTML and PDF files
-    html_files = list(input_dir.glob("*.html"))
-    pdf_files = list(input_dir.glob("*.pdf"))
-    all_files = html_files + pdf_files
-
-    if not all_files:
-        console.print(
-            f"[yellow]Warning: No HTML or PDF files found in {input_dir}[/yellow]"
-        )
+    # Early exit if no files found
+    if file_count == 0:
         return
-
-    console.print(f"Found {len(html_files)} HTML and {len(pdf_files)} PDF files\n")
-
-    # Initialize extractor
-    extractor = TextExtractor()
-    manifest_docs: list[DownloadMetadata] = []
-    success_count = 0
-    error_count = 0
-
-    # Process files with progress bar
-    for input_file in track(all_files, description="Preprocessing..."):
-        try:
-            # Generate output filename (.txt extension)
-            output_file = output_dir / f"{input_file.stem}.txt"
-
-            # Preprocess file (computes SHA256)
-            sha256 = extractor.preprocess_file(
-                input_file,
-                output_file,
-                compute_hash=True,
-            )
-
-            # Add to manifest
-            manifest_docs.append(
-                DownloadMetadata(
-                    filename=input_file.name,
-                    source_url=f"https://www.canada.ca/...",  # Placeholder
-                    downloaded_at=datetime.now(timezone.utc),
-                    sha256=sha256 or "",  # Should always be present
-                )
-            )
-
-            success_count += 1
-            logger.info("Preprocessed: %s → %s", input_file.name, output_file.name)
-
-        except Exception as e:
-            error_count += 1
-            console.print(f"[red]Error processing {input_file.name}: {e}[/red]")
-            logger.exception("Failed to preprocess %s: %s", input_file.name, e)
-
-    # Create manifest
-    manifest = PreprocessManifest(documents=manifest_docs)
-    manifest_path = input_dir / "manifest.json"
-
-    with manifest_path.open("w", encoding="utf-8") as f:
-        json.dump(manifest.model_dump(mode="json"), f, indent=2, default=str)
-
-    # Summary
-    console.print("\n[bold green]Preprocessing Complete![/bold green]")
-    console.print(f"✅ Processed: {success_count} files")
-    if error_count > 0:
-        console.print(f"❌ Errors: {error_count} files")
-    console.print(f"📄 Manifest: {manifest_path}")
 
 
 @app.command()
@@ -418,6 +357,105 @@ def build(
         raise typer.Exit(code=1) from e
 
 
+def _run_preprocess_logic(
+    input_dir: Path,
+    output_dir: Path,
+    console: Console,
+) -> tuple[int, Path]:
+    """
+    Run preprocessing logic (HTML/PDF → clean text).
+
+    Shared by both preprocess() command and pipeline() command.
+
+    Args:
+        input_dir: Directory containing HTML/PDF files
+        output_dir: Directory for preprocessed text files
+        console: Rich console for output
+
+    Returns:
+        Tuple of (file_count, manifest_path)
+
+    Raises:
+        typer.Exit: If input directory not found or no files to process
+
+    """
+    # Verify input directory exists
+    if not input_dir.exists():
+        console.print(f"[red]Error: Input directory not found: {input_dir}[/red]")
+        raise typer.Exit(code=1)
+
+    # Create output directory
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Find all HTML and PDF files
+    html_files = list(input_dir.glob("*.html"))
+    pdf_files = list(input_dir.glob("*.pdf"))
+    all_files = html_files + pdf_files
+
+    if not all_files:
+        console.print(
+            f"[yellow]Warning: No HTML or PDF files found in {input_dir}[/yellow]"
+        )
+        # Return 0 count for preprocess() to handle gracefully
+        # But raise for pipeline() to fail-fast
+        return (0, input_dir / "manifest.json")
+
+    console.print(f"Found {len(html_files)} HTML and {len(pdf_files)} PDF files\n")
+
+    # Initialize extractor
+    extractor = TextExtractor()
+    manifest_docs: list[DownloadMetadata] = []
+    success_count = 0
+    error_count = 0
+
+    # Process files with progress bar
+    for input_file in track(all_files, description="Preprocessing..."):
+        try:
+            # Generate output filename (.txt extension)
+            output_file = output_dir / f"{input_file.stem}.txt"
+
+            # Preprocess file (computes SHA256)
+            sha256 = extractor.preprocess_file(
+                input_file,
+                output_file,
+                compute_hash=True,
+            )
+
+            # Add to manifest
+            manifest_docs.append(
+                DownloadMetadata(
+                    filename=input_file.name,
+                    source_url=f"https://www.canada.ca/...",  # Placeholder
+                    downloaded_at=datetime.now(timezone.utc),
+                    sha256=sha256 or "",  # Should always be present
+                )
+            )
+
+            success_count += 1
+            logger.info("Preprocessed: %s → %s", input_file.name, output_file.name)
+
+        except Exception as e:
+            error_count += 1
+            console.print(f"[red]Error processing {input_file.name}: {e}[/red]")
+            logger.exception("Failed to preprocess %s: %s", input_file.name, e)
+
+    # Create manifest
+    manifest = PreprocessManifest(documents=manifest_docs)
+    manifest_path = input_dir / "manifest.json"
+
+    with manifest_path.open("w", encoding="utf-8") as f:
+        json.dump(manifest.model_dump(mode="json"), f, indent=2, default=str)
+
+    # Summary
+    console.print("\n[bold green]Preprocessing Complete![/bold green]")
+    console.print(f"✅ Processed: {success_count} files")
+    if error_count > 0:
+        console.print(f"❌ Errors: {error_count} files")
+    console.print(f"📄 Manifest: {manifest_path}")
+
+    return (len(all_files), manifest_path)
+
+
 @app.command()
 def pipeline(
     input_dir: Path = typer.Option(  # noqa: B008
@@ -508,54 +546,19 @@ def pipeline(
     # Stage 1: Preprocess
     console.print("\n[bold cyan]Stage 1/4: Preprocessing HTML/PDF files[/bold cyan]")
     try:
-        # Call preprocess logic directly instead of invoking command
-        # This avoids subprocess complexity and allows fail-fast
-        if not input_dir.exists():
-            console.print(f"[red]Error: Input directory not found: {input_dir}[/red]")
-            raise typer.Exit(code=1)
+        # Run preprocessing via shared helper function
+        file_count, _manifest_path = _run_preprocess_logic(
+            input_dir=input_dir,
+            output_dir=preprocessed_dir,
+            console=console,
+        )
 
-        preprocessed_dir.mkdir(parents=True, exist_ok=True)
-
-        # Find files
-        html_files = list(input_dir.glob("*.html"))
-        pdf_files = list(input_dir.glob("*.pdf"))
-        all_files = html_files + pdf_files
-
-        if not all_files:
+        # Fail-fast if no files found (pipeline requires files)
+        if file_count == 0:
             console.print(
                 f"[red]Error: No HTML or PDF files found in {input_dir}[/red]"
             )
             raise typer.Exit(code=1)
-
-        console.print(f"Found {len(all_files)} files to preprocess")
-
-        # Preprocess files
-        from preprocessor.text_extractor import TextExtractor
-
-        extractor = TextExtractor()
-        manifest_docs: list[DownloadMetadata] = []
-
-        for input_file in track(all_files, description="Preprocessing..."):
-            output_file = preprocessed_dir / f"{input_file.stem}.txt"
-            sha256 = extractor.preprocess_file(
-                input_file, output_file, compute_hash=True
-            )
-            manifest_docs.append(
-                DownloadMetadata(
-                    filename=input_file.name,
-                    source_url="https://www.canada.ca/...",
-                    downloaded_at=datetime.now(timezone.utc),
-                    sha256=sha256 or "",
-                )
-            )
-
-        # Create manifest
-        manifest = PreprocessManifest(documents=manifest_docs)
-        manifest_path = input_dir / "manifest.json"
-        with manifest_path.open("w", encoding="utf-8") as f:
-            json.dump(manifest.model_dump(mode="json"), f, indent=2, default=str)
-
-        console.print(f"✅ Preprocessed {len(all_files)} files\n")
 
     except typer.Exit:
         raise
