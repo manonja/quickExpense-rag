@@ -826,6 +826,148 @@ class TestIntegrityChecks:
         assert count == 10
 
 
+class TestYAMLFormatDetection:
+    """Tests for YAML format auto-detection in build_from_file."""
+
+    @pytest.mark.unit
+    def test_build_from_file_detects_yaml_format(self, tmp_path: Path) -> None:
+        """Test that .yml files are detected and routed to YAML loader."""
+        yaml_file = tmp_path / "rules.yml"
+        # Valid RuleSet YAML with minimal rule
+        yaml_content = """
+rules:
+  - rule_number: 8523
+    title: "Test Rule"
+    content: "Test content for YAML format detection"
+    applies_to: [business]
+    source_citation: "Line 8523"
+    chapter: "Chapter 3"
+    section: null
+    source_file: "test.html"
+    expert_source: classic
+    anchor_id: null
+    confidence_score: 1.0
+schema_version: "1.0"
+extraction_timestamp: "2024-12-15T10:30:00Z"
+"""
+        yaml_file.write_text(yaml_content)
+
+        db_path = tmp_path / "test.db"
+        manifest_path = tmp_path / "manifest.json"
+
+        # Mock encoder
+        mock_encoder = Mock()
+        mock_encoder.embed_documents.return_value = np.random.rand(1, 384).astype(
+            np.float32
+        )
+        mock_encoder.model_name = "BAAI/bge-small-en-v1.5"
+
+        # Source file for the rule
+        source_files = [
+            SourceFile(path="test.html", url="https://test.ca", hash="abc123")
+        ]
+
+        builder = IndexBuilder(db_path=str(db_path), encoder=mock_encoder)
+
+        # Should not raise "Unknown file format" error
+        # YAML should be detected and processed successfully
+        builder.build_from_file(
+            input_path=yaml_file,
+            manifest_path=str(manifest_path),
+            source_files=source_files,
+            data_version="2024.12",
+        )
+
+        # Verify database was created
+        assert db_path.exists()
+
+        # Verify manifest was created
+        assert manifest_path.exists()
+
+    @pytest.mark.unit
+    def test_build_from_file_detects_jsonl_format(self, tmp_path: Path) -> None:
+        """Test that .jsonl files are detected and routed to JSONL loader."""
+        # Create minimal valid JSONL with one ParsedDocument
+        jsonl_file = tmp_path / "chunks.jsonl"
+
+        doc = ParsedDocument(
+            title="Test",
+            document_id="S1-F1-C1",
+            metadata=Metadata(),
+            sections=[
+                Section(
+                    section_title="Test Section",
+                    section_level=1,
+                    content=[
+                        TextChunk(
+                            type="paragraph",
+                            text="Test content",
+                            citation_id="S1-F1-C1-p1.1",
+                        )
+                    ],
+                )
+            ],
+        )
+
+        jsonl_file.write_text(doc.model_dump_json() + "\n")
+
+        db_path = tmp_path / "test.db"
+        manifest_path = tmp_path / "manifest.json"
+
+        # Mock encoder
+        mock_encoder = Mock()
+        mock_encoder.embed_documents.return_value = np.random.rand(1, 384).astype(
+            np.float32
+        )
+        mock_encoder.model_name = "BAAI/bge-small-en-v1.5"
+
+        source_files = [
+            SourceFile(path="S1-F1-C1.html", url="https://test.ca", hash="abc123")
+        ]
+
+        builder = IndexBuilder(db_path=str(db_path), encoder=mock_encoder)
+
+        # Should call _load_from_jsonl() internally
+        builder.build_from_file(
+            input_path=jsonl_file,
+            manifest_path=str(manifest_path),
+            source_files=source_files,
+            data_version="2024.12",
+        )
+
+        # Verify database was created
+        assert db_path.exists()
+
+        # Verify one chunk was inserted
+        conn = sqlite3.connect(str(db_path))
+        cursor = conn.execute("SELECT COUNT(*) FROM rules")
+        assert cursor.fetchone()[0] == 1
+        conn.close()
+
+    @pytest.mark.unit
+    def test_build_from_file_raises_on_unknown_format(self, tmp_path: Path) -> None:
+        """Test that unsupported file formats raise clear error."""
+        txt_file = tmp_path / "data.txt"
+        txt_file.write_text("invalid")
+
+        db_path = tmp_path / "test.db"
+        manifest_path = tmp_path / "manifest.json"
+
+        # Mock encoder with model_name
+        mock_encoder = Mock()
+        mock_encoder.model_name = "BAAI/bge-small-en-v1.5"
+
+        builder = IndexBuilder(db_path=str(db_path), encoder=mock_encoder)
+
+        with pytest.raises(ValueError, match="Unsupported input format"):
+            builder.build_from_file(
+                input_path=txt_file,
+                manifest_path=str(manifest_path),
+                source_files=[],
+                data_version="2024.12",
+            )
+
+
 class TestBuildFromJsonl:
     """
     Tests for build_from_jsonl orchestration method.
