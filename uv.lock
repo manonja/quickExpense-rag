@@ -1667,6 +1667,7 @@ name = "qe-tax-rag"
 source = { editable = "." }
 dependencies = [
     { name = "diskcache" },
+    { name = "filelock" },
     { name = "httpx" },
     { name = "numpy" },
     { name = "pydantic" },
@@ -1703,6 +1704,7 @@ indexing = [
 requires-dist = [
     { name = "beautifulsoup4", marker = "extra == 'indexing'", specifier = ">=4.12" },
     { name = "diskcache", specifier = ">=5.6.3" },
+    { name = "filelock", specifier = ">=3.20.0" },
     { name = "google-generativeai", marker = "extra == 'indexing'", specifier = ">=0.8.5" },
     { name = "httpx", specifier = ">=0.25" },
     { name = "lxml", marker = "extra == 'indexing'", specifier = ">=5.0" },

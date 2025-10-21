@@ -12,6 +12,7 @@ from google.api_core import exceptions as google_exceptions
 
 from qe_tax_rag.extraction.ca.cache import LLMResponseCache
 from qe_tax_rag.extraction.ca.exceptions import ParserError
+from qe_tax_rag.extraction.ca.rate_limiter import RateLimiter, RateLimitError
 from qe_tax_rag.extraction.ca.schema import (
     ApplicabilityType,
     ExpertSource,
@@ -40,6 +41,9 @@ Follow these rules precisely:
 Respond with a single JSON object containing a "rules" key, which holds a list of the extracted rule objects.
 """
 
+# Module-level rate limiter cache (initialized per cache_dir)
+_rate_limiters: dict[str, RateLimiter] = {}
+
 
 def parse(html_path: str, cache_dir: str | Path | None = None) -> list[ExtractedRule]:
     """
@@ -67,6 +71,19 @@ def parse(html_path: str, cache_dir: str | Path | None = None) -> list[Extracted
     """
     # Initialize cache if a directory is provided
     cache = LLMResponseCache(cache_dir) if cache_dir else None
+
+    # Initialize rate limiter for this cache_dir (singleton per directory)
+    rate_limiter = None
+    if cache_dir:
+        cache_key = str(Path(cache_dir).resolve())
+        if cache_key not in _rate_limiters:
+            state_file = Path(cache_dir) / "rate_limiter_state.json"
+            _rate_limiters[cache_key] = RateLimiter(
+                rpm_limit=settings.gemini_rpm_limit,
+                rpd_limit=settings.gemini_rpd_limit,
+                state_file=state_file,
+            )
+        rate_limiter = _rate_limiters[cache_key]
 
     # Read HTML file
     try:
@@ -103,6 +120,13 @@ def parse(html_path: str, cache_dir: str | Path | None = None) -> list[Extracted
         logger.info(f"Cache HIT for {html_path}. Skipping API call.")
     else:
         logger.info(f"Cache MISS for {html_path}. Calling Gemini API.")
+
+        # Respect rate limits before making an API call
+        if rate_limiter:
+            try:
+                rate_limiter.wait_if_needed()
+            except RateLimitError as e:
+                raise ParserError(str(e)) from e
 
         # Configure Gemini
         genai.configure(api_key=settings.gemini_api_key)  # type: ignore[attr-defined]
