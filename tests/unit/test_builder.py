@@ -1035,9 +1035,9 @@ extraction_timestamp: "2024-12-15T10:30:00Z"
             builder._load_from_yaml(yaml_file, [])
 
 
-class TestBuildFromJsonl:
+class TestBuildFromFile:
     """
-    Tests for build_from_jsonl orchestration method.
+    Tests for build_from_file orchestration method.
 
     User Story 2: As a library maintainer, I want to build a searchable database
     from manually downloaded CRA documents so that users can query up-to-date tax rules.
@@ -1053,10 +1053,10 @@ class TestBuildFromJsonl:
     8. Create manifest
     """
 
-    def test_build_from_jsonl_complete_workflow(self, tmp_path):
+    def test_build_from_file_jsonl_complete_workflow(self, tmp_path):
         """
         GIVEN: Valid JSONL file with ParsedDocuments and source files
-        WHEN: build_from_jsonl is called
+        WHEN: build_from_file is called
         THEN: Creates database, populates tables, validates integrity, creates manifest
         """
         # Create test JSONL with 2 documents
@@ -1138,12 +1138,11 @@ class TestBuildFromJsonl:
         manifest_path = tmp_path / "manifest.json"
 
         builder = IndexBuilder(db_path=str(db_path), encoder=mock_encoder)
-        builder.build_from_jsonl(
-            jsonl_path=str(jsonl_path),
+        builder.build_from_file(
+            input_path=jsonl_path,
             manifest_path=str(manifest_path),
             source_files=source_files,
             data_version="2024.12",
-            continue_on_error=False,
         )
 
         # Verify database file created
@@ -1200,10 +1199,10 @@ class TestBuildFromJsonl:
             assert "sha256" in manifest_data
             assert manifest_data["embedding_model"] == "BAAI/bge-small-en-v1.5"
 
-    def test_build_from_jsonl_atomic_rollback_on_error(self, tmp_path):
+    def test_build_from_file_atomic_rollback_on_error(self, tmp_path):
         """
         GIVEN: Encoder that fails during embedding
-        WHEN: build_from_jsonl called with continue_on_error=False
+        WHEN: build_from_file called with JSONL input
         THEN: Transaction rolls back, database file not created or empty
         """
         # Create test JSONL
@@ -1247,12 +1246,11 @@ class TestBuildFromJsonl:
 
         # Should raise EmbeddingError
         with pytest.raises(EmbeddingError):
-            builder.build_from_jsonl(
-                jsonl_path=str(jsonl_path),
+            builder.build_from_file(
+                input_path=jsonl_path,
                 manifest_path=str(manifest_path),
                 source_files=source_files,
                 data_version="2024.12",
-                continue_on_error=False,
             )
 
         # Database file may exist (schema created) but no data should be inserted
@@ -1286,12 +1284,12 @@ class TestBuildFromJsonl:
         # Manifest should not be created
         assert not manifest_path.exists()
 
-    def test_build_from_jsonl_continue_on_error_creates_partial_database(
+    def test_build_from_file_continue_on_error_creates_partial_database(
         self, tmp_path
     ):
         """
         GIVEN: Encoder that fails on some batches
-        WHEN: build_from_jsonl called with continue_on_error=True
+        WHEN: build_from_file called with JSONL input and continue_on_error=True
         THEN: Creates database with successfully embedded chunks only
         """
         # Create test JSONL with 64 chunks (2 batches of 32)
@@ -1344,8 +1342,8 @@ class TestBuildFromJsonl:
         manifest_path = tmp_path / "manifest.json"
 
         builder = IndexBuilder(db_path=str(db_path), encoder=mock_encoder)
-        builder.build_from_jsonl(
-            jsonl_path=str(jsonl_path),
+        builder.build_from_file(
+            input_path=jsonl_path,
             manifest_path=str(manifest_path),
             source_files=source_files,
             data_version="2024.12",
