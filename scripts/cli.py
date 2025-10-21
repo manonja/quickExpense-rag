@@ -297,7 +297,7 @@ def build(
         Path("data/processed/chunks.jsonl"),
         "--input-file",
         "-i",
-        help="Input JSONL file with ParsedDocument objects",
+        help="Input YAML or JSONL file with rules/documents",
     ),
     manifest_file: Path = typer.Option(  # noqa: B008
         Path("data/raw/manifest.json"),
