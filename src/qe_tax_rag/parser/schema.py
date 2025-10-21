@@ -103,114 +103,6 @@ class ParsedDocument(BaseModel):
     metadata: Metadata
     sections: list[Section]
 
-    def to_flat_chunks(self, source_url: str = "") -> list[dict[str, object]]:
-        """
-        Convert hierarchical ParsedDocument to flat list of chunk dictionaries.
-
-        Args:
-            source_url: Source URL to include in each chunk
-
-        Returns:
-            List of chunk dictionaries compatible with TICKET 9C indexing format
-
-        """
-        chunks: list[dict[str, object]] = []
-
-        for section in self.sections:
-            for content_item in section.content:
-                # Handle different content item types
-                if isinstance(content_item, TextChunk):
-                    chunks.append(
-                        self._create_chunk_dict(
-                            content=content_item.text,
-                            citation_id=content_item.citation_id,
-                            section_title=section.section_title,
-                            source_url=source_url,
-                            extraction_source=content_item.extraction_source,
-                            extraction_confidence=content_item.extraction_confidence,
-                            source_anchor=content_item.source_anchor,
-                        )
-                    )
-                elif isinstance(content_item, ListChunk):
-                    # Flatten list items recursively
-                    for item in content_item.items:
-                        chunks.extend(
-                            self._flatten_list_item(
-                                item=item,
-                                section_title=section.section_title,
-                                source_url=source_url,
-                            )
-                        )
-                elif isinstance(content_item, TableChunk):
-                    # Convert table to text representation
-                    table_text = self._table_to_text(content_item.data)
-                    chunks.append(
-                        self._create_chunk_dict(
-                            content=table_text,
-                            citation_id=content_item.citation_id,
-                            section_title=section.section_title,
-                            source_url=source_url,
-                        )
-                    )
-
-        return chunks
-
-    def _create_chunk_dict(  # noqa: PLR0913
-        self,
-        content: str,
-        citation_id: str | None,
-        section_title: str,
-        source_url: str,
-        extraction_source: str | None = None,
-        extraction_confidence: float | None = None,
-        source_anchor: str | None = None,
-    ) -> dict[str, object]:
-        """Create a chunk dictionary with all metadata."""
-        return {
-            "content": content,
-            "citation_id": citation_id,
-            "source_url": source_url,
-            "metadata": {
-                # Document-level metadata
-                "province": self.metadata.province,
-                "business_type": self.metadata.business_type,
-                "expense_type": self.metadata.expense_type,
-                "income_type": self.metadata.income_type,
-                "section_title": section_title,
-                "document_id": self.document_id,
-                # Chunk-level metadata
-                "extraction_source": extraction_source,
-                "extraction_confidence": extraction_confidence,
-                "source_anchor": source_anchor,
-            },
-        }
-
-    def _flatten_list_item(
-        self, item: ListItem, section_title: str, source_url: str
-    ) -> list[dict[str, object]]:
-        """Recursively flatten a ListItem and its sub-items."""
-        chunks: list[dict[str, object]] = []
-
-        # Add the parent item
-        chunks.append(
-            self._create_chunk_dict(
-                content=item.text,
-                citation_id=item.citation_id,
-                section_title=section_title,
-                source_url=source_url,
-            )
-        )
-
-        # Recursively add sub-items
-        for sub_item in item.sub_items:
-            chunks.extend(
-                self._flatten_list_item(
-                    item=sub_item, section_title=section_title, source_url=source_url
-                )
-            )
-
-        return chunks
-
     def _table_to_text(self, data: list[list[str]]) -> str:
         """Convert table data to text representation."""
         if not data:
@@ -223,8 +115,6 @@ class ParsedDocument(BaseModel):
         self, source_files: list[SourceFile]
     ) -> list[DatabaseChunk]:
         """Convert hierarchical ParsedDocument to flat DatabaseChunk list.
-
-        REPLACES: to_flat_chunks() returning dict[str, object]
 
         Args:
             source_files: List of SourceFile metadata for lookup

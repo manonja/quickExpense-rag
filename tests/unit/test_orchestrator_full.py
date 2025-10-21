@@ -95,7 +95,7 @@ def test_processing_single_file_success(
 
     # Verify calls
     mock_classic.assert_called_once_with(str(html_file))
-    mock_llm.assert_called_once_with(str(html_file))
+    mock_llm.assert_called_once_with(str(html_file), cache_dir=None)
     mock_adjudicate.assert_called_once()
 
 

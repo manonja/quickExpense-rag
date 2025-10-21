@@ -5,7 +5,7 @@ Implements User Story 2: Maintainer Indexing Workflow
 
 This module provides the IndexBuilder class that orchestrates the final stage
 of the data pipeline:
-1. Loads flattened chunks from JSONL (Gemini parser output)
+1. Loads chunks from YAML (extraction pipeline) or JSONL (Gemini parser)
 2. Generates BGE embeddings in batches
 3. Populates SQLite with rules, FTS index, vector embeddings, expense type links
 4. Validates integrity and generates manifest with SHA256 hash
@@ -36,12 +36,12 @@ logger = logging.getLogger(__name__)
 
 class IndexBuilder:
     """
-    Builds searchable SQLite database from Gemini-parsed CRA document chunks.
+    Builds searchable SQLite database from CRA document chunks.
 
     Implements User Story 2: Maintainer Indexing Workflow
 
     This class orchestrates the final stage of the data pipeline:
-    1. Loads flattened chunks from JSONL (Gemini parser output)
+    1. Loads chunks from YAML (extraction pipeline) or JSONL (Gemini parser)
     2. Generates BGE embeddings in batches
     3. Populates SQLite with rules, FTS index, vector embeddings, expense type links
     4. Validates integrity and generates manifest with SHA256 hash
@@ -52,8 +52,8 @@ class IndexBuilder:
     Example:
         >>> from qe_tax_rag.embeddings.encoder import embedding_service
         >>> builder = IndexBuilder(db_path="cra_rules.db", encoder=embedding_service)
-        >>> builder.build_from_jsonl(
-        ...     jsonl_path="chunks.jsonl",
+        >>> builder.build_from_file(
+        ...     input_path="rules.yml",
         ...     manifest_path="manifest.json",
         ...     source_files=[SourceFile(...)],
         ...     data_version="2024.12",
@@ -163,39 +163,6 @@ class IndexBuilder:
 
         logger.info(f"Index build complete: {len(embedded_chunks)} chunks indexed")
 
-    # Backward compatibility alias
-    def build_from_jsonl(
-        self,
-        jsonl_path: str,
-        manifest_path: str,
-        source_files: list[SourceFile],
-        data_version: str,
-        continue_on_error: bool = False,
-    ) -> None:
-        """Backward compatibility alias for build_from_file.
-
-        DEPRECATED: Use build_from_file() instead. This method will be removed
-        in a future version.
-
-        Args:
-            jsonl_path: Path to JSONL file with ParsedDocument objects
-            manifest_path: Where to write manifest.json
-            source_files: List of SourceFile models with hash/URL metadata
-            data_version: Version string (YYYY.MM format)
-            continue_on_error: If True, skip chunks with embedding errors
-
-        """
-        logger.warning(
-            "build_from_jsonl() is deprecated, use build_from_file() instead"
-        )
-        return self.build_from_file(
-            input_path=jsonl_path,
-            manifest_path=manifest_path,
-            source_files=source_files,
-            data_version=data_version,
-            continue_on_error=continue_on_error,
-        )
-
     def _setup_database(self, conn: sqlite3.Connection, data_version: str) -> None:
         """
         Initialize database schema and metadata.
@@ -232,7 +199,7 @@ class IndexBuilder:
     def _load_and_flatten_chunks(
         self, input_path: Path, source_files: list[SourceFile]
     ) -> list[DatabaseChunk]:
-        """Load chunks from YAML (extraction) or JSONL (legacy parser).
+        """Load chunks from YAML (extraction pipeline) or JSONL (Gemini parser).
 
         Auto-detects format and returns unified DatabaseChunk list.
 
@@ -251,7 +218,7 @@ class IndexBuilder:
             # Extraction pipeline: YAML → DatabaseChunk
             chunks = self._load_from_yaml(input_path, source_files)
         elif input_path.suffix == ".jsonl":
-            # Legacy Gemini parser: JSONL → DatabaseChunk
+            # Gemini parser: JSONL → DatabaseChunk
             chunks = self._load_from_jsonl(input_path, source_files)
         else:
             raise ValueError(
@@ -304,7 +271,7 @@ class IndexBuilder:
     def _load_from_jsonl(
         self, jsonl_path: Path, source_files: list[SourceFile]
     ) -> list[DatabaseChunk]:
-        """Load legacy Gemini parser JSONL and convert to DatabaseChunk.
+        """Load Gemini parser JSONL and convert to DatabaseChunk.
 
         Args:
             jsonl_path: Path to JSONL file with ParsedDocument objects
@@ -314,7 +281,7 @@ class IndexBuilder:
             List of DatabaseChunk objects
 
         """
-        logger.info(f"Loading legacy JSONL: {jsonl_path}")
+        logger.info(f"Loading JSONL: {jsonl_path}")
 
         chunks: list[DatabaseChunk] = []
 

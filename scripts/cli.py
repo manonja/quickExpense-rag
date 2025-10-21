@@ -387,8 +387,8 @@ def build(
 
         # Build index
         console.print("[cyan]Building index (this may take a while)...[/cyan]\n")
-        builder.build_from_jsonl(
-            jsonl_path=str(input_file),
+        builder.build_from_file(
+            input_path=input_file,
             manifest_path=str(output_manifest),
             source_files=source_files,
             data_version=data_version,
@@ -629,8 +629,8 @@ def pipeline(
         output_manifest.parent.mkdir(parents=True, exist_ok=True)
 
         builder = IndexBuilder(db_path=str(output_db), encoder=embedding_service)
-        builder.build_from_jsonl(
-            jsonl_path=str(chunks_file),
+        builder.build_from_file(
+            input_path=chunks_file,
             manifest_path=str(output_manifest),
             source_files=source_files,
             data_version=data_version,

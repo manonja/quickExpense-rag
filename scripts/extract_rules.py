@@ -80,14 +80,14 @@ def run(
         bool,
         typer.Option(
             "--auto-transform",
-            help="Automatically transform YAML to JSONL after extraction.",
+            help="DEPRECATED: Transformation feature removed. Use 'uv run python scripts/cli.py pipeline-extraction' instead.",
         ),
     ] = False,
     output_jsonl: Annotated[
         Path | None,
         typer.Option(
             "--output-jsonl",
-            help="JSONL output path (required if --auto-transform is set).",
+            help="DEPRECATED: Use 'uv run python scripts/cli.py pipeline-extraction' for complete pipeline.",
             resolve_path=True,
         ),
     ] = None,
@@ -106,6 +106,9 @@ def run(
     Uses a Mixture-of-Experts approach with two parsers (classic BeautifulSoup
     + LLM semantic) and grounded adjudication to resolve conflicts.
 
+    NOTE: For complete pipeline (extraction + database building), use:
+          uv run python scripts/cli.py pipeline-extraction --input-dir DIR --output-db DB
+
     Examples:
         # Process directory of HTML files
         uv run extract-rules cra_documents/cra_t4002e_rev24_dump/ output/rules.yml
@@ -115,9 +118,6 @@ def run(
 
         # With custom manual review file
         uv run extract-rules input/ output.yml --manual-review-file review.yml
-
-        # Extract and auto-transform to JSONL
-        uv run extract-rules input/ rules.yml --auto-transform --output-jsonl chunks.jsonl
 
     """
     # Enable verbose logging if requested
