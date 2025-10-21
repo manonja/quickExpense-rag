@@ -25,6 +25,7 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pytest
 from qe_tax_rag.data.builder import IndexBuilder
+from qe_tax_rag.data.models import DatabaseChunk
 from qe_tax_rag.exceptions import EmbeddingError, QeTaxRagError
 from qe_tax_rag.parser.schema import Metadata, ParsedDocument, Section, TextChunk
 from qe_tax_rag.search.models import SourceFile
@@ -966,6 +967,72 @@ extraction_timestamp: "2024-12-15T10:30:00Z"
                 source_files=[],
                 data_version="2024.12",
             )
+
+
+class TestLoadFromYAML:
+    """Tests for _load_from_yaml method."""
+
+    @pytest.mark.unit
+    def test_load_from_yaml_valid_file(self, tmp_path: Path) -> None:
+        """Test loading valid YAML file with RuleSet structure."""
+        yaml_content = """
+rules:
+  - rule_number: 8523
+    title: "Test Rule"
+    content: "Test content with meal expenses"
+    applies_to: [business]
+    source_citation: "Line 8523"
+    chapter: "Chapter 3"
+    section: null
+    source_file: "t4002-24e.html"
+    expert_source: classic
+    anchor_id: null
+    confidence_score: 1.0
+schema_version: "1.0"
+extraction_timestamp: "2024-12-15T10:30:00Z"
+"""
+        yaml_file = tmp_path / "rules.yml"
+        yaml_file.write_text(yaml_content)
+
+        # Source files mapping
+        source_files = [
+            SourceFile(path="t4002-24e.html", url="https://test.ca", hash="abc123")
+        ]
+
+        builder = IndexBuilder(db_path=str(tmp_path / "test.db"), encoder=Mock())
+        chunks = builder._load_from_yaml(yaml_file, source_files)
+
+        assert len(chunks) > 0
+        assert all(isinstance(chunk, DatabaseChunk) for chunk in chunks)
+        assert chunks[0].citation_id == "LINE-8523"
+
+    @pytest.mark.unit
+    def test_load_from_yaml_empty_rules(self, tmp_path: Path) -> None:
+        """Test loading YAML with empty rules list."""
+        yaml_content = """
+rules: []
+schema_version: "1.0"
+extraction_timestamp: "2024-12-15T10:30:00Z"
+"""
+        yaml_file = tmp_path / "empty.yml"
+        yaml_file.write_text(yaml_content)
+
+        builder = IndexBuilder(db_path=str(tmp_path / "test.db"), encoder=Mock())
+        chunks = builder._load_from_yaml(yaml_file, [])
+
+        assert chunks == []
+
+    @pytest.mark.unit
+    def test_load_from_yaml_invalid_schema(self, tmp_path: Path) -> None:
+        """Test that invalid YAML schema raises validation error."""
+        yaml_file = tmp_path / "invalid.yml"
+        yaml_file.write_text("invalid: yaml")
+
+        builder = IndexBuilder(db_path=str(tmp_path / "test.db"), encoder=Mock())
+
+        # Should raise validation error (pydantic or KeyError)
+        with pytest.raises(Exception):  # ValidationError or KeyError
+            builder._load_from_yaml(yaml_file, [])
 
 
 class TestBuildFromJsonl:
