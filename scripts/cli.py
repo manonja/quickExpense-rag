@@ -284,77 +284,16 @@ def build(
     console.print(f"Output Manifest: {output_manifest}")
     console.print(f"Data Version: {data_version}\n")
 
-    # Verify input file exists
-    if not input_file.exists():
-        console.print(f"[red]Error: Input file not found: {input_file}[/red]")
-        raise typer.Exit(code=1)
-
-    # Verify manifest file exists
-    if not manifest_file.exists():
-        console.print(f"[red]Error: Manifest file not found: {manifest_file}[/red]")
-        raise typer.Exit(code=1)
-
-    # Create output directories
-    output_db.parent.mkdir(parents=True, exist_ok=True)
-    output_manifest.parent.mkdir(parents=True, exist_ok=True)
-
-    try:
-        # Load source files from preprocess manifest
-        console.print("[cyan]Loading source file metadata...[/cyan]")
-        with manifest_file.open() as f:
-            manifest_data = json.load(f)
-
-        # Convert manifest documents to SourceFile models
-        source_files = []
-        for doc in manifest_data.get("documents", []):
-            source_files.append(
-                SourceFile(
-                    path=doc["filename"],
-                    url=doc["source_url"],
-                    hash=doc["sha256"],
-                )
-            )
-
-        if not source_files:
-            console.print("[yellow]Warning: No source files found in manifest[/yellow]")
-
-        console.print(f"Loaded {len(source_files)} source file records\n")
-
-        # Initialize IndexBuilder
-        console.print("[cyan]Initializing IndexBuilder...[/cyan]")
-        builder = IndexBuilder(db_path=str(output_db), encoder=embedding_service)
-
-        # Build index
-        console.print("[cyan]Building index (this may take a while)...[/cyan]\n")
-        builder.build_from_file(
-            input_path=input_file,
-            manifest_path=str(output_manifest),
-            source_files=source_files,
-            data_version=data_version,
-            continue_on_error=continue_on_error,
-        )
-
-        # Success summary
-        console.print("\n[bold green]Index Build Complete![/bold green]")
-        console.print(f"✅ Database: {output_db}")
-        console.print(f"✅ Manifest: {output_manifest}")
-
-        # Show database size
-        db_size_mb = output_db.stat().st_size / (1024 * 1024)
-        console.print(f"📊 Database size: {db_size_mb:.2f} MB")
-
-    except json.JSONDecodeError as e:
-        console.print(f"[red]Error: Invalid JSON in manifest file: {e}[/red]")
-        raise typer.Exit(code=1) from e
-
-    except ValueError as e:
-        console.print(f"[red]Error: {e}[/red]")
-        raise typer.Exit(code=1) from e
-
-    except Exception as e:
-        console.print(f"[red]Build failed: {e}[/red]")
-        logger.exception("Build failed")
-        raise typer.Exit(code=1) from e
+    # Run build logic via shared helper
+    _run_build_logic(
+        input_file=input_file,
+        manifest_file=manifest_file,
+        output_db=output_db,
+        output_manifest=output_manifest,
+        data_version=data_version,
+        continue_on_error=continue_on_error,
+        console=console,
+    )
 
 
 def _run_preprocess_logic(
@@ -454,6 +393,107 @@ def _run_preprocess_logic(
     console.print(f"📄 Manifest: {manifest_path}")
 
     return (len(all_files), manifest_path)
+
+
+def _run_build_logic(
+    input_file: Path,
+    manifest_file: Path,
+    output_db: Path,
+    output_manifest: Path,
+    data_version: str,
+    continue_on_error: bool,
+    console: Console,
+) -> None:
+    """
+    Run database build logic (JSONL/YAML → SQLite + embeddings).
+
+    Shared by both build() command and pipeline() command.
+
+    Args:
+        input_file: Input YAML or JSONL file with rules/documents
+        manifest_file: Input manifest.json from preprocess step (for source
+            file metadata)
+        output_db: Output SQLite database path
+        output_manifest: Output manifest.json path
+        data_version: Data version string (YYYY.MM format)
+        continue_on_error: Skip chunks with embedding errors instead of failing
+        console: Rich console for output
+
+    Raises:
+        typer.Exit: If input/manifest file not found or build fails
+
+    """
+    # Verify input file exists
+    if not input_file.exists():
+        console.print(f"[red]Error: Input file not found: {input_file}[/red]")
+        raise typer.Exit(code=1)
+
+    # Verify manifest file exists
+    if not manifest_file.exists():
+        console.print(f"[red]Error: Manifest file not found: {manifest_file}[/red]")
+        raise typer.Exit(code=1)
+
+    # Create output directories
+    output_db.parent.mkdir(parents=True, exist_ok=True)
+    output_manifest.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        # Load source files from preprocess manifest
+        console.print("[cyan]Loading source file metadata...[/cyan]")
+        with manifest_file.open() as f:
+            manifest_data = json.load(f)
+
+        # Convert manifest documents to SourceFile models
+        source_files = []
+        for doc in manifest_data.get("documents", []):
+            source_files.append(
+                SourceFile(
+                    path=doc["filename"],
+                    url=doc["source_url"],
+                    hash=doc["sha256"],
+                )
+            )
+
+        if not source_files:
+            console.print("[yellow]Warning: No source files found in manifest[/yellow]")
+
+        console.print(f"Loaded {len(source_files)} source file records\n")
+
+        # Initialize IndexBuilder
+        console.print("[cyan]Initializing IndexBuilder...[/cyan]")
+        builder = IndexBuilder(db_path=str(output_db), encoder=embedding_service)
+
+        # Build index
+        console.print("[cyan]Building index (this may take a while)...[/cyan]\n")
+        builder.build_from_file(
+            input_path=input_file,
+            manifest_path=str(output_manifest),
+            source_files=source_files,
+            data_version=data_version,
+            continue_on_error=continue_on_error,
+        )
+
+        # Success summary
+        console.print("\n[bold green]Index Build Complete![/bold green]")
+        console.print(f"✅ Database: {output_db}")
+        console.print(f"✅ Manifest: {output_manifest}")
+
+        # Show database size
+        db_size_mb = output_db.stat().st_size / (1024 * 1024)
+        console.print(f"📊 Database size: {db_size_mb:.2f} MB")
+
+    except json.JSONDecodeError as e:
+        console.print(f"[red]Error: Invalid JSON in manifest file: {e}[/red]")
+        raise typer.Exit(code=1) from e
+
+    except ValueError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1) from e
+
+    except Exception as e:
+        console.print(f"[red]Build failed: {e}[/red]")
+        logger.exception("Build failed")
+        raise typer.Exit(code=1) from e
 
 
 @app.command()
@@ -612,35 +652,17 @@ def pipeline(
     # Stage 3: Build
     console.print("[bold cyan]Stage 3/4: Building searchable database[/bold cyan]")
     try:
-        # Load source files from manifest
+        # Run build logic via shared helper function
         manifest_file = input_dir / "manifest.json"
-        with manifest_file.open() as f:
-            manifest_data = json.load(f)
-
-        source_files = []
-        for doc in manifest_data.get("documents", []):
-            source_files.append(
-                SourceFile(
-                    path=doc["filename"],
-                    url=doc["source_url"],
-                    hash=doc["sha256"],
-                )
-            )
-
-        # Build index
-        output_db.parent.mkdir(parents=True, exist_ok=True)
-        output_manifest.parent.mkdir(parents=True, exist_ok=True)
-
-        builder = IndexBuilder(db_path=str(output_db), encoder=embedding_service)
-        builder.build_from_file(
-            input_path=chunks_file,
-            manifest_path=str(output_manifest),
-            source_files=source_files,
+        _run_build_logic(
+            input_file=chunks_file,
+            manifest_file=manifest_file,
+            output_db=output_db,
+            output_manifest=output_manifest,
             data_version=data_version,
             continue_on_error=force,
+            console=console,
         )
-
-        console.print(f"✅ Database created: {output_db}\n")
 
     except typer.Exit:
         raise
