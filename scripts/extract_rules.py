@@ -21,12 +21,8 @@ from rich.console import Console
 # NOTE: sys.path needed because src/ is not in standard Python path for scripts
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-# Import canonical orchestrator and transformer from src package
+# Import canonical orchestrator from src package
 from qe_tax_rag.extraction.ca.orchestrator import run_extraction
-from qe_tax_rag.extraction.ca.transformer import (
-    TransformationReport,
-    YAMLTransformer,
-)
 
 # Initialize Typer app and Rich console
 app = typer.Typer(
@@ -234,14 +230,6 @@ def run(
     else:
         console.print("  [yellow]No rules extracted[/yellow]")
 
-    # Transformation breakdown
-    if transformation_report:
-        console.print("\n[bold]Transformation Breakdown:[/bold]")
-        console.print(f"  - Total Rules: {transformation_report.total_rules}")
-        console.print(f"  - [green]Successful:[/] {transformation_report.successful}")
-        console.print(f"  - [yellow]Skipped:[/]   {transformation_report.skipped}")
-        console.print(f"  - [red]Errors:[/]    {len(transformation_report.errors)}")
-
     # Output files
     console.print("\n[bold]Outputs:[/bold]")
     console.print(f"  📄 Ruleset: {output_yaml}")
@@ -250,13 +238,9 @@ def run(
         console.print(
             f"  ⚠️  Manual Review: {manual_review_yaml} ({stats['manual_review']} items)"
         )
-    if transformation_report:
-        console.print(f"  📄 Transformed JSONL: {output_jsonl}")
 
     # Final status
     final_exit_code = 0
-    if transformation_report and transformation_report.errors:
-        final_exit_code = 1
 
     if final_exit_code == 0:
         console.print("\n[green]✅ Pipeline completed successfully![/green]")
@@ -275,31 +259,32 @@ def _run_extraction_pipeline(
     output_jsonl: Path | None,
     verbose: bool = False,
     cache_dir: Path | None = None,
-) -> tuple[dict, "TransformationReport | None"]:
+) -> tuple[dict, None]:
     """
     Adapter for core extraction pipeline.
 
     Calls the canonical orchestrator from src/qe_tax_rag/extraction/ca/orchestrator.py
     and adapts its output to the legacy format expected by callers.
 
-    This function bridges the gap between the old script-level interface and the
-    new canonical orchestrator, ensuring backward compatibility.
+    NOTE: The transformation feature (YAML → JSONL) has been removed as the
+    IndexBuilder now supports direct YAML ingestion. Use scripts/cli.py pipeline-extraction
+    for the complete pipeline including database building.
 
     Args:
         html_files: List of HTML files to process
         output_yaml: Path for main ruleset YAML
         manual_review_yaml: Path for manual review YAML
-        output_jsonl: Path for JSONL output (enables auto-transform if set)
+        output_jsonl: Path for JSONL output (DEPRECATED: no longer used)
         verbose: Enable debug logging
+        cache_dir: Directory to cache LLM responses
 
     Returns:
-        Tuple of (stats dict, transformation report or None)
+        Tuple of (stats dict, None)
         - stats: Flat dict with total_rules, perfect_matches, auto_corrected, manual_review
-        - report: TransformationReport if output_jsonl is set, None otherwise
+        - report: Always None (transformation feature removed)
 
     Raises:
         PipelineError: On extraction/parsing failures
-        CriticalTransformationError: On transformation failures
 
     """
     # Configure logging
@@ -342,22 +327,14 @@ def _run_extraction_pipeline(
 
     logger.info(f"Extraction complete: {stats['total_rules']} rules extracted")
 
-    # === Step 3: Handle transformation (YAML → JSONL) ===
-    # The orchestrator doesn't do transformation, so we handle it separately
-    transformation_report = None
+    # Transformation feature removed - use scripts/cli.py pipeline-extraction instead
     if output_jsonl is not None:
-        logger.info(f"Transforming YAML to JSONL: {output_yaml} → {output_jsonl}")
-        transformer = YAMLTransformer()
-        transformation_report = transformer.transform_yaml_to_jsonl(
-            yaml_path=output_yaml,
-            jsonl_path=output_jsonl,
-            continue_on_error=True,
-        )
-        logger.info(
-            f"Transformation complete: {transformation_report.successful}/{transformation_report.total_rules} rules"
+        logger.warning(
+            "Transformation feature (--auto-transform) has been removed. "
+            "Use 'uv run python scripts/cli.py pipeline-extraction' for the complete pipeline."
         )
 
-    return stats, transformation_report
+    return stats, None
 
 
 if __name__ == "__main__":
