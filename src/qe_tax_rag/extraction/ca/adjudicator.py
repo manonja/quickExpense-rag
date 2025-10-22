@@ -292,7 +292,7 @@ Anchor ID: {anchor_id}
 --- FULL HTML SOURCE ---
 {html_content}
 
-Respond ONLY with a single JSON object (no markdown, no explanatory text):
+Respond ONLY with a single, RFC 8259 compliant JSON object (no markdown, no explanatory text). Ensure all string values are correctly escaped:
 
 {{
   "analysis": "<Brief 1-2 sentence explanation of what discrepancy you found>",
@@ -401,25 +401,36 @@ def _build_adjudication_prompt(
     )
 
 
-def _strip_markdown_json_fences(text: str) -> str:
+def _sanitize_llm_json_output(text: str) -> str:
     """
-    Strip markdown code fences from LLM JSON responses.
+    Sanitize raw LLM response to produce valid JSON.
 
-    Gemini sometimes wraps JSON responses in markdown code fences even when
-    instructed not to. This function removes ```json and ``` wrappers.
+    This function performs two critical operations:
+    1. Strips markdown code fences (```json...```) that LLMs often add despite instructions
+    2. Fixes invalid backslash escape sequences within JSON strings
+
+    The JSON specification (RFC 8259) requires backslashes to be part of valid escape
+    sequences (\\", \\\\, \\/, \\b, \\f, \\n, \\r, \\t, \\uXXXX) or escaped themselves.
+    LLMs sometimes generate HTML content with lone backslashes (e.g., href=\\"file.html\\")
+    that break JSON parsing. This function escapes such backslashes.
 
     Args:
         text: Raw text response from LLM
 
     Returns:
-        Clean JSON text without markdown fences
+        Sanitized JSON text ready for parsing
 
     Example:
-        >>> response = "```json\\n{\"key\": \"value\"}\\n```"
-        >>> _strip_markdown_json_fences(response)
-        '{"key": "value"}'
+        >>> response = '```json\\n{"citation": "<a href=\\"file.html\\">"}\\n```'
+        >>> _sanitize_llm_json_output(response)
+        '{"citation": "<a href=\\\\"file.html\\\\>"}'
+
+    Note:
+        This is a defensive measure against LLM output quirks. We cannot rely on
+        prompt engineering alone to ensure RFC 8259 compliance.
 
     """
+    # Step 1: Strip markdown code fences
     text = text.strip()
 
     # Remove opening fence (```json or ``` at start)
@@ -431,6 +442,13 @@ def _strip_markdown_json_fences(text: str) -> str:
     # Remove closing fence (``` at end)
     if text.endswith("```"):
         text = text[:-3].rstrip()
+
+    # Step 2: Fix invalid backslash escapes
+    # Valid JSON escapes: \", \\, \/, \b, \f, \n, \r, \t, \uXXXX
+    # This regex finds backslashes NOT followed by valid escape characters
+    # and replaces them with double backslashes (\\)
+    invalid_escape_regex = re.compile(r'\\(?!["\\/bfnrtu])')
+    text = invalid_escape_regex.sub(r"\\\\", text)
 
     return text
 
@@ -503,8 +521,8 @@ def _adjudicate_item_with_llm(
         # 30-second timeout
         response = model.generate_content(prompt, request_options={"timeout": 30})
 
-        # Strip markdown fences and parse JSON
-        clean_json = _strip_markdown_json_fences(response.text)
+        # Sanitize LLM output and parse JSON
+        clean_json = _sanitize_llm_json_output(response.text)
         data = json.loads(clean_json)
 
         # Check for insufficient evidence
@@ -600,9 +618,20 @@ def _determine_failure_reason(
     if "TimeoutError" in str(type(exception)):
         return "API timeout after 30s"
     elif isinstance(exception, json.JSONDecodeError):
-        response_text = local_vars.get("response")
-        if response_text and hasattr(response_text, "text"):
-            logger.error(f"[Adjudicator] Raw LLM response: {response_text.text[:500]}")
+        # Log both raw and sanitized JSON for debugging
+        raw_response_text = ""
+        response_obj = local_vars.get("response")
+        if response_obj and hasattr(response_obj, "text"):
+            raw_response_text = response_obj.text
+            logger.error(f"[Adjudicator] Raw LLM response: {raw_response_text[:500]}")
+
+        # Also log the sanitized version that was given to json.loads()
+        clean_json_text = local_vars.get("clean_json", "")
+        if clean_json_text and clean_json_text != raw_response_text:
+            logger.error(
+                f"[Adjudicator] Sanitized JSON given to parser: {str(clean_json_text)[:500]}"
+            )
+
         return f"Failed to parse LLM JSON response: {exception!s}"
     elif "ValidationError" in str(type(exception)):
         return f"LLM response failed schema validation: {exception!s}"
