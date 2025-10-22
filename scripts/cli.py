@@ -874,8 +874,10 @@ def pipeline_extraction(
                 f"✅ Extracted {extraction_result['total_rules']} rules to YAML"
             )
 
-        except Exception as e:
-            console.print(f"\n[red]❌ Stage 1/3 (Extraction) failed: {e}[/red]")
+        except typer.Exit:
+            raise
+        except Exception:
+            console.print("\n[red]❌ Stage 1/3 (Extraction) failed[/red]")
             logger.exception("Stage 1 (Extraction) failed")
             raise
 
@@ -915,8 +917,10 @@ def pipeline_extraction(
             db_size_mb = output_db.stat().st_size / (1024 * 1024)
             console.print(f"   Database size: {db_size_mb:.2f} MB")
 
-        except Exception as e:
-            console.print(f"\n[red]❌ Stage 2/3 (Build) failed: {e}[/red]")
+        except typer.Exit:
+            raise
+        except Exception:
+            console.print("\n[red]❌ Stage 2/3 (Build) failed[/red]")
             logger.exception("Stage 2 (Build) failed")
             raise
 
@@ -934,8 +938,10 @@ def pipeline_extraction(
             else:
                 console.print("[yellow]⚠️  Some validation checks failed[/yellow]")
 
-        except Exception as e:
-            console.print(f"\n[red]❌ Stage 3/3 (Validation) failed: {e}[/red]")
+        except typer.Exit:
+            raise
+        except Exception:
+            console.print("\n[red]❌ Stage 3/3 (Validation) failed[/red]")
             logger.exception("Stage 3 (Validation) failed")
             raise
 
@@ -944,10 +950,6 @@ def pipeline_extraction(
     except typer.Exit:
         # Re-raise typer.Exit to preserve exit code
         raise
-
-    except Exception as e:
-        # Stage-specific error already logged, just exit gracefully
-        raise typer.Exit(code=1) from e
 
     finally:
         # Cleanup intermediate files if applicable
