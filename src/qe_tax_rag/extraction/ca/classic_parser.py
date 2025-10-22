@@ -151,7 +151,7 @@ def parse(html_path: str) -> list[ExtractedRule]:
             )
             extracted_rules.append(rule)
 
-        except Exception as e:
+        except (ValueError, KeyError, AttributeError, TypeError) as e:
             logger.warning(
                 f"Skipping malformed rule '{header.get_text(strip=True)}': {e}"
             )

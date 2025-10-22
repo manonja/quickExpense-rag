@@ -141,7 +141,7 @@ def parse(html_path: str, cache_dir: str | Path | None = None) -> list[Extracted
                     f"{token_count.total_tokens} tokens (max: 1M). "
                     "Extraction may fail or be incomplete."
                 )
-        except Exception as e:
+        except (ImportError, AttributeError, ValueError, TypeError) as e:
             # Don't fail on token counting errors - it's a safety check
             logger.debug(f"Token counting failed for {html_path}: {e}")
 
@@ -172,7 +172,7 @@ def parse(html_path: str, cache_dir: str | Path | None = None) -> list[Extracted
                     raise ParserError(msg) from e
 
                 # Add jitter to prevent thundering herd
-                wait_time = (backoff_factor ** attempt) + random.uniform(0, 1)
+                wait_time = (backoff_factor**attempt) + random.uniform(0, 1)
                 logger.warning(
                     f"API error for {html_path}, attempt {attempt + 1}/{retries}. "
                     f"Retrying in {wait_time:.2f} seconds... Error: {e}"
@@ -198,7 +198,9 @@ def parse(html_path: str, cache_dir: str | Path | None = None) -> list[Extracted
         data = json.loads(response_text or "{}")
         rules_data = data.get("rules", [])
     except json.JSONDecodeError as e:
-        msg = f"Failed to parse JSON response for {html_path} (malformed/truncated JSON)"
+        msg = (
+            f"Failed to parse JSON response for {html_path} (malformed/truncated JSON)"
+        )
         logger.warning(
             f"{msg}. Gemini may have truncated the response for large files. "
             "Returning empty list to allow fallback to Classic Parser results. "

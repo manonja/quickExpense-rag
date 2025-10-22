@@ -74,7 +74,7 @@ class IndexValidator:
                 "missing": sorted(missing_tables) if missing_tables else [],
             }
 
-        except Exception as e:
+        except (OSError, sqlite3.Error) as e:
             return {
                 "passed": False,
                 "error": str(e),
@@ -141,7 +141,7 @@ class IndexValidator:
                 "rules_fts_count": rules_fts_count,
             }
 
-        except Exception as e:
+        except (OSError, sqlite3.Error, ImportError, AttributeError) as e:
             return {
                 "passed": False,
                 "error": str(e),
@@ -205,7 +205,7 @@ class IndexValidator:
                 "sample_count": 1,
             }
 
-        except Exception as e:
+        except (OSError, sqlite3.Error, ImportError, AttributeError, ValueError) as e:
             return {
                 "passed": False,
                 "error": str(e),
@@ -326,7 +326,7 @@ class IndexValidator:
                 "expense_types": expense_types,
             }
 
-        except Exception:
+        except (OSError, sqlite3.Error):
             return {
                 "total_chunks": 0,
                 "provinces": [],

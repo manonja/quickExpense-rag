@@ -490,11 +490,6 @@ def _run_build_logic(
         console.print(f"[red]Error: {e}[/red]")
         raise typer.Exit(code=1) from e
 
-    except Exception as e:
-        console.print(f"[red]Build failed: {e}[/red]")
-        logger.exception("Build failed")
-        raise typer.Exit(code=1) from e
-
 
 @app.command()
 def pipeline(
@@ -602,10 +597,6 @@ def pipeline(
 
     except typer.Exit:
         raise
-    except Exception as e:
-        console.print(f"[red]Preprocessing failed: {e}[/red]")
-        logger.exception("Preprocessing failed")
-        raise typer.Exit(code=1) from e
 
     # Stage 2: Parse
     console.print("[bold cyan]Stage 2/4: Parsing with Gemini Flash[/bold cyan]")
@@ -644,10 +635,6 @@ def pipeline(
 
     except typer.Exit:
         raise
-    except Exception as e:
-        console.print(f"[red]Parsing failed: {e}[/red]")
-        logger.exception("Parsing failed")
-        raise typer.Exit(code=1) from e
 
     # Stage 3: Build
     console.print("[bold cyan]Stage 3/4: Building searchable database[/bold cyan]")
@@ -666,10 +653,6 @@ def pipeline(
 
     except typer.Exit:
         raise
-    except Exception as e:
-        console.print(f"[red]Build failed: {e}[/red]")
-        logger.exception("Build failed")
-        raise typer.Exit(code=1) from e
 
     # Stage 4: Validate
     console.print("[bold cyan]Stage 4/4: Validating database[/bold cyan]")
@@ -682,10 +665,12 @@ def pipeline(
         else:
             console.print("[yellow]⚠️  Some validation checks failed[/yellow]\n")
 
-    except Exception as e:
-        console.print(f"[yellow]Warning: Validation failed: {e}[/yellow]")
+    except typer.Exit:
+        raise
+    except Exception:
+        # Don't fail the pipeline if validation fails - just log the exception
+        console.print("[yellow]Warning: Validation failed (see logs for details)[/yellow]")
         logger.exception("Validation failed")
-        # Don't fail the pipeline if validation fails
 
     # Success summary
     console.print("[bold green]Pipeline Complete![/bold green]")
@@ -735,11 +720,6 @@ def validate(
     except typer.Exit:
         # Re-raise typer.Exit to preserve exit code
         raise
-
-    except Exception as e:
-        console.print(f"[red]Validation error: {e}[/red]")
-        logger.exception("Validation failed")
-        raise typer.Exit(code=1) from e
 
     # Display results with rich formatting
     from rich.panel import Panel
