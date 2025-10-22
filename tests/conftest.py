@@ -1,10 +1,32 @@
 """Shared pytest fixtures for test suite."""
 
 from pathlib import Path
+from typing import Any
 from unittest.mock import Mock
 
 import numpy as np
 import pytest
+
+
+def normalize_yaml_for_golden_comparison(data: dict[str, Any]) -> dict[str, Any]:
+    """
+    Normalize YAML data for resilient golden file comparison.
+
+    Removes volatile fields (timestamps, IDs) that change between runs
+    but don't affect functional correctness. Makes golden file tests
+    less brittle to non-breaking changes.
+
+    Args:
+        data: Loaded YAML data (typically RuleSet dict)
+
+    Returns:
+        Normalized copy with volatile fields removed
+
+    """
+    normalized = data.copy()
+    # Remove timestamp - changes with every extraction but doesn't affect correctness
+    normalized.pop("extraction_timestamp", None)
+    return normalized
 
 
 @pytest.fixture(scope="session")
@@ -108,106 +130,3 @@ def sample_chunks() -> list[dict]:
     return []
 
 
-@pytest.fixture
-def mock_gemini_client(mocker):  # type: ignore[no-untyped-def]
-    """
-    Mock Gemini API client for deterministic LLM parser testing.
-
-    Returns pre-defined ExtractedRule objects based on the input file,
-    avoiding network calls and ensuring test reproducibility.
-
-    Args:
-        mocker: pytest-mock fixture for patching
-
-    Returns:
-        Mock object for llm_parse function
-
-    """
-    from qe_tax_rag.extraction.ca.schema import (
-        ApplicabilityType,
-        ExpertSource,
-        ExtractedRule,
-    )
-
-    def mock_llm_parse(
-        html_path: str,
-        cache_dir: Path | None = None,  # noqa: ARG001
-    ) -> list[ExtractedRule]:
-        """Mock implementation of llm_parse()."""
-        # Determine which fixture is being parsed
-        path = Path(html_path)
-
-        if "simple_rule" in path.name:
-            # Return single rule for simple fixture
-            return [
-                ExtractedRule(
-                    rule_number=8523,
-                    title="Meals and entertainment",
-                    content="The maximum amount you can claim for food, beverages and entertainment expenses is 50% of the lesser of the following amounts:\n\nthe amount incurred for these expenses\nan amount that is reasonable in the circumstances\n\nWhen you claim expenses on this line, you will have to calculate the allowable part you can claim for business use.",
-                    applies_to=[ApplicabilityType.BUSINESS],
-                    source_citation="Line 8523",
-                    chapter="Chapter 3 – Business Expenses",
-                    section="Part 1 – Meals and Entertainment",
-                    source_file=path.name,
-                    expert_source=ExpertSource.LLM,
-                    anchor_id="tocch3ln8523",
-                    confidence_score=0.95,
-                ),
-            ]
-
-        if "complex_rule" in path.name:
-            # Return multiple rules for complex fixture
-            return [
-                ExtractedRule(
-                    rule_number=8523,
-                    title="Meals and entertainment",
-                    content="You can deduct 50% of the cost of food, beverages, or entertainment.",
-                    applies_to=[ApplicabilityType.BUSINESS],
-                    source_citation="Line 8523",
-                    chapter="Chapter 3 – Business Expenses",
-                    section=None,
-                    source_file=path.name,
-                    expert_source=ExpertSource.LLM,
-                    anchor_id="tocch3ln8523",
-                    confidence_score=0.95,
-                ),
-                ExtractedRule(
-                    rule_number=9270,
-                    title="Motor vehicle expenses",
-                    content="You can deduct motor vehicle expenses including fuel and maintenance.",
-                    applies_to=[ApplicabilityType.BUSINESS, ApplicabilityType.FARMING],
-                    source_citation="Line 9270",
-                    chapter="Chapter 3 – Business Expenses",
-                    section=None,
-                    source_file=path.name,
-                    expert_source=ExpertSource.LLM,
-                    anchor_id="tocch3ln9270",
-                    confidence_score=0.92,
-                ),
-                ExtractedRule(
-                    rule_number=8000,
-                    title="Utilities",
-                    content="Deduct electricity, heating, and water expenses for fishing operations.",
-                    applies_to=[ApplicabilityType.FISHING],
-                    source_citation="Line 8000",
-                    chapter="Chapter 3 – Business Expenses",
-                    section=None,
-                    source_file=path.name,
-                    expert_source=ExpertSource.LLM,
-                    anchor_id="tocch3ln8000",
-                    confidence_score=0.88,
-                ),
-            ]
-
-        if "malformed" in path.name:
-            # Return empty list for malformed HTML (simulates parsing failure)
-            return []
-
-        # Default: return empty list
-        return []
-
-    # Patch the llm_parse function
-    return mocker.patch(
-        "qe_tax_rag.extraction.ca.orchestrator.llm_parse",
-        side_effect=mock_llm_parse,
-    )

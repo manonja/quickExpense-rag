@@ -17,8 +17,17 @@ from tests.strategies import ruleset_strategy, extracted_rule_strategy
 def test_yaml_roundtrip_preserves_ruleset(ruleset: RuleSet) -> None:
     """Property: RuleSet → YAML → RuleSet is an identity function.
 
-    Serialization to YAML and back should preserve all data exactly,
-    including nested structures, enums, and optional fields.
+    Comprehensive test that serialization to YAML and back preserves all data
+    exactly, including:
+    - Nested structures (RuleSet → rules list)
+    - Enums (ApplicabilityType, ExpertSource)
+    - Optional fields (section, anchor_id)
+    - List fields (rules, applies_to) with order preserved
+    - Float precision (confidence_score)
+    - All other field types
+
+    Consolidates: test_yaml_preserves_optional_fields, test_yaml_preserves_list_fields,
+    test_yaml_preserves_enum_fields, test_yaml_preserves_float_precision
 
     Args:
         ruleset: Generated RuleSet instance
@@ -31,7 +40,7 @@ def test_yaml_roundtrip_preserves_ruleset(ruleset: RuleSet) -> None:
     deserialized_data = yaml.safe_load(yaml_str)
     deserialized_ruleset = RuleSet.model_validate(deserialized_data)
 
-    # Postcondition: original and deserialized are equal
+    # Postcondition: original and deserialized are equal (checks ALL fields via Pydantic __eq__)
     assert deserialized_ruleset == ruleset
     assert deserialized_ruleset.schema_version == ruleset.schema_version
     assert len(deserialized_ruleset.rules) == len(ruleset.rules)
@@ -90,107 +99,6 @@ def test_pydantic_validation_survives_yaml(ruleset: RuleSet) -> None:
 
     with pytest.raises(Exception):  # ValidationError
         RuleSet.model_validate(invalid_data)
-
-
-@pytest.mark.unit
-@given(extracted_rule_strategy())
-def test_yaml_preserves_optional_fields(rule: ExtractedRule) -> None:
-    """Property: Optional fields (section, anchor_id) are preserved correctly.
-
-    YAML should correctly serialize None values and distinguish between
-    missing fields and None values.
-
-    Args:
-        rule: Generated ExtractedRule instance
-    """
-    # Serialize to YAML
-    yaml_data = rule.model_dump(mode="json")
-    yaml_str = yaml.dump(yaml_data, allow_unicode=True)
-
-    # Deserialize
-    deserialized_data = yaml.safe_load(yaml_str)
-    deserialized_rule = ExtractedRule.model_validate(deserialized_data)
-
-    # Postcondition: Optional fields match
-    assert deserialized_rule.section == rule.section
-    assert deserialized_rule.anchor_id == rule.anchor_id
-
-
-@pytest.mark.unit
-@given(ruleset_strategy())
-def test_yaml_preserves_list_fields(ruleset: RuleSet) -> None:
-    """Property: List fields (rules, applies_to) are preserved correctly.
-
-    Lists should maintain order, length, and element values after YAML
-    serialization.
-
-    Args:
-        ruleset: Generated RuleSet instance
-    """
-    # Serialize and deserialize
-    yaml_data = ruleset.model_dump(mode="json")
-    yaml_str = yaml.dump(yaml_data, allow_unicode=True)
-    deserialized_data = yaml.safe_load(yaml_str)
-    deserialized_ruleset = RuleSet.model_validate(deserialized_data)
-
-    # Postcondition: List lengths match
-    assert len(deserialized_ruleset.rules) == len(ruleset.rules)
-
-    # Postcondition: Each rule's applies_to list is preserved
-    for original_rule, deserialized_rule in zip(ruleset.rules, deserialized_ruleset.rules):
-        assert deserialized_rule.applies_to == original_rule.applies_to
-        assert len(deserialized_rule.applies_to) == len(original_rule.applies_to)
-
-
-@pytest.mark.unit
-@given(extracted_rule_strategy())
-def test_yaml_preserves_enum_fields(rule: ExtractedRule) -> None:
-    """Property: Enum fields (ApplicabilityType, ExpertSource) serialize correctly.
-
-    Enums should be represented as strings in YAML and deserialize back
-    to the correct enum values.
-
-    Args:
-        rule: Generated ExtractedRule instance
-    """
-    # Serialize to YAML
-    yaml_data = rule.model_dump(mode="json")
-    yaml_str = yaml.dump(yaml_data, allow_unicode=True)
-
-    # Check YAML representation (should be strings)
-    assert "applies_to:" in yaml_str
-    assert "expert_source:" in yaml_str
-
-    # Deserialize and validate
-    deserialized_data = yaml.safe_load(yaml_str)
-    deserialized_rule = ExtractedRule.model_validate(deserialized_data)
-
-    # Postcondition: Enum values match
-    assert deserialized_rule.expert_source == rule.expert_source
-    assert deserialized_rule.applies_to == rule.applies_to
-
-
-@pytest.mark.unit
-@given(ruleset_strategy())
-def test_yaml_preserves_float_precision(ruleset: RuleSet) -> None:
-    """Property: Float fields (confidence_score) maintain precision.
-
-    Confidence scores should serialize with sufficient precision and
-    deserialize to the same value (within floating-point tolerance).
-
-    Args:
-        ruleset: Generated RuleSet instance
-    """
-    # Serialize and deserialize
-    yaml_data = ruleset.model_dump(mode="json")
-    yaml_str = yaml.dump(yaml_data, allow_unicode=True)
-    deserialized_data = yaml.safe_load(yaml_str)
-    deserialized_ruleset = RuleSet.model_validate(deserialized_data)
-
-    # Postcondition: Confidence scores are preserved
-    for original_rule, deserialized_rule in zip(ruleset.rules, deserialized_ruleset.rules):
-        # Use approximate equality for floats
-        assert abs(deserialized_rule.confidence_score - original_rule.confidence_score) < 1e-6
 
 
 @pytest.mark.unit

@@ -50,6 +50,7 @@ dev = [
     "pre-commit>=3.5",
     "pyfakefs>=5.0",
     "types-PyYAML>=6.0",
+    "vcrpy>=6.0",
 ]
 indexing = [
     "sentence-transformers>=2.2",
@@ -164,4 +165,9 @@ exclude_lines = [
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
+]
+
+[dependency-groups]
+dev = [
+    "vcrpy>=7.0.0",
 ]

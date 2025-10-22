@@ -3,8 +3,18 @@
 from pathlib import Path
 
 import pytest
+import vcr
 import yaml
 from qe_tax_rag.extraction.ca.orchestrator import run_extraction
+from tests.conftest import normalize_yaml_for_golden_comparison
+
+# Configure VCR for these tests
+my_vcr = vcr.VCR(
+    cassette_library_dir="tests/fixtures/vcr_cassettes",
+    record_mode="once",
+    match_on=["method", "scheme", "host", "port", "path", "query"],
+    filter_headers=["authorization", "x-goog-api-key"],
+)
 
 
 @pytest.fixture
@@ -21,14 +31,16 @@ def temp_output(tmp_path: Path) -> tuple[Path, Path]:
     return output_yaml, manual_review_yaml
 
 
+@my_vcr.use_cassette("pipeline_complex_rule.yaml")
 @pytest.mark.unit
 def test_pipeline_complex_rule_against_golden(
     fixtures_dir: Path,
     temp_output: tuple[Path, Path],
-    mock_gemini_client,  # type: ignore[no-untyped-def]  # noqa: ARG001
 ) -> None:
     """
     Test extraction pipeline on complex HTML against golden YAML file.
+
+    Uses VCR to record/replay Gemini API responses for deterministic testing.
 
     Validates:
     - AC1: Valid YAML output (deserializes to RuleSet)
@@ -88,12 +100,16 @@ def test_pipeline_complex_rule_against_golden(
     with open(fixtures_dir / "complex_rule.golden.yml", encoding="utf-8") as f:
         golden_data = yaml.safe_load(f)
 
+    # Normalize both for resilient comparison (ignore volatile fields like timestamps)
+    normalized_generated = normalize_yaml_for_golden_comparison(generated_data)
+    normalized_golden = normalize_yaml_for_golden_comparison(golden_data)
+
     # Compare against golden file
-    assert len(generated_data["rules"]) == len(golden_data["rules"])
+    assert len(normalized_generated["rules"]) == len(normalized_golden["rules"])
 
     # Sort both by rule_number for comparison
-    gen_rules = sorted(generated_data["rules"], key=lambda r: r["rule_number"])
-    gold_rules = sorted(golden_data["rules"], key=lambda r: r["rule_number"])
+    gen_rules = sorted(normalized_generated["rules"], key=lambda r: r["rule_number"])
+    gold_rules = sorted(normalized_golden["rules"], key=lambda r: r["rule_number"])
 
     for gen, gold in zip(gen_rules, gold_rules, strict=False):
         assert gen["rule_number"] == gold["rule_number"]
@@ -101,14 +117,16 @@ def test_pipeline_complex_rule_against_golden(
         assert gen["applies_to"] == gold["applies_to"]
 
 
+@my_vcr.use_cassette("adjudicator_merge.yaml")
 @pytest.mark.unit
 def test_adjudicator_merges_classic_and_llm_outputs(
     fixtures_dir: Path,
     temp_output: tuple[Path, Path],
-    mock_gemini_client,  # type: ignore[no-untyped-def]  # noqa: ARG001
 ) -> None:
     """
     Test adjudicator logic with complex multi-rule HTML.
+
+    Uses VCR to record/replay Gemini API responses for deterministic testing.
 
     Validates:
     - AC3: Adjudicator merges Classic + LLM outputs correctly
@@ -150,14 +168,16 @@ def test_adjudicator_merges_classic_and_llm_outputs(
     assert rule_8000["applies_to"] == ["fishing"]
 
 
+@my_vcr.use_cassette("citation_id_integrity.yaml")
 @pytest.mark.unit
 def test_citation_id_format_and_uniqueness(
     fixtures_dir: Path,
     temp_output: tuple[Path, Path],
-    mock_gemini_client,  # type: ignore[no-untyped-def]  # noqa: ARG001
 ) -> None:
     """
     Test citation ID integrity across multiple rules.
+
+    Uses VCR to record/replay Gemini API responses for deterministic testing.
 
     Validates:
     - AC2: No duplicate citation_ids (rule_numbers)
