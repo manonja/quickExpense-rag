@@ -1,0 +1,4 @@
+# file: /Users/manonjacquin/Documents_local/POCs/quickExpense-rag/src/qe_tax_rag/api.py
+# hypothesis_version: 6.142.3
+
+['data_version', 'library_version', 'not_initialized', 'schema_version']

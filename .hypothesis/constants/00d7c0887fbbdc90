@@ -1,0 +1,4 @@
+# file: /Users/manonjacquin/Documents_local/POCs/quickExpense-rag/src/qe_tax_rag/__init__.py
+# hypothesis_version: 6.142.3
+
+['0.1.0', 'BusinessType', 'EmbeddingError', 'ExpenseQuery', 'NetworkError', 'ParsingError', 'Province', 'QeTaxRagError', 'SearchResult', '__version__', 'get_version', 'init', 'search', 'settings']

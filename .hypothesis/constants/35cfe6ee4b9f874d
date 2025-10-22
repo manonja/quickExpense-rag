@@ -1,0 +1,4 @@
+# file: /Users/manonjacquin/Documents_local/POCs/quickExpense-rag/src/qe_tax_rag/extraction/ca/orchestrator.py
+# hypothesis_version: 6.142.3
+
+['*.html', '.html', 'auto_corrected', 'failed_files', 'manual_review', 'manual_review_count', 'perfect_matches', 'processed_files', 'stats', 'total_files', 'total_rules', 'utf-8', 'w']

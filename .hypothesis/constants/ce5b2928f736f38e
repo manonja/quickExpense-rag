@@ -1,0 +1,4 @@
+# file: /Users/manonjacquin/Documents_local/POCs/quickExpense-rag/src/qe_tax_rag/search/enums.py
+# hypothesis_version: 6.142.3
+
+['AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'NT', 'NU', 'ON', 'PE', 'QC', 'SK', 'YT', 'corporation', 'partnership', 'sole_proprietorship']
