@@ -130,3 +130,20 @@ def sample_chunks() -> list[dict]:
     return []
 
 
+@pytest.fixture(scope="module")
+def module_monkeypatch() -> pytest.MonkeyPatch:
+    """
+    Module-scoped monkeypatch fixture for settings tests.
+
+    Allows setting environment variables once for an entire test module,
+    useful for VCR tests that need API keys for client initialization.
+
+    Returns:
+        MonkeyPatch instance with module scope
+
+    """
+    mpatch = pytest.MonkeyPatch()
+    yield mpatch
+    mpatch.undo()
+
+

@@ -401,6 +401,40 @@ def _build_adjudication_prompt(
     )
 
 
+def _strip_markdown_json_fences(text: str) -> str:
+    """
+    Strip markdown code fences from LLM JSON responses.
+
+    Gemini sometimes wraps JSON responses in markdown code fences even when
+    instructed not to. This function removes ```json and ``` wrappers.
+
+    Args:
+        text: Raw text response from LLM
+
+    Returns:
+        Clean JSON text without markdown fences
+
+    Example:
+        >>> response = "```json\\n{\"key\": \"value\"}\\n```"
+        >>> _strip_markdown_json_fences(response)
+        '{"key": "value"}'
+
+    """
+    text = text.strip()
+
+    # Remove opening fence (```json or ``` at start)
+    if text.startswith("```json"):
+        text = text[7:].lstrip()
+    elif text.startswith("```"):
+        text = text[3:].lstrip()
+
+    # Remove closing fence (``` at end)
+    if text.endswith("```"):
+        text = text[:-3].rstrip()
+
+    return text
+
+
 def _adjudicate_item_with_llm(
     discrepancy_type: str,
     rule_number: int,
@@ -469,8 +503,9 @@ def _adjudicate_item_with_llm(
         # 30-second timeout
         response = model.generate_content(prompt, request_options={"timeout": 30})
 
-        # Parse JSON
-        data = json.loads(response.text)
+        # Strip markdown fences and parse JSON
+        clean_json = _strip_markdown_json_fences(response.text)
+        data = json.loads(clean_json)
 
         # Check for insufficient evidence
         if data.get("analysis", "").startswith("INSUFFICIENT_EVIDENCE:"):

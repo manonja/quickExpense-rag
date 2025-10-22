@@ -17,6 +17,18 @@ my_vcr = vcr.VCR(
 )
 
 
+@pytest.fixture(autouse=True, scope="module")
+def set_dummy_api_key(module_monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Set a dummy API key for all tests in this module.
+
+    This is required for the Gemini client to initialize correctly, even when
+    VCR is replaying responses. The client may have pre-flight checks that
+    fail if the key is missing entirely.
+    """
+    module_monkeypatch.setenv("QE_TAX_RAG_EXTRACTION_GEMINI_API_KEY", "dummy-key-for-vcr")
+
+
 @pytest.fixture
 def fixtures_dir() -> Path:
     """Path to extraction test fixtures."""
