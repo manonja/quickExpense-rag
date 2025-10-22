@@ -147,10 +147,15 @@ class ParsedDocument(BaseModel):
         for section in self.sections:
             for content_item in section.content:
                 if isinstance(content_item, TextChunk):
+                    if not content_item.citation_id:
+                        raise ValueError(
+                            f"Missing citation_id for TextChunk in section '{section.section_title}'. "
+                            f"All chunks must have a valid citation_id (database constraint: UNIQUE NOT NULL)."
+                        )
                     chunks.append(
                         DatabaseChunk(
                             content=content_item.text,
-                            citation_id=content_item.citation_id or "",
+                            citation_id=content_item.citation_id,
                             source_url=str(source_file.url),
                             source_hash=source_file.hash,
                             province=self.metadata.province,
@@ -177,12 +182,17 @@ class ParsedDocument(BaseModel):
                             )
                         )
                 elif isinstance(content_item, TableChunk):
+                    if not content_item.citation_id:
+                        raise ValueError(
+                            f"Missing citation_id for TableChunk in section '{section.section_title}'. "
+                            f"All chunks must have a valid citation_id (database constraint: UNIQUE NOT NULL)."
+                        )
                     # Convert table to text representation
                     table_text = self._table_to_text(content_item.data)
                     chunks.append(
                         DatabaseChunk(
                             content=table_text,
-                            citation_id=content_item.citation_id or "",
+                            citation_id=content_item.citation_id,
                             source_url=str(source_file.url),
                             source_hash=source_file.hash,
                             province=self.metadata.province,
@@ -227,10 +237,15 @@ class ParsedDocument(BaseModel):
         chunks: list[DatabaseChunk] = []
 
         # Add parent item
+        if not item.citation_id:
+            raise ValueError(
+                f"Missing citation_id for ListItem in section '{section.section_title}'. "
+                f"All chunks must have a valid citation_id (database constraint: UNIQUE NOT NULL)."
+            )
         chunks.append(
             DatabaseChunk(
                 content=item.text,
-                citation_id=item.citation_id or "",
+                citation_id=item.citation_id,
                 source_url=str(source_file.url),
                 source_hash=source_file.hash,
                 province=self.metadata.province,

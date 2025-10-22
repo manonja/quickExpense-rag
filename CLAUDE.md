@@ -342,6 +342,17 @@ enforced.
 - All functions must have type hints
 - No `Any` types without justification
 
+### Citation ID Integrity
+
+**CRITICAL**: `citation_id` must NEVER be `None` or empty string (`""`).
+
+- **Database constraint**: `citation_id TEXT UNIQUE NOT NULL` (schema.py:43)
+- **Data quality**: Missing citation_id indicates a fundamental extraction/parsing error
+- **Error handling**: Code MUST raise `ValueError` for missing citation_id, never use fallback to empty string
+- **Formats**: `LINE-{number}` (extraction pipeline) or `S#-F#-C#-p#` (legacy Gemini parser)
+
+**Why no fallbacks**: Empty string would violate database UNIQUE constraint on subsequent inserts, causing silent data corruption. Fail-fast on missing citation_id ensures data integrity.
+
 ### Embedding Model Lock-in
 
 The BGE-small-en-v1.5 model produces 384-dimensional embeddings. Changing models
