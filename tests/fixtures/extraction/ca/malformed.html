@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CRA T4002 Test - Malformed HTML</title>
+</head>
+<body>
+    <h1>Chapter 3 – Business Expenses</h1>
+
+    <!-- Rule 1: Unclosed tags (tests parser resilience to broken DOM) -->
+    <h3><a id="tocch3ln9945">Line 9945 – Business-use-of-home expenses</h3>
+    <p>You can deduct expenses for the business use of a workspace in your home, if you meet one of the following conditions:
+    <!-- INTENTIONALLY MISSING </p> CLOSE TAG -->
+    <ul>
+        <li>it is your principal place of business
+        <!-- INTENTIONALLY MISSING </li> CLOSE TAG -->
+        <li>you use the space only to earn your business income
+    </ul>
+
+    <!-- Rule 2: Missing content body (tests content-association logic) -->
+    <h3><a id="tocch3ln8860"></a><span class="nowrap">Line 8860 –</span> Professional fees <img alt="business icon" src="business.png"></h3>
+    <!-- NO CONTENT PARAGRAPHS - IMMEDIATELY ENDS -->
+
+</body>
+<!-- Missing closing </html> tag
