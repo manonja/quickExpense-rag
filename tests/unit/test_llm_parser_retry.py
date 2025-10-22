@@ -5,7 +5,6 @@ from unittest.mock import Mock, patch
 
 import pytest
 from google.api_core.exceptions import ResourceExhausted
-
 from qe_tax_rag.extraction.ca.exceptions import ParserError
 from qe_tax_rag.extraction.ca.llm_parser import parse
 
@@ -14,13 +13,14 @@ class TestLLMParserRetryLogic:
     """Test retry behavior under API quota exhaustion."""
 
     @patch("qe_tax_rag.extraction.ca.llm_parser.genai.GenerativeModel")
-    def test_retry_uses_exponential_backoff_with_jitter(self, mock_model_class, tmp_path):
+    def test_retry_uses_exponential_backoff_with_jitter(
+        self, mock_model_class, tmp_path
+    ):
         """Verify retry delays increase exponentially with jitter."""
         # Create minimal HTML file
         html_file = tmp_path / "test.html"
         html_file.write_text(
-            "<html><body><main>Test content</main></body></html>",
-            encoding="utf-8"
+            "<html><body><main>Test content</main></body></html>", encoding="utf-8"
         )
 
         mock_model = Mock()
@@ -47,7 +47,9 @@ class TestLLMParserRetryLogic:
 
         # Expected delays: ~1s (attempt 0) + ~5s (attempt 1) + jitter ≈ 6-8s
         # Current implementation: 1s + 2s = 3s (will fail this test)
-        assert elapsed >= 6, f"Retry too fast: {elapsed}s (expected ≥6s with new backoff)"
+        assert elapsed >= 6, (
+            f"Retry too fast: {elapsed}s (expected ≥6s with new backoff)"
+        )
         assert elapsed <= 8, f"Retry too slow: {elapsed}s (expected ≤8s)"
 
         # Should have made 3 attempts total
@@ -58,15 +60,16 @@ class TestLLMParserRetryLogic:
         """Verify parser raises ParserError after exhausting retries."""
         html_file = tmp_path / "test.html"
         html_file.write_text(
-            "<html><body><main>Test content</main></body></html>",
-            encoding="utf-8"
+            "<html><body><main>Test content</main></body></html>", encoding="utf-8"
         )
 
         mock_model = Mock()
         mock_model_class.return_value = mock_model
 
         # Simulate persistent quota exhaustion
-        mock_model.generate_content.side_effect = ResourceExhausted("429 quota exceeded")
+        mock_model.generate_content.side_effect = ResourceExhausted(
+            "429 quota exceeded"
+        )
         mock_model.count_tokens.return_value = Mock(total_tokens=1000)
 
         with patch("qe_tax_rag.extraction.ca.llm_parser.settings") as mock_settings:
@@ -88,8 +91,7 @@ class TestLLMParserRetryLogic:
         """Verify jitter is added to retry delays."""
         html_file = tmp_path / "test.html"
         html_file.write_text(
-            "<html><body><main>Test content</main></body></html>",
-            encoding="utf-8"
+            "<html><body><main>Test content</main></body></html>", encoding="utf-8"
         )
 
         mock_random.return_value = 0.5  # Fixed jitter for testing

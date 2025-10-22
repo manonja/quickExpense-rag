@@ -22,7 +22,6 @@ from qe_tax_rag.data.builder import IndexBuilder
 from qe_tax_rag.data.validator import IndexValidator
 from qe_tax_rag.embeddings.encoder import embedding_service
 from qe_tax_rag.extraction.ca.orchestrator import run_extraction
-from qe_tax_rag.extraction.ca.transformer import YAMLTransformer
 from qe_tax_rag.search.models import SourceFile
 
 # Initialize Typer app and Rich console
@@ -75,77 +74,16 @@ def preprocess(
     console.print(f"Input: {input_dir}")
     console.print(f"Output: {output_dir}\n")
 
-    # Verify input directory exists
-    if not input_dir.exists():
-        console.print(f"[red]Error: Input directory not found: {input_dir}[/red]")
-        raise typer.Exit(code=1)
+    # Run preprocessing logic via shared helper
+    file_count, _manifest_path = _run_preprocess_logic(
+        input_dir=input_dir,
+        output_dir=output_dir,
+        console=console,
+    )
 
-    # Create output directory
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    # Find all HTML and PDF files
-    html_files = list(input_dir.glob("*.html"))
-    pdf_files = list(input_dir.glob("*.pdf"))
-    all_files = html_files + pdf_files
-
-    if not all_files:
-        console.print(
-            f"[yellow]Warning: No HTML or PDF files found in {input_dir}[/yellow]"
-        )
+    # Early exit if no files found
+    if file_count == 0:
         return
-
-    console.print(f"Found {len(html_files)} HTML and {len(pdf_files)} PDF files\n")
-
-    # Initialize extractor
-    extractor = TextExtractor()
-    manifest_docs: list[DownloadMetadata] = []
-    success_count = 0
-    error_count = 0
-
-    # Process files with progress bar
-    for input_file in track(all_files, description="Preprocessing..."):
-        try:
-            # Generate output filename (.txt extension)
-            output_file = output_dir / f"{input_file.stem}.txt"
-
-            # Preprocess file (computes SHA256)
-            sha256 = extractor.preprocess_file(
-                input_file,
-                output_file,
-                compute_hash=True,
-            )
-
-            # Add to manifest
-            manifest_docs.append(
-                DownloadMetadata(
-                    filename=input_file.name,
-                    source_url=f"https://www.canada.ca/...",  # Placeholder
-                    downloaded_at=datetime.now(timezone.utc),
-                    sha256=sha256 or "",  # Should always be present
-                )
-            )
-
-            success_count += 1
-            logger.info("Preprocessed: %s → %s", input_file.name, output_file.name)
-
-        except Exception as e:
-            error_count += 1
-            console.print(f"[red]Error processing {input_file.name}: {e}[/red]")
-            logger.exception("Failed to preprocess %s: %s", input_file.name, e)
-
-    # Create manifest
-    manifest = PreprocessManifest(documents=manifest_docs)
-    manifest_path = input_dir / "manifest.json"
-
-    with manifest_path.open("w", encoding="utf-8") as f:
-        json.dump(manifest.model_dump(mode="json"), f, indent=2, default=str)
-
-    # Summary
-    console.print("\n[bold green]Preprocessing Complete![/bold green]")
-    console.print(f"✅ Processed: {success_count} files")
-    if error_count > 0:
-        console.print(f"❌ Errors: {error_count} files")
-    console.print(f"📄 Manifest: {manifest_path}")
 
 
 @app.command()
@@ -298,7 +236,7 @@ def build(
         Path("data/processed/chunks.jsonl"),
         "--input-file",
         "-i",
-        help="Input JSONL file with ParsedDocument objects",
+        help="Input YAML or JSONL file with rules/documents",
     ),
     manifest_file: Path = typer.Option(  # noqa: B008
         Path("data/raw/manifest.json"),
@@ -346,6 +284,145 @@ def build(
     console.print(f"Output Manifest: {output_manifest}")
     console.print(f"Data Version: {data_version}\n")
 
+    # Run build logic via shared helper
+    _run_build_logic(
+        input_file=input_file,
+        manifest_file=manifest_file,
+        output_db=output_db,
+        output_manifest=output_manifest,
+        data_version=data_version,
+        continue_on_error=continue_on_error,
+        console=console,
+    )
+
+
+def _run_preprocess_logic(
+    input_dir: Path,
+    output_dir: Path,
+    console: Console,
+) -> tuple[int, Path]:
+    """
+    Run preprocessing logic (HTML/PDF → clean text).
+
+    Shared by both preprocess() command and pipeline() command.
+
+    Args:
+        input_dir: Directory containing HTML/PDF files
+        output_dir: Directory for preprocessed text files
+        console: Rich console for output
+
+    Returns:
+        Tuple of (file_count, manifest_path)
+
+    Raises:
+        typer.Exit: If input directory not found or no files to process
+
+    """
+    # Verify input directory exists
+    if not input_dir.exists():
+        console.print(f"[red]Error: Input directory not found: {input_dir}[/red]")
+        raise typer.Exit(code=1)
+
+    # Create output directory
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Find all HTML and PDF files
+    html_files = list(input_dir.glob("*.html"))
+    pdf_files = list(input_dir.glob("*.pdf"))
+    all_files = html_files + pdf_files
+
+    if not all_files:
+        console.print(
+            f"[yellow]Warning: No HTML or PDF files found in {input_dir}[/yellow]"
+        )
+        # Return 0 count for preprocess() to handle gracefully
+        # But raise for pipeline() to fail-fast
+        return (0, input_dir / "manifest.json")
+
+    console.print(f"Found {len(html_files)} HTML and {len(pdf_files)} PDF files\n")
+
+    # Initialize extractor
+    extractor = TextExtractor()
+    manifest_docs: list[DownloadMetadata] = []
+    success_count = 0
+    error_count = 0
+
+    # Process files with progress bar
+    for input_file in track(all_files, description="Preprocessing..."):
+        try:
+            # Generate output filename (.txt extension)
+            output_file = output_dir / f"{input_file.stem}.txt"
+
+            # Preprocess file (computes SHA256)
+            sha256 = extractor.preprocess_file(
+                input_file,
+                output_file,
+                compute_hash=True,
+            )
+
+            # Add to manifest
+            manifest_docs.append(
+                DownloadMetadata(
+                    filename=input_file.name,
+                    source_url=f"https://www.canada.ca/...",  # Placeholder
+                    downloaded_at=datetime.now(timezone.utc),
+                    sha256=sha256 or "",  # Should always be present
+                )
+            )
+
+            success_count += 1
+            logger.info("Preprocessed: %s → %s", input_file.name, output_file.name)
+
+        except Exception as e:
+            error_count += 1
+            console.print(f"[red]Error processing {input_file.name}: {e}[/red]")
+            logger.exception("Failed to preprocess %s: %s", input_file.name, e)
+
+    # Create manifest
+    manifest = PreprocessManifest(documents=manifest_docs)
+    manifest_path = input_dir / "manifest.json"
+
+    with manifest_path.open("w", encoding="utf-8") as f:
+        json.dump(manifest.model_dump(mode="json"), f, indent=2, default=str)
+
+    # Summary
+    console.print("\n[bold green]Preprocessing Complete![/bold green]")
+    console.print(f"✅ Processed: {success_count} files")
+    if error_count > 0:
+        console.print(f"❌ Errors: {error_count} files")
+    console.print(f"📄 Manifest: {manifest_path}")
+
+    return (len(all_files), manifest_path)
+
+
+def _run_build_logic(
+    input_file: Path,
+    manifest_file: Path,
+    output_db: Path,
+    output_manifest: Path,
+    data_version: str,
+    continue_on_error: bool,
+    console: Console,
+) -> None:
+    """
+    Run database build logic (JSONL/YAML → SQLite + embeddings).
+
+    Shared by both build() command and pipeline() command.
+
+    Args:
+        input_file: Input YAML or JSONL file with rules/documents
+        manifest_file: Input manifest.json from preprocess step (for source
+            file metadata)
+        output_db: Output SQLite database path
+        output_manifest: Output manifest.json path
+        data_version: Data version string (YYYY.MM format)
+        continue_on_error: Skip chunks with embedding errors instead of failing
+        console: Rich console for output
+
+    Raises:
+        typer.Exit: If input/manifest file not found or build fails
+
+    """
     # Verify input file exists
     if not input_file.exists():
         console.print(f"[red]Error: Input file not found: {input_file}[/red]")
@@ -388,8 +465,8 @@ def build(
 
         # Build index
         console.print("[cyan]Building index (this may take a while)...[/cyan]\n")
-        builder.build_from_jsonl(
-            jsonl_path=str(input_file),
+        builder.build_index(
+            input_path=input_file,
             manifest_path=str(output_manifest),
             source_files=source_files,
             data_version=data_version,
@@ -411,11 +488,6 @@ def build(
 
     except ValueError as e:
         console.print(f"[red]Error: {e}[/red]")
-        raise typer.Exit(code=1) from e
-
-    except Exception as e:
-        console.print(f"[red]Build failed: {e}[/red]")
-        logger.exception("Build failed")
         raise typer.Exit(code=1) from e
 
 
@@ -509,61 +581,22 @@ def pipeline(
     # Stage 1: Preprocess
     console.print("\n[bold cyan]Stage 1/4: Preprocessing HTML/PDF files[/bold cyan]")
     try:
-        # Call preprocess logic directly instead of invoking command
-        # This avoids subprocess complexity and allows fail-fast
-        if not input_dir.exists():
-            console.print(f"[red]Error: Input directory not found: {input_dir}[/red]")
-            raise typer.Exit(code=1)
+        # Run preprocessing via shared helper function
+        file_count, _manifest_path = _run_preprocess_logic(
+            input_dir=input_dir,
+            output_dir=preprocessed_dir,
+            console=console,
+        )
 
-        preprocessed_dir.mkdir(parents=True, exist_ok=True)
-
-        # Find files
-        html_files = list(input_dir.glob("*.html"))
-        pdf_files = list(input_dir.glob("*.pdf"))
-        all_files = html_files + pdf_files
-
-        if not all_files:
+        # Fail-fast if no files found (pipeline requires files)
+        if file_count == 0:
             console.print(
                 f"[red]Error: No HTML or PDF files found in {input_dir}[/red]"
             )
             raise typer.Exit(code=1)
 
-        console.print(f"Found {len(all_files)} files to preprocess")
-
-        # Preprocess files
-        from preprocessor.text_extractor import TextExtractor
-
-        extractor = TextExtractor()
-        manifest_docs: list[DownloadMetadata] = []
-
-        for input_file in track(all_files, description="Preprocessing..."):
-            output_file = preprocessed_dir / f"{input_file.stem}.txt"
-            sha256 = extractor.preprocess_file(
-                input_file, output_file, compute_hash=True
-            )
-            manifest_docs.append(
-                DownloadMetadata(
-                    filename=input_file.name,
-                    source_url="https://www.canada.ca/...",
-                    downloaded_at=datetime.now(timezone.utc),
-                    sha256=sha256 or "",
-                )
-            )
-
-        # Create manifest
-        manifest = PreprocessManifest(documents=manifest_docs)
-        manifest_path = input_dir / "manifest.json"
-        with manifest_path.open("w", encoding="utf-8") as f:
-            json.dump(manifest.model_dump(mode="json"), f, indent=2, default=str)
-
-        console.print(f"✅ Preprocessed {len(all_files)} files\n")
-
     except typer.Exit:
         raise
-    except Exception as e:
-        console.print(f"[red]Preprocessing failed: {e}[/red]")
-        logger.exception("Preprocessing failed")
-        raise typer.Exit(code=1) from e
 
     # Stage 2: Parse
     console.print("[bold cyan]Stage 2/4: Parsing with Gemini Flash[/bold cyan]")
@@ -602,50 +635,24 @@ def pipeline(
 
     except typer.Exit:
         raise
-    except Exception as e:
-        console.print(f"[red]Parsing failed: {e}[/red]")
-        logger.exception("Parsing failed")
-        raise typer.Exit(code=1) from e
 
     # Stage 3: Build
     console.print("[bold cyan]Stage 3/4: Building searchable database[/bold cyan]")
     try:
-        # Load source files from manifest
+        # Run build logic via shared helper function
         manifest_file = input_dir / "manifest.json"
-        with manifest_file.open() as f:
-            manifest_data = json.load(f)
-
-        source_files = []
-        for doc in manifest_data.get("documents", []):
-            source_files.append(
-                SourceFile(
-                    path=doc["filename"],
-                    url=doc["source_url"],
-                    hash=doc["sha256"],
-                )
-            )
-
-        # Build index
-        output_db.parent.mkdir(parents=True, exist_ok=True)
-        output_manifest.parent.mkdir(parents=True, exist_ok=True)
-
-        builder = IndexBuilder(db_path=str(output_db), encoder=embedding_service)
-        builder.build_from_jsonl(
-            jsonl_path=str(chunks_file),
-            manifest_path=str(output_manifest),
-            source_files=source_files,
+        _run_build_logic(
+            input_file=chunks_file,
+            manifest_file=manifest_file,
+            output_db=output_db,
+            output_manifest=output_manifest,
             data_version=data_version,
             continue_on_error=force,
+            console=console,
         )
-
-        console.print(f"✅ Database created: {output_db}\n")
 
     except typer.Exit:
         raise
-    except Exception as e:
-        console.print(f"[red]Build failed: {e}[/red]")
-        logger.exception("Build failed")
-        raise typer.Exit(code=1) from e
 
     # Stage 4: Validate
     console.print("[bold cyan]Stage 4/4: Validating database[/bold cyan]")
@@ -658,10 +665,14 @@ def pipeline(
         else:
             console.print("[yellow]⚠️  Some validation checks failed[/yellow]\n")
 
-    except Exception as e:
-        console.print(f"[yellow]Warning: Validation failed: {e}[/yellow]")
+    except typer.Exit:
+        raise
+    except Exception:
+        # Don't fail the pipeline if validation fails - just log the exception
+        console.print(
+            "[yellow]Warning: Validation failed (see logs for details)[/yellow]"
+        )
         logger.exception("Validation failed")
-        # Don't fail the pipeline if validation fails
 
     # Success summary
     console.print("[bold green]Pipeline Complete![/bold green]")
@@ -711,11 +722,6 @@ def validate(
     except typer.Exit:
         # Re-raise typer.Exit to preserve exit code
         raise
-
-    except Exception as e:
-        console.print(f"[red]Validation error: {e}[/red]")
-        logger.exception("Validation failed")
-        raise typer.Exit(code=1) from e
 
     # Display results with rich formatting
     from rich.panel import Panel
@@ -805,9 +811,11 @@ def pipeline_extraction(
 
     This command orchestrates:
     1. Extract rules from HTML → YAML (canonical orchestrator)
-    2. Transform YAML → JSONL (transformer)
-    3. Build RAG database (IndexBuilder)
-    4. Validate database integrity
+    2. Build RAG database directly from YAML (IndexBuilder with auto-detection)
+    3. Validate database integrity
+
+    Note: This pipeline now skips the intermediate JSONL transformation step,
+    going directly from YAML to SQLite for improved performance.
 
     Example:
         uv run python scripts/cli.py pipeline-extraction \
@@ -836,17 +844,16 @@ def pipeline_extraction(
 
     # Define intermediate file paths
     yml_path = work_dir / "rules.yml"
-    jsonl_path = work_dir / "chunks.jsonl"
     manual_path = work_dir / "manual_review.yml"
 
     pipeline_success = False
     try:
         # =====================================================================
-        # Stage 1/3: Extract and Transform
+        # Stage 1/3: Extract rules
         # =====================================================================
         try:
             console.print(
-                "\n[bold cyan]Stage 1/3: Extracting and transforming rules[/bold cyan]"
+                "\n[bold cyan]Stage 1/3: Extracting rules from HTML[/bold cyan]"
             )
 
             # Find HTML files
@@ -857,7 +864,7 @@ def pipeline_extraction(
 
             console.print(f"Found {len(html_files)} HTML files to process")
 
-            # Step 1a: Run extraction (HTML → YAML) via canonical orchestrator
+            # Run extraction (HTML → YAML) via canonical orchestrator
             logger.info("Calling canonical orchestrator for extraction")
             extraction_result = run_extraction(
                 input_path=input_dir,
@@ -869,21 +876,10 @@ def pipeline_extraction(
                 f"✅ Extracted {extraction_result['total_rules']} rules to YAML"
             )
 
-            # Step 1b: Run transformation (YAML → JSONL)
-            logger.info("Transforming YAML to JSONL")
-            transformer = YAMLTransformer()
-            transformation_report = transformer.transform_yaml_to_jsonl(
-                yaml_path=yml_path,
-                jsonl_path=jsonl_path,
-                continue_on_error=True,
-            )
-
-            console.print(
-                f"✅ Transformed {transformation_report.successful}/{transformation_report.total_rules} rules to JSONL"
-            )
-
-        except Exception as e:
-            console.print(f"\n[red]❌ Stage 1/3 (Extraction) failed: {e}[/red]")
+        except typer.Exit:
+            raise
+        except Exception:
+            console.print("\n[red]❌ Stage 1/3 (Extraction) failed[/red]")
             logger.exception("Stage 1 (Extraction) failed")
             raise
 
@@ -906,11 +902,11 @@ def pipeline_extraction(
                 for f in html_files
             ]
 
-            # Build index
+            # Build index (directly from YAML, bypassing transformer)
             output_db.parent.mkdir(parents=True, exist_ok=True)
             builder = IndexBuilder(db_path=str(output_db), encoder=embedding_service)
-            builder.build_from_jsonl(
-                jsonl_path=str(jsonl_path),
+            builder.build_index(
+                input_path=yml_path,  # Use YAML directly
                 manifest_path=str(manifest_path),
                 source_files=source_files,
                 data_version="2024.12",
@@ -923,8 +919,10 @@ def pipeline_extraction(
             db_size_mb = output_db.stat().st_size / (1024 * 1024)
             console.print(f"   Database size: {db_size_mb:.2f} MB")
 
-        except Exception as e:
-            console.print(f"\n[red]❌ Stage 2/3 (Build) failed: {e}[/red]")
+        except typer.Exit:
+            raise
+        except Exception:
+            console.print("\n[red]❌ Stage 2/3 (Build) failed[/red]")
             logger.exception("Stage 2 (Build) failed")
             raise
 
@@ -942,8 +940,10 @@ def pipeline_extraction(
             else:
                 console.print("[yellow]⚠️  Some validation checks failed[/yellow]")
 
-        except Exception as e:
-            console.print(f"\n[red]❌ Stage 3/3 (Validation) failed: {e}[/red]")
+        except typer.Exit:
+            raise
+        except Exception:
+            console.print("\n[red]❌ Stage 3/3 (Validation) failed[/red]")
             logger.exception("Stage 3 (Validation) failed")
             raise
 
@@ -952,10 +952,6 @@ def pipeline_extraction(
     except typer.Exit:
         # Re-raise typer.Exit to preserve exit code
         raise
-
-    except Exception as e:
-        # Stage-specific error already logged, just exit gracefully
-        raise typer.Exit(code=1) from e
 
     finally:
         # Cleanup intermediate files if applicable

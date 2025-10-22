@@ -21,12 +21,8 @@ from rich.console import Console
 # NOTE: sys.path needed because src/ is not in standard Python path for scripts
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-# Import canonical orchestrator and transformer from src package
+# Import canonical orchestrator from src package
 from qe_tax_rag.extraction.ca.orchestrator import run_extraction
-from qe_tax_rag.extraction.ca.transformer import (
-    TransformationReport,
-    YAMLTransformer,
-)
 
 # Initialize Typer app and Rich console
 app = typer.Typer(
@@ -80,35 +76,27 @@ def run(
             help="Enable verbose logging for debugging",
         ),
     ] = False,
-    auto_transform: Annotated[
-        bool,
-        typer.Option(
-            "--auto-transform",
-            help="Automatically transform YAML to JSONL after extraction.",
-        ),
-    ] = False,
-    output_jsonl: Annotated[
-        Path | None,
-        typer.Option(
-            "--output-jsonl",
-            help="JSONL output path (required if --auto-transform is set).",
-            resolve_path=True,
-        ),
-    ] = None,
     cache_dir: Annotated[
         Path | None,
         typer.Option(
             "--cache-dir",
-            help="Directory to cache LLM responses (improves performance and reduces API costs).",
+            help=(
+                "Directory to cache LLM responses "
+                "(improves performance and reduces API costs)."
+            ),
             resolve_path=True,
         ),
     ] = None,
 ) -> None:
-    """
+    r"""
     Extract structured rules from CRA HTML documents into YAML format.
 
     Uses a Mixture-of-Experts approach with two parsers (classic BeautifulSoup
     + LLM semantic) and grounded adjudication to resolve conflicts.
+
+    NOTE: For complete pipeline (extraction + database building), use:
+          uv run python scripts/cli.py pipeline-extraction \
+              --input-dir DIR --output-db DB
 
     Examples:
         # Process directory of HTML files
@@ -119,9 +107,6 @@ def run(
 
         # With custom manual review file
         uv run extract-rules input/ output.yml --manual-review-file review.yml
-
-        # Extract and auto-transform to JSONL
-        uv run extract-rules input/ rules.yml --auto-transform --output-jsonl chunks.jsonl
 
     """
     # Enable verbose logging if requested
@@ -146,7 +131,7 @@ def run(
                 f"[red]Error: No HTML files found in directory: {input_path}[/red]"
             )
             raise typer.Exit(code=1)
-        logger.info(f"Found {len(html_files)} HTML files in directory")
+        logger.info("Found %d HTML files in directory", len(html_files))
     else:
         html_files = [input_path]
         logger.info("Processing single HTML file")
@@ -160,8 +145,6 @@ def run(
     try:
         output_yaml.parent.mkdir(parents=True, exist_ok=True)
         manual_review_yaml.parent.mkdir(parents=True, exist_ok=True)
-        if output_jsonl:
-            output_jsonl.parent.mkdir(parents=True, exist_ok=True)
     except PermissionError as e:
         console.print(
             f"[red]Error: Cannot create output directory: {e}[/red]\n"
@@ -189,11 +172,10 @@ def run(
     console.print(f"[cyan]Processing {len(html_files)} file(s)...[/cyan]\n")
 
     # Call the extracted pipeline logic
-    stats, transformation_report = _run_extraction_pipeline(
+    stats, _ = _run_extraction_pipeline(
         html_files=html_files,
         output_yaml=output_yaml,
         manual_review_yaml=manual_review_yaml,
-        output_jsonl=output_jsonl if auto_transform else None,
         verbose=verbose,
         cache_dir=cache_dir,
     )
@@ -234,14 +216,6 @@ def run(
     else:
         console.print("  [yellow]No rules extracted[/yellow]")
 
-    # Transformation breakdown
-    if transformation_report:
-        console.print("\n[bold]Transformation Breakdown:[/bold]")
-        console.print(f"  - Total Rules: {transformation_report.total_rules}")
-        console.print(f"  - [green]Successful:[/] {transformation_report.successful}")
-        console.print(f"  - [yellow]Skipped:[/]   {transformation_report.skipped}")
-        console.print(f"  - [red]Errors:[/]    {len(transformation_report.errors)}")
-
     # Output files
     console.print("\n[bold]Outputs:[/bold]")
     console.print(f"  📄 Ruleset: {output_yaml}")
@@ -250,13 +224,9 @@ def run(
         console.print(
             f"  ⚠️  Manual Review: {manual_review_yaml} ({stats['manual_review']} items)"
         )
-    if transformation_report:
-        console.print(f"  📄 Transformed JSONL: {output_jsonl}")
 
     # Final status
     final_exit_code = 0
-    if transformation_report and transformation_report.errors:
-        final_exit_code = 1
 
     if final_exit_code == 0:
         console.print("\n[green]✅ Pipeline completed successfully![/green]")
@@ -272,34 +242,34 @@ def _run_extraction_pipeline(
     html_files: list[Path],
     output_yaml: Path,
     manual_review_yaml: Path,
-    output_jsonl: Path | None,
     verbose: bool = False,
     cache_dir: Path | None = None,
-) -> tuple[dict, "TransformationReport | None"]:
-    """
+) -> tuple[dict, None]:
+    r"""
     Adapter for core extraction pipeline.
 
     Calls the canonical orchestrator from src/qe_tax_rag/extraction/ca/orchestrator.py
     and adapts its output to the legacy format expected by callers.
 
-    This function bridges the gap between the old script-level interface and the
-    new canonical orchestrator, ensuring backward compatibility.
+    NOTE: For complete pipeline (extraction + database building), use:
+          uv run python scripts/cli.py pipeline-extraction \
+              --input-dir DIR --output-db DB
 
     Args:
         html_files: List of HTML files to process
         output_yaml: Path for main ruleset YAML
         manual_review_yaml: Path for manual review YAML
-        output_jsonl: Path for JSONL output (enables auto-transform if set)
         verbose: Enable debug logging
+        cache_dir: Directory to cache LLM responses
 
     Returns:
-        Tuple of (stats dict, transformation report or None)
-        - stats: Flat dict with total_rules, perfect_matches, auto_corrected, manual_review
-        - report: TransformationReport if output_jsonl is set, None otherwise
+        Tuple of (stats dict, None)
+        - stats: Flat dict with total_rules, perfect_matches,
+                 auto_corrected, manual_review
+        - report: Always None (legacy return value for backward compatibility)
 
     Raises:
         PipelineError: On extraction/parsing failures
-        CriticalTransformationError: On transformation failures
 
     """
     # Configure logging
@@ -321,7 +291,9 @@ def _run_extraction_pipeline(
 
     # === Step 1: Call canonical orchestrator (HTML → YAML) ===
     logger.info(
-        f"Calling canonical orchestrator for {len(html_files)} files in {input_dir}"
+        "Calling canonical orchestrator for %d files in %s",
+        len(html_files),
+        input_dir,
     )
     result = run_extraction(
         input_path=input_dir,
@@ -332,7 +304,8 @@ def _run_extraction_pipeline(
 
     # === Step 2: Adapt orchestrator output to legacy flat stats structure ===
     # Orchestrator returns nested structure: {"total_rules": X, "stats": {...}}
-    # Legacy callers expect flat structure: {"total_rules": X, "perfect_matches": Y, ...}
+    # Legacy callers expect flat structure:
+    #   {"total_rules": X, "perfect_matches": Y, ...}
     stats = {
         "total_rules": result["total_rules"],
         **result[
@@ -340,24 +313,9 @@ def _run_extraction_pipeline(
         ],  # Unpack nested stats dict (perfect_matches, auto_corrected, manual_review)
     }
 
-    logger.info(f"Extraction complete: {stats['total_rules']} rules extracted")
+    logger.info("Extraction complete: %d rules extracted", stats["total_rules"])
 
-    # === Step 3: Handle transformation (YAML → JSONL) ===
-    # The orchestrator doesn't do transformation, so we handle it separately
-    transformation_report = None
-    if output_jsonl is not None:
-        logger.info(f"Transforming YAML to JSONL: {output_yaml} → {output_jsonl}")
-        transformer = YAMLTransformer()
-        transformation_report = transformer.transform_yaml_to_jsonl(
-            yaml_path=output_yaml,
-            jsonl_path=output_jsonl,
-            continue_on_error=True,
-        )
-        logger.info(
-            f"Transformation complete: {transformation_report.successful}/{transformation_report.total_rules} rules"
-        )
-
-    return stats, transformation_report
+    return stats, None
 
 
 if __name__ == "__main__":

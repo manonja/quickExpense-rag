@@ -169,7 +169,8 @@ def test_handles_empty_applies_to_list(mock_genai, tmp_path):
 
 @patch("qe_tax_rag.extraction.ca.llm_parser.genai.GenerativeModel")
 def test_returns_empty_list_for_malformed_json(mock_genai, tmp_path, caplog):
-    """Parser should return [] (not crash) when Gemini returns malformed JSON.
+    """
+    Parser should return [] (not crash) when Gemini returns malformed JSON.
 
     Large HTML files can sometimes cause Gemini to return truncated/malformed
     JSON responses. The parser should log a warning and return [], allowing
@@ -191,8 +192,12 @@ def test_returns_empty_list_for_malformed_json(mock_genai, tmp_path, caplog):
 
     # Assertions
     assert result == [], "Should return empty list for malformed JSON"
-    assert ("malformed" in caplog.text.lower() or "failed to parse" in caplog.text.lower())
-    assert "fallback" in caplog.text.lower(), "Should mention fallback to Classic Parser"
+    assert (
+        "malformed" in caplog.text.lower() or "failed to parse" in caplog.text.lower()
+    )
+    assert "fallback" in caplog.text.lower(), (
+        "Should mention fallback to Classic Parser"
+    )
 
 
 def test_raises_parser_error_on_invalid_file_path():

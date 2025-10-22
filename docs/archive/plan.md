@@ -103,7 +103,7 @@ pre-commit hooks
 
 ### Acceptance Criteria
 
-- [ ] Project initialized with `uv init --lib qe-tax-rag`
+- [ ] Project initialized with `uv init --lib quickexpense-rag`
 - [ ] `pyproject.toml` configured:
   ```toml
   [build-system]
@@ -111,7 +111,7 @@ pre-commit hooks
   build-backend = "hatchling.build"
 
   [project]
-  name = "qe-tax-rag"
+  name = "quickexpense-rag"
   version = "0.1.0"
   requires-python = ">=3.11"
   dependencies = [
@@ -340,12 +340,12 @@ ______________________________________________________________________
   class Settings(BaseSettings):
       model_config = SettingsConfigDict(
           env_file=".env",
-          env_prefix="QE_TAX_RAG_",
+          env_prefix="QUICKEXPENSE_RAG_",
           case_sensitive=False
       )
 
       # Data settings
-      cache_dir: Path = Path.home() / ".cache" / "qe_tax_rag"
+      cache_dir: Path = Path.home() / ".cache" / "quickexpense_rag"
       db_download_url: str = "https://github.com/.../releases/download/..."
       db_filename: str = "cra_rules.db"
 
@@ -370,31 +370,31 @@ ______________________________________________________________________
   ```
 - [ ] `app/exceptions.py` with custom exception hierarchy:
   ```python
-  class QeTaxRagError(Exception):
+  class QuickExpenseError(Exception):
       """Base exception for all library errors."""
 
-  class DatabaseNotInitializedError(QeTaxRagError):
+  class DatabaseNotInitializedError(QuickExpenseError):
       """Database not found. Call init() first."""
 
-  class DataVersionMismatchError(QeTaxRagError):
+  class DataVersionMismatchError(QuickExpenseError):
       """Database version incompatible with library version."""
 
-  class ChecksumMismatchError(QeTaxRagError):
+  class ChecksumMismatchError(QuickExpenseError):
       """Downloaded database failed integrity check."""
 
-  class NetworkError(QeTaxRagError):
+  class NetworkError(QuickExpenseError):
       """Network operation failed."""
 
-  class ParsingError(QeTaxRagError):
+  class ParsingError(QuickExpenseError):
       """Document parsing failed."""
 
-  class EmbeddingError(QeTaxRagError):
+  class EmbeddingError(QuickExpenseError):
       """Embedding generation failed."""
   ```
 - [ ] Logging configured in `app/__init__.py`:
   ```python
   import logging
-  logging.getLogger("qe_tax_rag").addHandler(logging.NullHandler())
+  logging.getLogger("quickexpense_rag").addHandler(logging.NullHandler())
   ```
 - [ ] `.env.example` created with all settings documented
 - [ ] Unit tests verify:
@@ -430,8 +430,12 @@ ______________________________________________________________________
       CORPORATION = "corporation"
       PARTNERSHIP = "partnership"
 
-  # Note: ExpenseType enum removed - expense types are database-driven
-  # Stored in expense_types table and queried dynamically
+  class ExpenseType(str, Enum):
+      MEALS = "meals"
+      TRAVEL = "travel"
+      VEHICLE = "vehicle"
+      HOME_OFFICE = "home_office"
+      # ... all expense types
   ```
 - [ ] `app/rag/search/models.py`:
   ```python
@@ -444,7 +448,7 @@ ______________________________________________________________________
       query: str = Field(..., min_length=3, description="Search query")
       province: Province | None = None
       business_type: BusinessType | None = None
-      expense_types: list[str] | None = None  # Database-driven, not enum
+      expense_type: ExpenseType | None = None
       top_k: int = Field(5, ge=1, le=50)
 
   class SearchResult(BaseModel):
@@ -456,7 +460,7 @@ ______________________________________________________________________
       score: float = Field(..., ge=0.0, le=1.0)
       province: Province | None
       business_type: BusinessType | None
-      expense_types: list[str]  # Database-driven, not enum
+      expense_type: ExpenseType | None
       retrieved_at: datetime
 
       @computed_field
@@ -552,12 +556,12 @@ ______________________________________________________________________
 
 ### Acceptance Criteria
 
-- [ ] `src/qe_tax_rag/data/schema.py` - **CRITICAL: Remove old column first to avoid
-  duplicate data**:
+- [ ] `src/quickexpense_rag/data/schema.py` - **CRITICAL: Remove old column first to
+  avoid duplicate data**:
   - **DELETE line 38**: `expense_type TEXT,` from `rules` table definition
   - **DELETE line 77**:
     `CREATE INDEX IF NOT EXISTS idx_expense_type ON rules(expense_type);`
-- [ ] `src/qe_tax_rag/data/schema.py` - Add new tables to CREATE_TABLES_SQL:
+- [ ] `src/quickexpense_rag/data/schema.py` - Add new tables to CREATE_TABLES_SQL:
   ```python
   -- Controlled vocabulary for expense types
   CREATE TABLE IF NOT EXISTS expense_types (
@@ -628,7 +632,7 @@ ______________________________________________________________________
       score: float = Field(..., ge=0.0, le=1.0)
       province: Province | None
       business_type: BusinessType | None
-      expense_types: list[str]  # Database-driven, not enum
+      expense_types: list[str]  # Changed from expense_type: ExpenseType | None
       retrieved_at: datetime
 
       @computed_field
@@ -642,11 +646,19 @@ ______________________________________________________________________
               "The data may be incomplete, outdated, or incorrectly interpreted."
           )
   ```
-- [x] `app/rag/search/enums.py` - ExpenseType enum REMOVED:
-  - Expense types are now fully database-driven
-  - Canonical list stored in `expense_types` table
-  - Populated during indexing from source documents
-  - No hardcoded enum - schema evolves with CRA content
+- [ ] `app/rag/search/enums.py` - Keep `ExpenseType` enum for reference:
+  ```python
+  class ExpenseType(str, Enum):
+      """Reference enum for common expense types. Not enforced in database."""
+      MEALS = "meals"
+      TRAVEL = "travel"
+      VEHICLE = "vehicle"
+      HOME_OFFICE = "home_office"
+      ADVERTISING = "advertising"
+      SUPPLIES = "supplies"
+      PROFESSIONAL_FEES = "professional_fees"
+      # ... add comprehensive list
+  ```
 - [ ] Update validation logic:
   - `expense_types` can be empty list (no filtering)
   - `expense_types` can be None (no filtering)
@@ -665,9 +677,11 @@ ______________________________________________________________________
 relationship in the database schema. Using `list[str]` provides flexibility while
 maintaining type safety.
 
+**ALL TICKETS ABOVE ARE DONE**
+
 ______________________________________________________________________
 
-## TICKET 5: Embedding Service
+## TICKET 5: Embedding Service DONE
 
 **Scope**: Text-to-vector encoding with BGE model, singleton pattern, batch processing
 
@@ -732,7 +746,7 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-## TICKET 6: Data Manager (Download, Cache, Verify)
+## TICKET 6: Data Manager (Download, Cache, Verify) TICKET DONE
 
 **Scope**: Download database from GitHub, verify integrity, manage cache, handle offline
 mode
@@ -787,7 +801,7 @@ mode
 
 ______________________________________________________________________
 
-## TICKET 7: Hybrid Search Engine (FTS5 + Vector + RRF)
+## TICKET 7: Hybrid Search Engine (FTS5 + Vector + RRF) DONE
 
 **Scope**: Core search logic combining keyword and semantic search with metadata
 filtering
@@ -882,7 +896,7 @@ filtering
 
 ______________________________________________________________________
 
-## TICKET 8: Public API
+## TICKET 8: Public API DONE
 
 **Scope**: User-facing functions with legal disclaimers, initialization, search
 interface
@@ -971,7 +985,7 @@ interface
   - get_version() returns correct dict structure
 - [ ] Integration test (User Story 1):
   ```python
-  import qe_tax_rag as qer
+  import quickexpense_rag as qer
   qer.init()
   results = qer.search(
       query="restaurant expense while traveling for training",
@@ -992,7 +1006,7 @@ interface
 
 ______________________________________________________________________
 
-## TICKET 9A: Document Pre-processor
+## TICKET 9A: Document Pre-processor TODO
 
 **Scope**: Convert manually downloaded HTML/PDF files to clean text for LLM parsing
 
@@ -1061,7 +1075,7 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-## TICKET 9B: Gemini Flash Parser
+## TICKET 9B: Gemini Flash Parser DONE
 
 **Scope**: Use Gemini Flash to parse documents into structured chunks with citations
 
@@ -1232,7 +1246,7 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-## TICKET 9C: Index Builder
+## TICKET 9C: Index Builder DONE
 
 **Scope**: Convert Gemini-parsed chunks to embeddings, populate SQLite database,
 generate manifest
@@ -1309,7 +1323,7 @@ Story 2 (auditable indexing)
 
 ______________________________________________________________________
 
-## TICKET 9D: Maintainer CLI
+## TICKET 9D: Maintainer CLI DONE
 
 **Scope**: Command-line interface to orchestrate preprocessing, parsing, building,
 validation
@@ -1485,7 +1499,7 @@ ______________________________________________________________________
 - [ ] `pyproject.toml` project metadata:
   ```toml
   [project]
-  name = "qe-tax-rag"
+  name = "quickexpense-rag"
   version = "0.1.0"
   description = "Semantic search over CRA business expense rules"
   readme = "README.md"
@@ -1503,10 +1517,10 @@ ______________________________________________________________________
   ]
 
   [project.urls]
-  Homepage = "https://github.com/.../qe-tax-rag"
-  Documentation = "https://github.com/.../qe-tax-rag/docs"
-  Repository = "https://github.com/.../qe-tax-rag"
-  Changelog = "https://github.com/.../qe-tax-rag/CHANGELOG.md"
+  Homepage = "https://github.com/.../quickexpense-rag"
+  Documentation = "https://github.com/.../quickexpense-rag/docs"
+  Repository = "https://github.com/.../quickexpense-rag"
+  Changelog = "https://github.com/.../quickexpense-rag/CHANGELOG.md"
 
   [build-system]
   requires = ["hatchling"]
@@ -1518,7 +1532,7 @@ ______________________________________________________________________
   ```
 - [ ] `README.md` structure:
   ```markdown
-  # QE Tax RAG
+  # QuickExpense RAG
 
   [![PyPI](badge)] [![Python](badge)] [![License](badge)] [![CI](badge)]
 
@@ -1534,7 +1548,7 @@ ______________________________________________________________________
   classification agents.
 
   ## Installation
-  pip install qe-tax-rag
+  pip install quickexpense-rag
 
   ## Quick Start
   [User Story 1 example code]
@@ -1579,14 +1593,14 @@ ______________________________________________________________________
   ls dist/  # Should show .whl and .tar.gz
   unzip -l dist/*.whl | grep "app/"  # Verify only app/ included
   pip install dist/*.whl
-  python -c "import qe_tax_rag; print(qe_tax_rag.__version__)"
+  python -c "import quickexpense_rag; print(quickexpense_rag.__version__)"
   ```
 - [ ] Verify wheel size < 5MB
 - [ ] TestPyPI upload:
   ```bash
   twine check dist/*
   twine upload --repository testpypi dist/*
-  pip install --index-url https://test.pypi.org/simple/ qe-tax-rag
+  pip install --index-url https://test.pypi.org/simple/ quickexpense-rag
   ```
 
 **Dependency**: All implementation tickets **Enables**: User Story 3 (PyPI publishing)
@@ -1738,7 +1752,7 @@ Phase 4: Integration & Release (Days 6-7)
 4.7 (Models), TICKET 7 (Search)
 
 ```python
-import qe_tax_rag as qer
+import quickexpense_rag as qer
 qer.init()
 results = qer.search(
     query="restaurant expense while traveling for training",
@@ -1893,6 +1907,9 @@ ______________________________________________________________________
 1. TICKET 12: Release automation
 1. Deploy to TestPyPI for validation
 1. Launch v0.1.0 to PyPI
+
+
+1. rename git-repo, package and directory in 'src' to quickexpense_tax_rag
 
 ### Team Composition Recommendations
 

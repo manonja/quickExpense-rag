@@ -1,4 +1,5 @@
-"""Test orchestrator circuit breaker pattern for catastrophic API failures.
+"""
+Test orchestrator circuit breaker pattern for catastrophic API failures.
 
 When the LLM parser fails consistently across multiple files (indicating sustained
 API quota exhaustion), the orchestrator should halt processing (circuit breaker)
@@ -10,10 +11,10 @@ This prevents:
 - Unclear error messages (final error looks like validation, not quota)
 """
 
-import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
 from qe_tax_rag.extraction.ca.exceptions import ParserError
 from qe_tax_rag.extraction.ca.orchestrator import run_extraction
 
@@ -36,7 +37,7 @@ def temp_html_files(tmp_path):
                 </main>
             </html>
             """,
-            encoding="utf-8"
+            encoding="utf-8",
         )
 
     return html_dir
@@ -50,7 +51,8 @@ class TestOrchestratorCircuitBreaker:
     def test_circuit_breaker_halts_after_3_consecutive_failures(
         self, mock_classic, mock_llm, temp_html_files, tmp_path
     ):
-        """Circuit breaker should halt processing after 3 consecutive LLM parser failures.
+        """
+        Circuit breaker should halt processing after 3 consecutive LLM parser failures.
 
         Expected behavior (NEW):
         - LLM parser fails on file 1 → continue (could be transient)
@@ -68,7 +70,9 @@ class TestOrchestratorCircuitBreaker:
         mock_classic.return_value = []
 
         # LLM parser always fails (simulating sustained quota exhaustion)
-        mock_llm.side_effect = ParserError("API call failed permanently after 4 attempts")
+        mock_llm.side_effect = ParserError(
+            "API call failed permanently after 4 attempts"
+        )
 
         output_yaml = tmp_path / "output.yml"
         manual_review_yaml = tmp_path / "manual_review.yml"
@@ -82,7 +86,9 @@ class TestOrchestratorCircuitBreaker:
         )
 
         # Assert - Circuit breaker should have opened
-        assert mock_llm.call_count == 3, "Should stop after 3 failures (circuit breaker)"
+        assert mock_llm.call_count == 3, (
+            "Should stop after 3 failures (circuit breaker)"
+        )
         assert mock_classic.call_count == 3, "Should stop classic parser too"
 
         # Only 3 files should be marked as failed (not 5)
@@ -100,12 +106,13 @@ class TestOrchestratorCircuitBreaker:
     def test_circuit_breaker_resets_on_success(
         self, mock_classic, mock_llm, temp_html_files, tmp_path
     ):
-        """Circuit breaker should reset failure counter when a file succeeds.
+        """
+        Circuit breaker should reset failure counter when a file succeeds.
 
         This ensures transient failures (1-2 retries) don't trigger circuit breaker.
         Only sustained failures (3 consecutive) should halt processing.
         """
-        from qe_tax_rag.extraction.ca.schema import ExtractedRule, ExpertSource
+        from qe_tax_rag.extraction.ca.schema import ExpertSource, ExtractedRule
 
         # Setup
         mock_classic.return_value = []
@@ -115,19 +122,21 @@ class TestOrchestratorCircuitBreaker:
         mock_llm.side_effect = [
             ParserError("Failure 1"),
             ParserError("Failure 2"),
-            [ExtractedRule(  # Success on file 3
-                rule_number=8523,
-                title="Test",
-                content="Test content",
-                applies_to=[],
-                source_citation="Line 8523",
-                chapter="Chapter 1",
-                section=None,
-                source_file="test_3.html",
-                expert_source=ExpertSource.LLM,
-                anchor_id=None,
-                confidence_score=0.8,
-            )],
+            [
+                ExtractedRule(  # Success on file 3
+                    rule_number=8523,
+                    title="Test",
+                    content="Test content",
+                    applies_to=[],
+                    source_citation="Line 8523",
+                    chapter="Chapter 1",
+                    section=None,
+                    source_file="test_3.html",
+                    expert_source=ExpertSource.LLM,
+                    anchor_id=None,
+                    confidence_score=0.8,
+                )
+            ],
             ParserError("Failure 4"),
             ParserError("Failure 5"),
         ]
@@ -144,7 +153,9 @@ class TestOrchestratorCircuitBreaker:
         )
 
         # Assert - All 5 files should be processed (success reset counter)
-        assert mock_llm.call_count == 5, "Should process all files (counter reset after success)"
+        assert mock_llm.call_count == 5, (
+            "Should process all files (counter reset after success)"
+        )
         assert len(result["failed_files"]) == 4  # 4 failures, 1 success
         assert result["processed_files"] == 1  # 1 file succeeded
 
@@ -153,12 +164,13 @@ class TestOrchestratorCircuitBreaker:
     def test_non_parser_errors_do_not_increment_circuit_breaker(
         self, mock_classic, mock_llm, temp_html_files, tmp_path
     ):
-        """Circuit breaker should only count LLM parser failures, not other errors.
+        """
+        Circuit breaker should only count LLM parser failures, not other errors.
 
         File read errors, adjudication failures, etc. should not contribute to
         the circuit breaker counter (they're not API quota issues).
         """
-        from qe_tax_rag.extraction.ca.schema import ExtractedRule, ExpertSource
+        from qe_tax_rag.extraction.ca.schema import ExpertSource, ExtractedRule
 
         # Setup
         mock_classic.side_effect = [
@@ -183,7 +195,9 @@ class TestOrchestratorCircuitBreaker:
         )
 
         # Assert - All 5 files should be attempted (non-parser errors ignored)
-        assert mock_classic.call_count == 5, "Should process all files (non-parser error)"
+        assert mock_classic.call_count == 5, (
+            "Should process all files (non-parser error)"
+        )
         assert mock_llm.call_count == 4  # Only called for non-failing classic runs
         assert len(result["failed_files"]) == 1  # Only the OSError file
         assert result["processed_files"] == 4
@@ -193,7 +207,8 @@ class TestOrchestratorCircuitBreaker:
     def test_circuit_breaker_threshold_configurable(
         self, mock_classic, mock_llm, temp_html_files, tmp_path
     ):
-        """Circuit breaker threshold should be configurable (default=3).
+        """
+        Circuit breaker threshold should be configurable (default=3).
 
         This test documents the circuit breaker threshold value.
         If we want to make it configurable later, update this test.

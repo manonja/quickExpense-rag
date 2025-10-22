@@ -11,14 +11,17 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts"))
 
 
 @pytest.mark.unit
-@patch("extract_rules.YAMLTransformer")
 @patch("extract_rules.run_extraction")
 def test_run_extraction_pipeline_returns_stats_and_report(
     mock_run_extraction: MagicMock,
-    mock_transformer_class: MagicMock,
     tmp_path: Path,
 ) -> None:
-    """_run_extraction_pipeline should adapt orchestrator output and return (stats, report)."""
+    """
+    _run_extraction_pipeline should adapt orchestrator output and return (stats, None).
+
+    NOTE: Transformation feature has been removed. The function now always returns None
+    as the second value. Use scripts/cli.py pipeline-extraction for complete pipeline.
+    """
     from extract_rules import _run_extraction_pipeline
 
     # Mock the return value of the canonical orchestrator (new nested structure)
@@ -30,16 +33,6 @@ def test_run_extraction_pipeline_returns_stats_and_report(
         "stats": {"perfect_matches": 3, "auto_corrected": 1, "manual_review": 1},
         "manual_review_count": 1,
     }
-
-    # Mock transformer
-    mock_report = MagicMock()
-    mock_report.successful = 5
-    mock_report.total_rules = 5
-    mock_report.skipped = 0
-    mock_report.errors = []
-    mock_transformer = MagicMock()
-    mock_transformer.transform_yaml_to_jsonl.return_value = mock_report
-    mock_transformer_class.return_value = mock_transformer
 
     # Setup test files
     html_dir = tmp_path / "html"
@@ -63,7 +56,7 @@ def test_run_extraction_pipeline_returns_stats_and_report(
         html_files=[html_file],
         output_yaml=output_yaml,
         manual_review_yaml=manual_yaml,
-        output_jsonl=output_jsonl,
+        output_jsonl=output_jsonl,  # Still accept parameter for backward compat
         verbose=False,
     )
 
@@ -75,11 +68,9 @@ def test_run_extraction_pipeline_returns_stats_and_report(
     assert "total_rules" in stats
     assert stats["total_rules"] == 5
     assert stats["perfect_matches"] == 3
-    assert report is not None  # Should have report since jsonl requested
-    assert report.successful == 5
 
-    # Verify transformer was called
-    assert mock_transformer.transform_yaml_to_jsonl.called
+    # Transformation feature removed - always returns None
+    assert report is None
 
 
 @pytest.mark.unit

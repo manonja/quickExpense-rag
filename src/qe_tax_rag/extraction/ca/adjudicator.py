@@ -253,7 +253,7 @@ def _truncate_html_for_prompt(
                         "based on the rule's anchor ID.\n\n"
                         f"{truncated_content}"
                     )
-        except Exception as e:
+        except (ImportError, ValueError, AttributeError) as e:
             logger.warning(
                 f"[Adjudicator] Failed to extract context for anchor {anchor_id}: {e}"
             )

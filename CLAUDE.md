@@ -342,6 +342,17 @@ enforced.
 - All functions must have type hints
 - No `Any` types without justification
 
+### Citation ID Integrity
+
+**CRITICAL**: `citation_id` must NEVER be `None` or empty string (`""`).
+
+- **Database constraint**: `citation_id TEXT UNIQUE NOT NULL` (schema.py:43)
+- **Data quality**: Missing citation_id indicates a fundamental extraction/parsing error
+- **Error handling**: Code MUST raise `ValueError` for missing citation_id, never use fallback to empty string
+- **Formats**: `LINE-{number}` (extraction pipeline) or `S#-F#-C#-p#` (legacy Gemini parser)
+
+**Why no fallbacks**: Empty string would violate database UNIQUE constraint on subsequent inserts, causing silent data corruption. Fail-fast on missing citation_id ensures data integrity.
+
 ### Embedding Model Lock-in
 
 The BGE-small-en-v1.5 model produces 384-dimensional embeddings. Changing models
@@ -462,73 +473,24 @@ The extraction workflow uses a **Mixture-of-Experts** approach with dual parsers
 1. **Classic Parser** (BeautifulSoup): Fast, deterministic extraction via DOM traversal
 1. **LLM Parser** (Gemini): Semantic understanding and context-aware extraction
 1. **Adjudicator**: Grounded self-correction layer that resolves conflicts between parsers
-1. **Transformer**: Converts validated YAML to JSONL chunks with schema validation
-1. **Builder**: Generates embeddings and builds SQLite database with FTS5 + vector search
+1. **Builder**: Converts YAML directly to SQLite via DatabaseChunk model, generates embeddings
 1. **Validator**: Smoke tests to verify database integrity
 
-### Transformer Pipeline (YAML to JSONL)
+### Direct YAML-to-Database Conversion
 
-The transformer bridges the extraction pipeline (TICKETS 1-6) with the RAG database.
+The extraction pipeline uses a streamlined approach that eliminates intermediate transformations:
 
-#### What It Does
+1. **ExtractedRule** (YAML) → **DatabaseChunk** (Pydantic model) → **SQLite** (FTS5 + vector)
+2. No JSONL intermediate format - direct conversion via `RuleSet.to_database_chunks()`
+3. Type-safe with strict Pydantic validation throughout
 
-- Converts ExtractedRule (YAML) to ParsedDocument (JSONL)
-- Maps `rule_number` to `LINE-{number}` citation format
-- Infers expense types from content (keyword-based classifier)
-- Preserves extraction metadata (source, confidence, anchor)
-- Groups rules hierarchically by chapter and section
+#### Key Features
 
-#### Usage Options
-
-**Option 1: Manual transformation**
-
-```bash
-uv run extract-rules transform output/rules.yml data/chunks.jsonl
-```
-
-**Option 2: Auto-transform with extraction**
-
-```bash
-uv run extract-rules run HTML_DIR output/rules.yml \
-  --auto-transform --output-jsonl data/chunks.jsonl
-```
-
-**Option 3: Full pipeline (recommended)**
-
-```bash
-uv run python scripts/cli.py pipeline-extraction \
-  --input-dir HTML_DIR --output-db data/cra_rules.db
-```
-
-#### Schema Compatibility
-
-- **Citation ID**: Accepts both `S#-F#-C#-p#` (legacy) and `LINE-{number}` (extraction) formats
-- **Metadata**: Added `income_type` field (business, farming, fishing)
-- **TextChunk**: Added extraction provenance fields:
-  - `extraction_source`: Parser that generated the rule (classic, llm, adjudicated)
-  - `extraction_confidence`: Confidence score from extraction pipeline (0.0-1.0)
-  - `source_anchor`: HTML anchor ID for debugging and traceability
-
-#### Error Handling
-
-The transformer uses fail-fast error handling:
-
-- **CriticalTransformationError**: Fatal errors (invalid YAML, duplicate rule_numbers, schema version mismatch) → Stops immediately
-- **SkippableTransformationError**: Non-fatal warnings (empty sections, optional field issues) → Logs warning, continues with `--continue-on-error`
-
-Error reports include:
-
-- Timestamp and file paths
-- Success/skipped/error counts
-- Detailed error messages with actionable suggestions
-
-#### Expense Type Classification
-
-The transformer uses a simple keyword-based classifier (good enough for MVP):
-
-- **Supported types**: meals, travel, vehicle, home_office, advertising, supplies, professional_fees, utilities, insurance, capital, maintenance, salaries, office_equipment, interest, bad_debts
-- **Fallback**: Rules without keyword matches default to "general"
-- **Future enhancement**: Can be replaced with ML classifier if needed
+- **Citation Format**: `LINE-{number}` (e.g., `LINE-8523`)
+- **Metadata Preservation**: Includes `income_type`, extraction source, confidence, and anchor
+- **Expense Classification**: Keyword-based classifier infers expense types from content
+- **Supported Types**: meals, travel, vehicle, home_office, advertising, supplies, professional_fees, utilities, insurance, capital, maintenance, salaries, office_equipment, interest, bad_debts
+- **Type Safety**: Pydantic models (`DatabaseChunk`, `ChunkMetadata`) replace dict-based schemas
 
 ### Usage Options
 
@@ -539,6 +501,11 @@ uv run python scripts/cli.py pipeline-extraction \
   --input-dir cra_documents/cra_t4002e_rev24_dump/ \
   --output-db data/cra_rules.db
 ```
+
+This command automatically:
+1. Extracts rules from HTML → YAML
+2. Converts YAML directly to SQLite (via DatabaseChunk)
+3. Validates database integrity
 
 **Option 2: Pipeline with intermediate files kept** (for debugging)
 
@@ -553,13 +520,12 @@ uv run python scripts/cli.py pipeline-extraction \
 **Option 3: Manual step-by-step** (for development)
 
 ```bash
-# Step 1: Extract HTML → YAML (with auto-transformation to JSONL)
-uv run extract-rules run input/ output/rules.yml \
-  --auto-transform --output-jsonl output/chunks.jsonl
+# Step 1: Extract HTML → YAML
+uv run extract-rules run input/ output/rules.yml
 
-# Step 2: Build database from JSONL
+# Step 2: Build database directly from YAML
 uv run python scripts/cli.py build \
-  --input-file output/chunks.jsonl \
+  --input-file output/rules.yml \
   --output-db data/rules.db
 
 # Step 3: Validate database integrity
@@ -570,13 +536,13 @@ uv run python scripts/cli.py validate --db-path data/rules.db
 
 The pipeline uses **fail-fast** error handling with stage-specific messages:
 
-- **Stage 1/3 (Extraction)**: HTML parsing, adjudication, YAML generation, JSONL transformation
-- **Stage 2/3 (Build)**: Embedding generation, database construction, index building
-- **Stage 3/3 (Validation)**: Schema verification, row counts, embedding dimensions, search tests
+- **Stage 1/2 (Extraction)**: HTML parsing, adjudication, YAML generation
+- **Stage 2/2 (Build)**: YAML→DatabaseChunk conversion, embedding generation, database construction
+- **Stage 3/2 (Validation)**: Schema verification, row counts, embedding dimensions, search tests
 
 If a stage fails:
 
-- Error message identifies the specific stage: `❌ Stage X/3 (Name) failed: <error>`
+- Error message identifies the specific stage: `❌ Stage X/2 (Name) failed: <error>`
 - Pipeline stops immediately (no cascading failures)
 - Intermediate files are preserved for debugging
 - Logs include full stack traces for troubleshooting
@@ -594,6 +560,7 @@ The pipeline uses smart cleanup:
 
 1. **Start with manual step-by-step** to understand each stage
 1. **Use `--keep-intermediate`** when developing or debugging
-1. **Check intermediate YAML** before transformation to catch extraction issues early
+1. **Check intermediate YAML** for data quality before building database
 1. **Run validation** after building to catch schema/data inconsistencies
 1. **Test with small HTML sets** first (1-5 files) before full processing
+- Code should never have bare exceptions or exceptions that don't actually serve a purpose beside logging. We want the raw exception and stack trace to help us debug.

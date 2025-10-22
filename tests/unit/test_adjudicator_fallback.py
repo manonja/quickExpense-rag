@@ -1,4 +1,5 @@
-"""Test adjudicator graceful degradation with API quota exhaustion fallback.
+"""
+Test adjudicator graceful degradation with API quota exhaustion fallback.
 
 When Gemini API calls fail during adjudication (429 quota errors, timeouts, etc.),
 the adjudicator should fall back to using classic parser results instead of
@@ -6,10 +7,10 @@ creating ManualReviewItems. This ensures the pipeline continues extracting rules
 even under API failures.
 """
 
-import pytest
-from google.api_core.exceptions import ResourceExhausted
 from unittest.mock import MagicMock, patch
 
+import pytest
+from google.api_core.exceptions import ResourceExhausted
 from qe_tax_rag.extraction.ca.adjudicator import adjudicate
 from qe_tax_rag.extraction.ca.schema import (
     ApplicabilityType,
@@ -78,7 +79,8 @@ class TestAdjudicatorFallback:
     def test_conflict_falls_back_to_classic_on_quota_error(
         self, mock_genai, classic_rule, llm_rule, sample_html_content
     ):
-        """When adjudication API fails with 429, use classic parser result instead of ManualReviewItem.
+        """
+        When adjudication API fails with 429, use classic parser result instead of ManualReviewItem.
 
         Expected behavior (NEW):
         - Detect ResourceExhausted error
@@ -92,7 +94,9 @@ class TestAdjudicatorFallback:
         - Final output has 0 rules
         """
         mock_model = mock_genai.return_value
-        mock_model.generate_content.side_effect = ResourceExhausted("429 quota exceeded")
+        mock_model.generate_content.side_effect = ResourceExhausted(
+            "429 quota exceeded"
+        )
 
         # Act
         resolved_rules, manual_items, stats = adjudicate(
@@ -103,8 +107,12 @@ class TestAdjudicatorFallback:
         )
 
         # Assert - Should fall back to classic, not manual review
-        assert len(resolved_rules) == 1, "Should have 1 resolved rule (classic fallback)"
-        assert len(manual_items) == 0, "Should NOT create manual review item on quota error"
+        assert len(resolved_rules) == 1, (
+            "Should have 1 resolved rule (classic fallback)"
+        )
+        assert len(manual_items) == 0, (
+            "Should NOT create manual review item on quota error"
+        )
 
         # Verify the returned rule is the classic one
         assert resolved_rules[0].rule_number == 8523
@@ -120,7 +128,8 @@ class TestAdjudicatorFallback:
     def test_orphan_falls_back_to_classic_on_timeout(
         self, mock_genai, classic_rule, sample_html_content
     ):
-        """When adjudication times out on orphan, use the orphan rule if it's from classic parser.
+        """
+        When adjudication times out on orphan, use the orphan rule if it's from classic parser.
 
         Expected behavior (NEW):
         - Detect timeout error
@@ -147,7 +156,9 @@ class TestAdjudicatorFallback:
 
         # Assert - Should trust classic orphan on timeout
         assert len(resolved_rules) == 1, "Should trust classic orphan on timeout"
-        assert len(manual_items) == 0, "Should NOT create manual review for classic orphan"
+        assert len(manual_items) == 0, (
+            "Should NOT create manual review for classic orphan"
+        )
 
         assert resolved_rules[0].rule_number == 8523
         assert resolved_rules[0].expert_source == ExpertSource.CLASSIC
@@ -158,14 +169,17 @@ class TestAdjudicatorFallback:
     def test_llm_orphan_creates_manual_review_on_api_failure(
         self, mock_genai, llm_rule, sample_html_content
     ):
-        """LLM orphans still require manual review on API failure (can't trust without validation).
+        """
+        LLM orphans still require manual review on API failure (can't trust without validation).
 
         This is the correct behavior - we can't blindly trust LLM parser results
         without adjudication. Only classic parser is deterministic enough to trust
         during API failures.
         """
         mock_model = mock_genai.return_value
-        mock_model.generate_content.side_effect = ResourceExhausted("429 quota exceeded")
+        mock_model.generate_content.side_effect = ResourceExhausted(
+            "429 quota exceeded"
+        )
 
         # Act - Only LLM found this rule (orphan from LLM)
         resolved_rules, manual_items, stats = adjudicate(
@@ -176,7 +190,9 @@ class TestAdjudicatorFallback:
         )
 
         # Assert - LLM orphan should go to manual review (can't trust)
-        assert len(resolved_rules) == 0, "Should NOT auto-accept LLM orphan on API failure"
+        assert len(resolved_rules) == 0, (
+            "Should NOT auto-accept LLM orphan on API failure"
+        )
         assert len(manual_items) == 1, "Should create manual review for LLM orphan"
 
         assert manual_items[0].rule_number == 8523
@@ -189,13 +205,16 @@ class TestAdjudicatorFallback:
     def test_multiple_conflicts_all_fall_back_to_classic(
         self, mock_genai, sample_html_content
     ):
-        """When API quota is exhausted, all conflicts should fall back to classic parser.
+        """
+        When API quota is exhausted, all conflicts should fall back to classic parser.
 
         This ensures the pipeline continues producing rules even when all
         adjudication calls fail (e.g., sustained quota exhaustion).
         """
         mock_model = mock_genai.return_value
-        mock_model.generate_content.side_effect = ResourceExhausted("429 quota exceeded")
+        mock_model.generate_content.side_effect = ResourceExhausted(
+            "429 quota exceeded"
+        )
 
         # Create 3 conflicting rules
         classic_rules = [
@@ -291,7 +310,9 @@ class TestAdjudicatorFallback:
         )
 
         # Assert - All conflicts should resolve to classic versions
-        assert len(resolved_rules) == 3, "Should have 3 resolved rules (all classic fallbacks)"
+        assert len(resolved_rules) == 3, (
+            "Should have 3 resolved rules (all classic fallbacks)"
+        )
         assert len(manual_items) == 0, "Should have NO manual review items"
 
         # Verify all are classic versions
