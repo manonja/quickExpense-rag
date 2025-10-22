@@ -1,0 +1,34 @@
+rules:
+  - rule_number: 8523
+    title: "Meals and entertainment"
+    content: "You can deduct 50% of the cost of food, beverages, or entertainment."
+    applies_to:
+      - business
+    source_citation: "Line 8523"
+    chapter: "Chapter 3 – Business Expenses"
+    section: null
+    source_file: "complex_rule.html"
+
+  - rule_number: 9270
+    title: "Motor vehicle expenses"
+    content: "You can deduct motor vehicle expenses including fuel and maintenance."
+    applies_to:
+      - business
+      - farming
+    source_citation: "Line 9270"
+    chapter: "Chapter 3 – Business Expenses"
+    section: null
+    source_file: "complex_rule.html"
+
+  - rule_number: 8000
+    title: "Utilities"
+    content: "Deduct electricity, heating, and water expenses for fishing operations."
+    applies_to:
+      - fishing
+    source_citation: "Line 8000"
+    chapter: "Chapter 3 – Business Expenses"
+    section: null
+    source_file: "complex_rule.html"
+
+schema_version: "1.0"
+extraction_timestamp: "2024-12-15T10:00:00Z"

@@ -106,3 +106,86 @@ def sample_chunks() -> list[dict]:
 
     """
     return []
+
+
+@pytest.fixture
+def mock_gemini_client(mocker):  # type: ignore[no-untyped-def]
+    """
+    Mock Gemini API client for deterministic LLM parser testing.
+
+    Returns pre-defined ExtractedRule objects based on the input file,
+    avoiding network calls and ensuring test reproducibility.
+
+    Args:
+        mocker: pytest-mock fixture for patching
+
+    Returns:
+        Mock object for llm_parse function
+
+    """
+    from qe_tax_rag.extraction.ca.schema import (
+        ApplicabilityType,
+        ExpertSource,
+        ExtractedRule,
+    )
+
+    def mock_llm_parse(
+        html_path: str,
+        cache_dir: Path | None = None,  # noqa: ARG001
+    ) -> list[ExtractedRule]:
+        """Mock implementation of llm_parse()."""
+        # Determine which fixture is being parsed
+        path = Path(html_path)
+
+        if "complex_rule" in path.name:
+            # Return multiple rules for complex fixture
+            return [
+                ExtractedRule(
+                    rule_number=8523,
+                    title="Meals and entertainment",
+                    content="You can deduct 50% of the cost of food, beverages, or entertainment.",
+                    applies_to=[ApplicabilityType.BUSINESS],
+                    source_citation="Line 8523",
+                    chapter="Chapter 3 – Business Expenses",
+                    section=None,
+                    source_file=path.name,
+                    expert_source=ExpertSource.LLM,
+                    anchor_id="tocch3ln8523",
+                    confidence_score=0.95,
+                ),
+                ExtractedRule(
+                    rule_number=9270,
+                    title="Motor vehicle expenses",
+                    content="You can deduct motor vehicle expenses including fuel and maintenance.",
+                    applies_to=[ApplicabilityType.BUSINESS, ApplicabilityType.FARMING],
+                    source_citation="Line 9270",
+                    chapter="Chapter 3 – Business Expenses",
+                    section=None,
+                    source_file=path.name,
+                    expert_source=ExpertSource.LLM,
+                    anchor_id="tocch3ln9270",
+                    confidence_score=0.92,
+                ),
+                ExtractedRule(
+                    rule_number=8000,
+                    title="Utilities",
+                    content="Deduct electricity, heating, and water expenses for fishing operations.",
+                    applies_to=[ApplicabilityType.FISHING],
+                    source_citation="Line 8000",
+                    chapter="Chapter 3 – Business Expenses",
+                    section=None,
+                    source_file=path.name,
+                    expert_source=ExpertSource.LLM,
+                    anchor_id="tocch3ln8000",
+                    confidence_score=0.88,
+                ),
+            ]
+
+        # Default: return empty list
+        return []
+
+    # Patch the llm_parse function
+    return mocker.patch(
+        "qe_tax_rag.extraction.ca.orchestrator.llm_parse",
+        side_effect=mock_llm_parse,
+    )
