@@ -43,11 +43,14 @@ dev = [
     "pytest>=7.4",
     "pytest-cov>=4.1",
     "pytest-asyncio>=0.21",
+    "pytest-mock>=3.15.1",
+    "hypothesis>=6.0",
     "ruff>=0.1",
     "mypy>=1.7",
     "pre-commit>=3.5",
     "pyfakefs>=5.0",
     "types-PyYAML>=6.0",
+    "vcrpy>=6.0",
 ]
 indexing = [
     "sentence-transformers>=2.2",
@@ -162,4 +165,9 @@ exclude_lines = [
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
+]
+
+[dependency-groups]
+dev = [
+    "vcrpy>=7.0.0",
 ]

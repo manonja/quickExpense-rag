@@ -1,0 +1,4 @@
+# file: /Users/manonjacquin/Documents_local/POCs/quickExpense-rag/src/qe_tax_rag/extraction/ca/__init__.py
+# hypothesis_version: 6.142.3
+
+['adjudicate', 'cli_app', 'generate']

@@ -1,0 +1,16 @@
+rules:
+  - rule_number: 8523
+    title: "Meals and entertainment"
+    content: "The maximum amount you can claim for food, beverages and entertainment expenses is 50% of the lesser of the following amounts:\n\nthe amount incurred for these expenses\nan amount that is reasonable in the circumstances\n\nWhen you claim expenses on this line, you will have to calculate the allowable part you can claim for business use."
+    applies_to:
+      - business
+    source_citation: "Line 8523"
+    chapter: "Chapter 3 – Business Expenses"
+    section: "Part 1 – Meals and Entertainment"
+    source_file: "simple_rule.html"
+    expert_source: adjudicated
+    anchor_id: "tocch3ln8523"
+    confidence_score: 1.0
+
+schema_version: "1.0"
+extraction_timestamp: "2024-12-15T10:00:00Z"

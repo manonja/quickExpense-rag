@@ -89,7 +89,7 @@ def test_retries_on_rate_limit_then_succeeds(mock_sleep, mock_genai, tmp_path):
 @patch("qe_tax_rag.extraction.ca.llm_parser.genai.GenerativeModel")
 @patch("qe_tax_rag.extraction.ca.llm_parser.time.sleep")
 def test_raises_error_after_max_retries(mock_sleep, mock_genai, tmp_path):
-    """Test parser raises ParserError after 3 failed retries."""
+    """Test parser raises ParserError after 4 total failed attempts."""
     # Arrange
     html_file = tmp_path / "test.html"
     html_file.write_text("<html><main><p>Test</p></main></html>")
@@ -103,8 +103,9 @@ def test_raises_error_after_max_retries(mock_sleep, mock_genai, tmp_path):
     with pytest.raises(ParserError, match="API call failed permanently"):
         parse(str(html_file))
 
-    assert mock_model.generate_content.call_count == 3
-    assert mock_sleep.call_count == 2  # Sleep between retries
+    # The code is configured for 4 total attempts (1 initial + 3 retries)
+    assert mock_model.generate_content.call_count == 4
+    assert mock_sleep.call_count == 3  # Sleeps after attempts 1, 2, and 3
 
 
 @patch("qe_tax_rag.extraction.ca.llm_parser.genai.GenerativeModel")

@@ -1,10 +1,32 @@
 """Shared pytest fixtures for test suite."""
 
 from pathlib import Path
+from typing import Any
 from unittest.mock import Mock
 
 import numpy as np
 import pytest
+
+
+def normalize_yaml_for_golden_comparison(data: dict[str, Any]) -> dict[str, Any]:
+    """
+    Normalize YAML data for resilient golden file comparison.
+
+    Removes volatile fields (timestamps, IDs) that change between runs
+    but don't affect functional correctness. Makes golden file tests
+    less brittle to non-breaking changes.
+
+    Args:
+        data: Loaded YAML data (typically RuleSet dict)
+
+    Returns:
+        Normalized copy with volatile fields removed
+
+    """
+    normalized = data.copy()
+    # Remove timestamp - changes with every extraction but doesn't affect correctness
+    normalized.pop("extraction_timestamp", None)
+    return normalized
 
 
 @pytest.fixture(scope="session")
@@ -106,3 +128,22 @@ def sample_chunks() -> list[dict]:
 
     """
     return []
+
+
+@pytest.fixture(scope="module")
+def module_monkeypatch() -> pytest.MonkeyPatch:
+    """
+    Module-scoped monkeypatch fixture for settings tests.
+
+    Allows setting environment variables once for an entire test module,
+    useful for VCR tests that need API keys for client initialization.
+
+    Returns:
+        MonkeyPatch instance with module scope
+
+    """
+    mpatch = pytest.MonkeyPatch()
+    yield mpatch
+    mpatch.undo()
+
+
