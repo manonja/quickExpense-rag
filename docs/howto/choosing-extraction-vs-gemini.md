@@ -16,7 +16,7 @@
 
 **Status**: Production-ready, fully integrated
 
-**Architecture**: Classic Parser → LLM Parser → Adjudicator → Transformer → Database
+**Architecture**: Classic Parser → LLM Parser → Adjudicator → DatabaseChunk → Database
 
 **Strengths**:
 
@@ -88,12 +88,11 @@ uv run python scripts/cli.py pipeline-extraction \
 ```bash
 # Step 1: Extract HTML → YAML
 uv run extract-rules run cra_documents/cra_t4002e_rev24_dump/ \
-  output/rules.yml \
-  --auto-transform --output-jsonl output/chunks.jsonl
+  output/rules.yml
 
-# Step 2: Build database
+# Step 2: Build database directly from YAML
 uv run python scripts/cli.py build \
-  --input-file output/chunks.jsonl \
+  --input-file output/rules.yml \
   --output-db data/extraction_rules.db
 
 # Step 3: Validate

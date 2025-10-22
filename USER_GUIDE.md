@@ -42,22 +42,21 @@ uv run python scripts/cli.py pipeline-extraction \
 
 **What this does:**
 
-- **Stage 1/3:** Extracts rules from HTML using high-quality parsers (Classic + LLM with adjudication)
-- **Stage 2/3:** Transforms YAML → JSONL → SQLite database with FTS5 + vector embeddings
-- **Stage 3/3:** Validates database integrity
+- **Stage 1/2:** Extracts rules from HTML using high-quality parsers (Classic + LLM with adjudication)
+- **Stage 2/2:** Builds SQLite database directly from YAML with FTS5 + vector embeddings
+- **Stage 3/2:** Validates database integrity
 
 **Expected output:**
 
 ```
-✅ Stage 1/3: Extracting and transforming rules
+✅ Stage 1/2: Extracting rules from HTML
    Extracted 247 rules to YAML
-   Transformed 247/247 rules to JSONL
 
-✅ Stage 2/3: Building searchable database
+✅ Stage 2/2: Building searchable database
    Database built: data/cra_rules.db
    Database size: 15.23 MB
 
-✅ Stage 3/3: Validating database
+✅ Stage 3/2: Validating database
    Validation passed
 
 🎉 Pipeline complete!
@@ -175,7 +174,6 @@ uv run python scripts/cli.py pipeline-extraction \
 This preserves:
 
 - `output/rules.yml` - Extracted rules (YAML)
-- `output/chunks.jsonl` - Transformed chunks (JSONL)
 - `output/manual_review.yml` - Edge cases requiring review (if any)
 
 ### Manual Stage-by-Stage Execution
@@ -184,22 +182,17 @@ For debugging or inspection:
 
 ```bash
 # Stage 1: Extract HTML → YAML
-uv run extract-rules extract \
+uv run extract-rules run \
   cra_documents/cra_t4002e_rev24_dump/ \
   output/rules.yml \
   --manual-review-file output/manual_review.yml
 
-# Stage 2: Transform YAML → JSONL
-uv run extract-rules transform \
-  output/rules.yml \
-  output/chunks.jsonl
-
-# Stage 3: Build database from JSONL
+# Stage 2: Build database directly from YAML
 uv run python scripts/cli.py build \
-  --input-file output/chunks.jsonl \
+  --input-file output/rules.yml \
   --output-db data/cra_rules.db
 
-# Stage 4: Validate
+# Stage 3: Validate
 uv run python scripts/cli.py validate \
   --db-path data/cra_rules.db
 ```

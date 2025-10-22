@@ -91,9 +91,7 @@ HTML Files
     ↓
 [Classic + LLM Parsers with Adjudicator] → ExtractedRule (YAML)
     ↓
-[YAML Transformer] → ParsedDocument (JSONL)
-    ↓
-[IndexBuilder] → SQLite Database (FTS5 + Vector Search)
+[IndexBuilder with RuleSet.to_database_chunks()] → SQLite Database (FTS5 + Vector Search)
     ↓
 [HybridSearchEngine] → Search Results
 ```
@@ -124,13 +122,14 @@ HTML/PDF Files
 
 ### Which Pipeline Should You Use?
 
-| Feature                | Extraction Pipeline (New & Recommended) | Gemini Pipeline (Legacy)                             |
+| Feature                | Extraction Pipeline (Recommended)       | Gemini Pipeline (Legacy)                             |
 | ---------------------- | --------------------------------------- | ---------------------------------------------------- |
 | **Primary Use Case**   | High-precision, line-item queries       | Broad, conceptual queries                            |
 | **Chunking Strategy**  | One rule per chunk                      | Large, multi-paragraph chunks                        |
 | **Metadata**           | Rich (income type, confidence score)    | Basic (inferred from content)                        |
 | **API Key Required**   | ❌ **No**                               | ✅ **Yes** (`GEMINI_API_KEY`)                        |
 | **CLI Command**        | `pipeline-extraction`                   | `pipeline`                                           |
+| **Pipeline Stages**    | 2 stages (Extract → Build)              | 3 stages (Extract → Parse → Build)                   |
 | **Recommendation**     | **Default for production & testing**    | Use for search quality comparison or as a fallback.  |
 
 ---
@@ -141,7 +140,7 @@ If you need to inspect the intermediate files produced by the new pipeline, you 
 
 ### Stage 1: Extract HTML to YAML
 
-This runs the extraction and adjudication but stops before transformation.
+This runs the extraction and adjudication, outputting structured YAML.
 
 ```bash
 uv run extract-rules run \
@@ -150,26 +149,13 @@ uv run extract-rules run \
   --manual-review-file output/manual_review.yml
 ```
 
-### Stage 2: Transform YAML to JSONL
+### Stage 2: Build Database from YAML
 
-This command (part of the same script) can be used to transform the YAML into the JSONL format required by the database builder.
-
-```bash
-# This functionality is now integrated into the `run` command via a flag.
-uv run extract-rules run \
-  cra_documents/cra_t4002e_rev24_dump/ \
-  output/cra_rules.yml \
-  --auto-transform \
-  --output-jsonl output/chunks.jsonl
-```
-
-### Stage 3: Build Database from JSONL
-
-This uses the main CLI to build the database from the intermediate JSONL file.
+The database builder now accepts YAML directly (auto-detects format).
 
 ```bash
 uv run python scripts/cli.py build \
-  --input-file output/chunks.jsonl \
+  --input-file output/cra_rules.yml \
   --output-db data/cra_rules.db
 ```
 
@@ -181,7 +167,7 @@ uv run python scripts/cli.py build \
 | --------------------------- | ---------------- | -------------------------------------------------------------------- |
 | **Working RAG Search**      | ✅ **YES**       | Use `pipeline-extraction` to build, then `qe.search()` to query.     |
 | **High-Quality Extraction** | ✅ **YES**       | The `extract-rules` script produces high-fidelity YAML.              |
-| **Integration**             | ✅ **YES**       | The transformer connects the extraction pipeline to the RAG database. |
+| **Integration**             | ✅ **YES**       | DatabaseChunk model connects extraction pipeline directly to RAG database. |
 | **Test RAG Today**          | ✅ **YES**       | Use the `pipeline-extraction` command.                               |
 | **Database Schema**         | ✅ **Valid**     | SQLite with FTS5, vector search, and metadata.                       |
 | **Search API**              | ✅ **Working**   | `qe.init()` and `qe.search()` are fully functional.                  |
@@ -194,8 +180,9 @@ uv run python scripts/cli.py build \
 
 - `scripts/cli.py`: Orchestrator for `pipeline-extraction`.
 - `src/qe_tax_rag/extraction/ca/orchestrator.py`: Core extraction logic (HTML → YAML).
-- `src/qe_tax_rag/extraction/ca/transformer.py`: Core transformation logic (YAML → JSONL).
-- `src/qe_tax_rag/data/builder.py`: IndexBuilder (JSONL → SQLite).
+- `src/qe_tax_rag/extraction/ca/schema.py`: RuleSet.to_database_chunks() for direct conversion.
+- `src/qe_tax_rag/data/models.py`: DatabaseChunk and ChunkMetadata models.
+- `src/qe_tax_rag/data/builder.py`: IndexBuilder (YAML/JSONL → SQLite).
 - `src/qe_tax_rag/api.py`: Public search API (`init`, `search`).
 
 ### Legacy Gemini Pipeline
