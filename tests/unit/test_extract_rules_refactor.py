@@ -16,7 +16,8 @@ def test_run_extraction_pipeline_returns_stats_and_report(
     mock_run_extraction: MagicMock,
     tmp_path: Path,
 ) -> None:
-    """_run_extraction_pipeline should adapt orchestrator output and return (stats, None).
+    """
+    _run_extraction_pipeline should adapt orchestrator output and return (stats, None).
 
     NOTE: Transformation feature has been removed. The function now always returns None
     as the second value. Use scripts/cli.py pipeline-extraction for complete pipeline.

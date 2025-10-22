@@ -157,7 +157,8 @@ def test_raise_parser_error_on_invalid_file_path() -> None:
 
 @pytest.mark.unit
 def test_return_empty_list_for_files_without_line_patterns(tmp_path: Path) -> None:
-    """Parser should return [] (not error) for HTML without 'Line XXXX –' patterns.
+    """
+    Parser should return [] (not error) for HTML without 'Line XXXX –' patterns.
 
     Files like CCA chapters (t4002-6.html) contain valid content but no
     line-numbered expense rules. This is an expected edge case.
@@ -195,7 +196,8 @@ def test_return_empty_list_for_files_without_line_patterns(tmp_path: Path) -> No
 
 @pytest.mark.unit
 def test_parse_rule_with_no_space_after_dash(fixture_html_path: Path) -> None:
-    """Test parser handles titles with no space after en dash.
+    """
+    Test parser handles titles with no space after en dash.
 
     Edge case from real CRA HTML where BeautifulSoup's text extraction produces:
     "Line 8521 –Advertising" (no space between – and Advertising)

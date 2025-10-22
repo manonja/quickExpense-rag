@@ -828,10 +828,10 @@ class TestIntegrityChecks:
 
 
 class TestYAMLFormatDetection:
-    """Tests for YAML format auto-detection in build_from_file."""
+    """Tests for YAML format auto-detection in build_index."""
 
     @pytest.mark.unit
-    def test_build_from_file_detects_yaml_format(self, tmp_path: Path) -> None:
+    def test_build_index_detects_yaml_format(self, tmp_path: Path) -> None:
         """Test that .yml files are detected and routed to YAML loader."""
         yaml_file = tmp_path / "rules.yml"
         # Valid RuleSet YAML with minimal rule
@@ -872,7 +872,7 @@ extraction_timestamp: "2024-12-15T10:30:00Z"
 
         # Should not raise "Unknown file format" error
         # YAML should be detected and processed successfully
-        builder.build_from_file(
+        builder.build_index(
             input_path=yaml_file,
             manifest_path=str(manifest_path),
             source_files=source_files,
@@ -886,7 +886,7 @@ extraction_timestamp: "2024-12-15T10:30:00Z"
         assert manifest_path.exists()
 
     @pytest.mark.unit
-    def test_build_from_file_detects_jsonl_format(self, tmp_path: Path) -> None:
+    def test_build_index_detects_jsonl_format(self, tmp_path: Path) -> None:
         """Test that .jsonl files are detected and routed to JSONL loader."""
         # Create minimal valid JSONL with one ParsedDocument
         jsonl_file = tmp_path / "chunks.jsonl"
@@ -929,7 +929,7 @@ extraction_timestamp: "2024-12-15T10:30:00Z"
         builder = IndexBuilder(db_path=str(db_path), encoder=mock_encoder)
 
         # Should call _load_from_jsonl() internally
-        builder.build_from_file(
+        builder.build_index(
             input_path=jsonl_file,
             manifest_path=str(manifest_path),
             source_files=source_files,
@@ -946,7 +946,7 @@ extraction_timestamp: "2024-12-15T10:30:00Z"
         conn.close()
 
     @pytest.mark.unit
-    def test_build_from_file_raises_on_unknown_format(self, tmp_path: Path) -> None:
+    def test_build_index_raises_on_unknown_format(self, tmp_path: Path) -> None:
         """Test that unsupported file formats raise clear error."""
         txt_file = tmp_path / "data.txt"
         txt_file.write_text("invalid")
@@ -961,7 +961,7 @@ extraction_timestamp: "2024-12-15T10:30:00Z"
         builder = IndexBuilder(db_path=str(db_path), encoder=mock_encoder)
 
         with pytest.raises(ValueError, match="Unsupported input format"):
-            builder.build_from_file(
+            builder.build_index(
                 input_path=txt_file,
                 manifest_path=str(manifest_path),
                 source_files=[],
@@ -1035,9 +1035,9 @@ extraction_timestamp: "2024-12-15T10:30:00Z"
             builder._load_from_yaml(yaml_file, [])
 
 
-class TestBuildFromFile:
+class TestBuildIndex:
     """
-    Tests for build_from_file orchestration method.
+    Tests for build_index orchestration method.
 
     User Story 2: As a library maintainer, I want to build a searchable database
     from manually downloaded CRA documents so that users can query up-to-date tax rules.
@@ -1053,10 +1053,10 @@ class TestBuildFromFile:
     8. Create manifest
     """
 
-    def test_build_from_file_jsonl_complete_workflow(self, tmp_path):
+    def test_build_index_jsonl_complete_workflow(self, tmp_path):
         """
         GIVEN: Valid JSONL file with ParsedDocuments and source files
-        WHEN: build_from_file is called
+        WHEN: build_index is called
         THEN: Creates database, populates tables, validates integrity, creates manifest
         """
         # Create test JSONL with 2 documents
@@ -1138,7 +1138,7 @@ class TestBuildFromFile:
         manifest_path = tmp_path / "manifest.json"
 
         builder = IndexBuilder(db_path=str(db_path), encoder=mock_encoder)
-        builder.build_from_file(
+        builder.build_index(
             input_path=jsonl_path,
             manifest_path=str(manifest_path),
             source_files=source_files,
@@ -1199,10 +1199,10 @@ class TestBuildFromFile:
             assert "sha256" in manifest_data
             assert manifest_data["embedding_model"] == "BAAI/bge-small-en-v1.5"
 
-    def test_build_from_file_atomic_rollback_on_error(self, tmp_path):
+    def test_build_index_atomic_rollback_on_error(self, tmp_path):
         """
         GIVEN: Encoder that fails during embedding
-        WHEN: build_from_file called with JSONL input
+        WHEN: build_index called with JSONL input
         THEN: Transaction rolls back, database file not created or empty
         """
         # Create test JSONL
@@ -1246,7 +1246,7 @@ class TestBuildFromFile:
 
         # Should raise EmbeddingError
         with pytest.raises(EmbeddingError):
-            builder.build_from_file(
+            builder.build_index(
                 input_path=jsonl_path,
                 manifest_path=str(manifest_path),
                 source_files=source_files,
@@ -1277,19 +1277,17 @@ class TestBuildFromFile:
             cursor = conn.execute("SELECT COUNT(*) FROM rules")
             rule_count = cursor.fetchone()[0]
             conn.close()
-            assert (
-                rule_count == 0
-            ), "Transaction should have rolled back, no rules should be inserted"
+            assert rule_count == 0, (
+                "Transaction should have rolled back, no rules should be inserted"
+            )
 
         # Manifest should not be created
         assert not manifest_path.exists()
 
-    def test_build_from_file_continue_on_error_creates_partial_database(
-        self, tmp_path
-    ):
+    def test_build_index_continue_on_error_creates_partial_database(self, tmp_path):
         """
         GIVEN: Encoder that fails on some batches
-        WHEN: build_from_file called with JSONL input and continue_on_error=True
+        WHEN: build_index called with JSONL input and continue_on_error=True
         THEN: Creates database with successfully embedded chunks only
         """
         # Create test JSONL with 64 chunks (2 batches of 32)
@@ -1342,7 +1340,7 @@ class TestBuildFromFile:
         manifest_path = tmp_path / "manifest.json"
 
         builder = IndexBuilder(db_path=str(db_path), encoder=mock_encoder)
-        builder.build_from_file(
+        builder.build_index(
             input_path=jsonl_path,
             manifest_path=str(manifest_path),
             source_files=source_files,

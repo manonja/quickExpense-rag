@@ -75,7 +75,8 @@ def test_build_from_yaml_to_database_success(
     source_files: dict[str, SourceFile],
     tmp_path: Path,
 ) -> None:
-    """Test full pipeline: YAML file → database with embeddings.
+    """
+    Test full pipeline: YAML file → database with embeddings.
 
     This integration test verifies:
     - YAML file is detected and loaded correctly
@@ -91,7 +92,7 @@ def test_build_from_yaml_to_database_success(
 
     # Build database from YAML
     builder = IndexBuilder(db_path=str(db_path), encoder=encoder)
-    builder.build_from_file(
+    builder.build_index(
         input_path=valid_yaml_file,
         manifest_path=str(manifest_path),
         source_files=list(source_files.values()),
@@ -125,6 +126,7 @@ def test_build_from_yaml_to_database_success(
         pass
 
     import sqlite_vec
+
     sqlite_vec.load(conn)
 
     cursor = conn.cursor()
@@ -188,7 +190,8 @@ def test_build_from_yaml_to_database_with_malformed_yaml(
     source_files: dict[str, SourceFile],
     tmp_path: Path,
 ) -> None:
-    """Test that malformed YAML raises clear validation error.
+    """
+    Test that malformed YAML raises clear validation error.
 
     This integration test verifies:
     - Malformed YAML with missing required fields is detected
@@ -205,7 +208,7 @@ def test_build_from_yaml_to_database_with_malformed_yaml(
     from pydantic import ValidationError
 
     with pytest.raises(ValidationError):
-        builder.build_from_file(
+        builder.build_index(
             input_path=malformed_yaml_file,
             manifest_path=str(manifest_path),
             source_files=list(source_files.values()),

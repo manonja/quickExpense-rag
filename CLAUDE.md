@@ -597,3 +597,4 @@ The pipeline uses smart cleanup:
 1. **Check intermediate YAML** before transformation to catch extraction issues early
 1. **Run validation** after building to catch schema/data inconsistencies
 1. **Test with small HTML sets** first (1-5 files) before full processing
+- Code should never have bare exceptions or exceptions that don't actually serve a purpose beside logging. We want the raw exception and stack trace to help us debug.

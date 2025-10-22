@@ -280,6 +280,4 @@ def test_pipeline_extraction_keeps_intermediate_on_success(
 
     assert result.exit_code == 0, f"Failed: {result.stderr}\n{result.stdout}"
     # Should mention where intermediate files are kept
-    assert (
-        "Intermediate files at:" in result.stdout or "kept at:" in result.stdout
-    )
+    assert "Intermediate files at:" in result.stdout or "kept at:" in result.stdout

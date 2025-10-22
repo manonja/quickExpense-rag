@@ -3,8 +3,8 @@ Index builder for QuickExpense RAG.
 
 Implements User Story 2: Maintainer Indexing Workflow
 
-This module provides the IndexBuilder class that orchestrates the final stage
-of the data pipeline:
+This module provides the IndexBuilder class that orchestrates building a searchable
+index from document chunks:
 1. Loads chunks from YAML (extraction pipeline) or JSONL (Gemini parser)
 2. Generates BGE embeddings in batches
 3. Populates SQLite with rules, FTS index, vector embeddings, expense type links
@@ -36,11 +36,11 @@ logger = logging.getLogger(__name__)
 
 class IndexBuilder:
     """
-    Builds searchable SQLite database from CRA document chunks.
+    Builds searchable SQLite index from CRA document chunks.
 
     Implements User Story 2: Maintainer Indexing Workflow
 
-    This class orchestrates the final stage of the data pipeline:
+    This class orchestrates building a searchable index from document chunks:
     1. Loads chunks from YAML (extraction pipeline) or JSONL (Gemini parser)
     2. Generates BGE embeddings in batches
     3. Populates SQLite with rules, FTS index, vector embeddings, expense type links
@@ -52,7 +52,7 @@ class IndexBuilder:
     Example:
         >>> from qe_tax_rag.embeddings.encoder import embedding_service
         >>> builder = IndexBuilder(db_path="cra_rules.db", encoder=embedding_service)
-        >>> builder.build_from_file(
+        >>> builder.build_index(
         ...     input_path="rules.yml",
         ...     manifest_path="manifest.json",
         ...     source_files=[SourceFile(...)],
@@ -73,7 +73,7 @@ class IndexBuilder:
         self.db_path = Path(db_path)
         self.encoder = encoder
 
-    def build_from_file(
+    def build_index(
         self,
         input_path: str | Path,
         manifest_path: str,
@@ -82,7 +82,7 @@ class IndexBuilder:
         continue_on_error: bool = False,
     ) -> None:
         """
-        Main entry point to build index from YAML or JSONL file.
+        Build searchable index from YAML or JSONL chunks file.
 
         Auto-detects format based on file extension (.yml, .yaml, .jsonl).
 
@@ -199,7 +199,8 @@ class IndexBuilder:
     def _load_and_flatten_chunks(
         self, input_path: Path, source_files: list[SourceFile]
     ) -> list[DatabaseChunk]:
-        """Load chunks from YAML (extraction pipeline) or JSONL (Gemini parser).
+        """
+        Load chunks from YAML (extraction pipeline) or JSONL (Gemini parser).
 
         Auto-detects format and returns unified DatabaseChunk list.
 
@@ -242,7 +243,8 @@ class IndexBuilder:
     def _load_from_yaml(
         self, yaml_path: Path, source_files: list[SourceFile]
     ) -> list[DatabaseChunk]:
-        """Load extraction pipeline YAML and convert to DatabaseChunk.
+        """
+        Load extraction pipeline YAML and convert to DatabaseChunk.
 
         Args:
             yaml_path: Path to YAML file with RuleSet
@@ -271,7 +273,8 @@ class IndexBuilder:
     def _load_from_jsonl(
         self, jsonl_path: Path, source_files: list[SourceFile]
     ) -> list[DatabaseChunk]:
-        """Load Gemini parser JSONL and convert to DatabaseChunk.
+        """
+        Load Gemini parser JSONL and convert to DatabaseChunk.
 
         Args:
             jsonl_path: Path to JSONL file with ParsedDocument objects
@@ -303,7 +306,8 @@ class IndexBuilder:
     def _populate_expense_types(
         self, conn: sqlite3.Connection, chunks: list[DatabaseChunk]
     ) -> dict[str, int]:
-        """Identify unique expense types, populate table, return name-to-ID map.
+        """
+        Identify unique expense types, populate table, return name-to-ID map.
 
         Extracts all unique expense types from chunks, inserts them into the
         expense_types table, and returns a mapping of expense type names to
@@ -342,7 +346,8 @@ class IndexBuilder:
     def _embed_chunks_in_batches(
         self, chunks: list[DatabaseChunk], continue_on_error: bool
     ) -> list[tuple[DatabaseChunk, npt.NDArray[np.float32]]]:
-        """Generate embeddings for all chunks in batches with progress bar.
+        """
+        Generate embeddings for all chunks in batches with progress bar.
 
         Processes chunks in batches of 32, calling encoder.embed_documents() for
         each batch. Shows progress bar with tqdm. Handles errors according to
@@ -411,7 +416,8 @@ class IndexBuilder:
         expense_type_map: dict[str, int],
         source_files: list[SourceFile],
     ) -> None:
-        """Insert all rules, vectors, and links within a single transaction.
+        """
+        Insert all rules, vectors, and links within a single transaction.
 
         For each embedded chunk, performs three inserts:
         1. INSERT INTO rules (get lastrowid)

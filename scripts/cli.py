@@ -465,7 +465,7 @@ def _run_build_logic(
 
         # Build index
         console.print("[cyan]Building index (this may take a while)...[/cyan]\n")
-        builder.build_from_file(
+        builder.build_index(
             input_path=input_file,
             manifest_path=str(output_manifest),
             source_files=source_files,
@@ -669,7 +669,9 @@ def pipeline(
         raise
     except Exception:
         # Don't fail the pipeline if validation fails - just log the exception
-        console.print("[yellow]Warning: Validation failed (see logs for details)[/yellow]")
+        console.print(
+            "[yellow]Warning: Validation failed (see logs for details)[/yellow]"
+        )
         logger.exception("Validation failed")
 
     # Success summary
@@ -903,7 +905,7 @@ def pipeline_extraction(
             # Build index (directly from YAML, bypassing transformer)
             output_db.parent.mkdir(parents=True, exist_ok=True)
             builder = IndexBuilder(db_path=str(output_db), encoder=embedding_service)
-            builder.build_from_file(
+            builder.build_index(
                 input_path=yml_path,  # Use YAML directly
                 manifest_path=str(manifest_path),
                 source_files=source_files,
