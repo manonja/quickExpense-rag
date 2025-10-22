@@ -137,6 +137,24 @@ def mock_gemini_client(mocker):  # type: ignore[no-untyped-def]
         # Determine which fixture is being parsed
         path = Path(html_path)
 
+        if "simple_rule" in path.name:
+            # Return single rule for simple fixture
+            return [
+                ExtractedRule(
+                    rule_number=8523,
+                    title="Meals and entertainment",
+                    content="The maximum amount you can claim for food, beverages and entertainment expenses is 50% of the lesser of the following amounts:\n\nthe amount incurred for these expenses\nan amount that is reasonable in the circumstances\n\nWhen you claim expenses on this line, you will have to calculate the allowable part you can claim for business use.",
+                    applies_to=[ApplicabilityType.BUSINESS],
+                    source_citation="Line 8523",
+                    chapter="Chapter 3 – Business Expenses",
+                    section="Part 1 – Meals and Entertainment",
+                    source_file=path.name,
+                    expert_source=ExpertSource.LLM,
+                    anchor_id="tocch3ln8523",
+                    confidence_score=0.95,
+                ),
+            ]
+
         if "complex_rule" in path.name:
             # Return multiple rules for complex fixture
             return [
@@ -180,6 +198,10 @@ def mock_gemini_client(mocker):  # type: ignore[no-untyped-def]
                     confidence_score=0.88,
                 ),
             ]
+
+        if "malformed" in path.name:
+            # Return empty list for malformed HTML (simulates parsing failure)
+            return []
 
         # Default: return empty list
         return []
