@@ -1,10 +1,4 @@
-"""Reusable Hypothesis strategies for property-based testing.
-
-This module provides composable strategies for generating valid test data
-for the extraction pipeline's core data models.
-"""
-
-from datetime import datetime, timezone
+"""Hypothesis strategies for property-based testing."""
 
 from hypothesis import strategies as st
 from qe_tax_rag.extraction.ca.schema import (
@@ -15,146 +9,89 @@ from qe_tax_rag.extraction.ca.schema import (
 )
 
 
-# Strategy for generating valid rule numbers (line numbers)
-# Range: 1000-9999 (realistic CRA line numbers)
-rule_numbers = st.integers(min_value=1000, max_value=9999)
-
-# Strategy for generating non-empty text content
-# Excludes null characters and control characters
-non_empty_text = st.text(
-    min_size=1,
-    max_size=500,
-    alphabet=st.characters(blacklist_categories=("Cs", "Cc", "Cn")),
-).filter(lambda s: s.strip() != "")
-
-# Strategy for generating short titles
-titles = st.text(
-    min_size=1,
-    max_size=100,
-    alphabet=st.characters(blacklist_categories=("Cs", "Cc", "Cn")),
-).filter(lambda s: s.strip() != "")
-
-# Strategy for generating realistic content
-content = st.text(
-    min_size=10,
-    max_size=1000,
-    alphabet=st.characters(blacklist_categories=("Cs", "Cc", "Cn")),
-).filter(lambda s: s.strip() != "")
-
-# Strategy for generating ApplicabilityType lists
-applicability_types = st.lists(
-    st.sampled_from(ApplicabilityType),
-    min_size=1,
-    max_size=3,
-    unique=True,
-)
-
-# Strategy for generating source citations
-source_citations = st.builds(
-    lambda n: f"Line {n}",
-    rule_numbers,
-)
-
-# Strategy for generating chapter titles
-chapters = st.sampled_from([
-    "Chapter 1 – General Information",
-    "Chapter 2 – Income",
-    "Chapter 3 – Business Expenses",
-    "Chapter 4 – Net Income",
-])
-
-# Strategy for generating section titles (optional)
-sections = st.one_of(
-    st.none(),
-    st.sampled_from([
-        "Part 1 – Meals and Entertainment",
-        "Part 2 – Travel Expenses",
-        "Part 3 – Motor Vehicle Expenses",
-        "Part 4 – Home Office Expenses",
-    ]),
-)
-
-# Strategy for generating source filenames
-source_files = st.sampled_from([
-    "t4002-1.html",
-    "t4002-2.html",
-    "t4002-3.html",
-    "t4002-4.html",
-    "t4002-5.html",
-])
-
-# Strategy for generating expert sources
-expert_sources = st.sampled_from(ExpertSource)
-
-# Strategy for generating HTML anchor IDs (optional)
-anchor_ids = st.one_of(
-    st.none(),
-    st.builds(
-        lambda n: f"tocch3ln{n}",
-        rule_numbers,
-    ),
-)
-
-# Strategy for generating confidence scores
-confidence_scores = st.floats(min_value=0.0, max_value=1.0)
-
-
 @st.composite
-def extracted_rule_strategy(draw: st.DrawFn) -> ExtractedRule:
-    """Generate a valid ExtractedRule instance.
+def extracted_rule_strategy(draw):
+    """
+    Generate valid ExtractedRule with all required fields.
 
-    This strategy ensures all Pydantic constraints are satisfied:
-    - rule_number is a positive integer
-    - title and content are non-empty strings
-    - applies_to is a non-empty list of unique ApplicabilityType
-    - confidence_score is between 0.0 and 1.0
-    - All required fields are populated
+    Generates rules that pass Pydantic validation with:
+    - Valid rule_number (1-9999)
+    - Non-empty title and content
+    - At least one applicability type
+    - Required expert metadata (source, confidence, anchor)
 
-    Args:
-        draw: Hypothesis draw function
+    Optional fields (section, anchor_id) are sometimes None to test
+    optional field handling.
 
     Returns:
-        A valid ExtractedRule instance
+        ExtractedRule with all fields populated
+
     """
     return ExtractedRule(
-        rule_number=draw(rule_numbers),
-        title=draw(titles),
-        content=draw(content),
-        applies_to=draw(applicability_types),
-        source_citation=draw(source_citations),
-        chapter=draw(chapters),
-        section=draw(sections),
-        source_file=draw(source_files),
-        expert_source=draw(expert_sources),
-        anchor_id=draw(anchor_ids),
-        confidence_score=draw(confidence_scores),
+        rule_number=draw(st.integers(min_value=1, max_value=9999)),
+        title=draw(
+            st.text(
+                min_size=1,
+                max_size=100,
+                alphabet=st.characters(blacklist_categories=("Cs",)),
+            )
+        ),
+        content=draw(
+            st.text(
+                min_size=10,
+                max_size=500,
+                alphabet=st.characters(blacklist_categories=("Cs",)),
+            )
+        ),
+        applies_to=draw(
+            st.lists(
+                st.sampled_from(ApplicabilityType), min_size=1, max_size=3, unique=True
+            )
+        ),
+        source_citation=draw(st.text(min_size=1, max_size=50)),
+        chapter=draw(st.text(min_size=1, max_size=100)),
+        section=draw(st.one_of(st.none(), st.text(min_size=1, max_size=100))),
+        source_file=draw(st.text(min_size=1, max_size=50)),
+        expert_source=draw(st.sampled_from(ExpertSource)),
+        anchor_id=draw(st.one_of(st.none(), st.text(min_size=1, max_size=50))),
+        confidence_score=draw(st.floats(min_value=0.0, max_value=1.0)),
     )
 
 
 @st.composite
-def ruleset_strategy(draw: st.DrawFn) -> RuleSet:
-    """Generate a valid RuleSet instance.
+def ruleset_strategy(draw, min_rules=1, max_rules=10):
+    """
+    Generate valid RuleSet with multiple rules.
 
-    This strategy generates a RuleSet with 0-10 rules, realistic schema
-    version, and valid ISO 8601 timestamp.
+    Creates RuleSets that pass Pydantic validation with:
+    - 1-10 rules (configurable via min/max parameters)
+    - Schema version "1.0"
+    - Valid ISO 8601 timestamp
+
+    Use this for property-based testing of:
+    - YAML serialization/deserialization
+    - DatabaseChunk transformation
+    - Database constraint enforcement
 
     Args:
         draw: Hypothesis draw function
+        min_rules: Minimum number of rules to generate (default: 1)
+        max_rules: Maximum number of rules to generate (default: 10)
 
     Returns:
-        A valid RuleSet instance
+        RuleSet with generated rules
+
     """
-    # Generate list of rules
-    rules = draw(st.lists(extracted_rule_strategy(), min_size=0, max_size=10))
-
-    # Schema version follows semantic versioning
-    schema_version = "1.0"
-
-    # Generate realistic ISO 8601 timestamp
-    extraction_timestamp = datetime.now(tz=timezone.utc).isoformat()
+    rules = draw(
+        st.lists(
+            extracted_rule_strategy(),
+            min_size=min_rules,
+            max_size=max_rules,
+        )
+    )
 
     return RuleSet(
         rules=rules,
-        schema_version=schema_version,
-        extraction_timestamp=extraction_timestamp,
+        schema_version="1.0",
+        extraction_timestamp="2025-10-22T00:00:00Z",
     )
