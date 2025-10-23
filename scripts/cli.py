@@ -399,6 +399,56 @@ def _run_preprocess_logic(
     return (len(all_files), manifest_path)
 
 
+def _extract_source_files_from_input(input_path: Path) -> list[SourceFile]:
+    """
+    Extract unique source file names from YAML or JSONL input.
+
+    For YAML: reads ExtractedRule.source_file field
+    For JSONL: reads ParsedDocument.source_filename field
+
+    Args:
+        input_path: Path to YAML or JSONL file
+
+    Returns:
+        List of SourceFile objects with auto-generated metadata
+
+    """
+    source_filenames: set[str] = set()
+
+    if input_path.suffix in [".yml", ".yaml"]:
+        # Parse YAML and extract source_file from each rule
+        import yaml
+
+        with open(input_path) as f:
+            data = yaml.safe_load(f)
+
+        for rule in data.get("rules", []):
+            if source_file := rule.get("source_file"):
+                source_filenames.add(source_file)
+
+    elif input_path.suffix == ".jsonl":
+        # Parse JSONL and extract source_filename from each document
+        with open(input_path) as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+
+                doc = json.loads(line)
+                if source_filename := doc.get("source_filename"):
+                    source_filenames.add(source_filename)
+
+    # Convert to SourceFile objects with placeholder metadata
+    return [
+        SourceFile(
+            path=filename,
+            url=f"file://{filename}",  # Placeholder URL
+            hash="",  # Hash not critical for manual workflows
+        )
+        for filename in sorted(source_filenames)
+    ]
+
+
 def _run_build_logic(
     input_file: Path,
     manifest_file: Path | None,
@@ -468,17 +518,8 @@ def _run_build_logic(
                 "[cyan]Auto-generating source file metadata from input...[/cyan]"
             )
 
-            # Infer source filename from input file
-            # For YAML: use source_file field from ExtractedRule
-            # For JSONL: use source_filename from ParsedDocument
-            # For now, create a single dummy SourceFile entry
-            source_files = [
-                SourceFile(
-                    path=input_file.name,
-                    url=f"file://{input_file.absolute()}",
-                    hash="",  # Hash not critical for manual workflows
-                )
-            ]
+            # Extract unique source files from input
+            source_files = _extract_source_files_from_input(input_file)
 
             console.print(
                 f"Auto-generated {len(source_files)} source file record(s)\n"
