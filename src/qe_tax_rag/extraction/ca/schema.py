@@ -268,6 +268,16 @@ class RuleSet(BaseModel):
                     f"Available keys: {list(source_files.keys())}"
                 )
 
+            # Construct LineageMetadata from rule's lineage_stages (PRE-143)
+            lineage_metadata = None
+            if rule.lineage_stages:
+                lineage_metadata = LineageMetadata(
+                    source_document=rule.source_file,
+                    expert_source=rule.expert_source.value,
+                    extraction_timestamp=self.extraction_timestamp,
+                    pipeline_stages=rule.lineage_stages,
+                )
+
             chunks.append(
                 DatabaseChunk(
                     content=f"{rule.title}\n\n{rule.content}",
@@ -284,6 +294,7 @@ class RuleSet(BaseModel):
                         extraction_source=rule.expert_source.value,
                         extraction_confidence=rule.confidence_score,
                         source_anchor=rule.anchor_id,
+                        lineage=lineage_metadata,
                     ),
                 )
             )

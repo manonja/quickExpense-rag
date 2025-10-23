@@ -4,6 +4,7 @@ import json
 import logging
 import random
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 import google.generativeai as genai
@@ -69,6 +70,9 @@ def parse(html_path: str, cache_dir: str | Path | None = None) -> list[Extracted
         ParserError: If file cannot be read or API call fails permanently.
 
     """
+    # Record timestamp for lineage tracking (PRE-143)
+    timestamp = datetime.now(timezone.utc).isoformat()
+
     # Initialize cache if a directory is provided
     cache = LLMResponseCache(cache_dir) if cache_dir else None
 
@@ -218,6 +222,7 @@ def parse(html_path: str, cache_dir: str | Path | None = None) -> list[Extracted
             applies_to_str = rule_dict.get("applies_to", [])
             applies_to_enum = [ApplicabilityType(s) for s in applies_to_str]
 
+            # Create ExtractedRule with lineage tracking (PRE-143)
             rule = ExtractedRule(
                 rule_number=rule_dict["rule_number"],
                 title=rule_dict["title"],
@@ -230,6 +235,7 @@ def parse(html_path: str, cache_dir: str | Path | None = None) -> list[Extracted
                 expert_source=ExpertSource.LLM,
                 anchor_id=rule_dict.get("anchor_id"),
                 confidence_score=0.8,  # LLM confidence default
+                lineage_stages=[{"stage": "llm_parser", "timestamp": timestamp}],
             )
             rules.append(rule)
         except (KeyError, ValueError) as e:
