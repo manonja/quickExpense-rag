@@ -50,6 +50,14 @@ logs/
 .env.local
 
 # Claude Code local settings
-.claude/settings.local.json
+.claude/
+**/.claude/
 zen_generated.code
 .llm_cache/
+
+# Python test cache
+.hypothesis/
+
+# Runtime data and output
+/data/
+/output/
