@@ -204,7 +204,7 @@ class RuleSet(BaseModel):
 
             chunks.append(
                 DatabaseChunk(
-                    content=rule.content,
+                    content=f"{rule.title}\n\n{rule.content}",
                     citation_id=f"LINE-{rule.rule_number}",
                     source_url=str(source_file.url),
                     source_hash=source_file.hash,

@@ -238,11 +238,11 @@ def build(
         "-i",
         help="Input YAML or JSONL file with rules/documents",
     ),
-    manifest_file: Path = typer.Option(  # noqa: B008
-        Path("data/raw/manifest.json"),
+    manifest_file: Path | None = typer.Option(  # noqa: B008
+        None,
         "--manifest-file",
         "-m",
-        help="Input manifest.json from preprocess step (for source file metadata)",
+        help="Optional manifest.json with source file metadata (auto-generated if missing)",
     ),
     output_db: Path = typer.Option(  # noqa: B008
         Path("data/cra_rules.db"),
@@ -268,18 +268,22 @@ def build(
     ),
 ) -> None:
     """
-    Build searchable SQLite database from parsed JSONL chunks.
+    Build searchable SQLite database from YAML or JSONL files.
 
-    Loads ParsedDocument chunks from JSONL, generates BGE embeddings,
-    and populates SQLite database with FTS5 and vector search indexes.
+    Loads rules from YAML (extraction pipeline) or JSONL (Gemini parser),
+    generates BGE embeddings, and populates SQLite database with FTS5 and
+    vector search indexes.
+
+    The manifest file is optional - if not provided, source file metadata
+    will be auto-generated from the input file.
 
     Example:
-        uv run python scripts/cli.py build --input-file data/processed/chunks.jsonl
+        uv run python scripts/cli.py build --input-file output/rules.yml
 
     """
     console.print("[bold blue]QE Tax RAG Index Building[/bold blue]")
     console.print(f"Input: {input_file}")
-    console.print(f"Manifest: {manifest_file}")
+    console.print(f"Manifest: {manifest_file if manifest_file else '(auto-generated)'}")
     console.print(f"Output DB: {output_db}")
     console.print(f"Output Manifest: {output_manifest}")
     console.print(f"Data Version: {data_version}\n")
@@ -395,9 +399,59 @@ def _run_preprocess_logic(
     return (len(all_files), manifest_path)
 
 
+def _extract_source_files_from_input(input_path: Path) -> list[SourceFile]:
+    """
+    Extract unique source file names from YAML or JSONL input.
+
+    For YAML: reads ExtractedRule.source_file field
+    For JSONL: reads ParsedDocument.source_filename field
+
+    Args:
+        input_path: Path to YAML or JSONL file
+
+    Returns:
+        List of SourceFile objects with auto-generated metadata
+
+    """
+    source_filenames: set[str] = set()
+
+    if input_path.suffix in [".yml", ".yaml"]:
+        # Parse YAML and extract source_file from each rule
+        import yaml
+
+        with open(input_path) as f:
+            data = yaml.safe_load(f)
+
+        for rule in data.get("rules", []):
+            if source_file := rule.get("source_file"):
+                source_filenames.add(source_file)
+
+    elif input_path.suffix == ".jsonl":
+        # Parse JSONL and extract source_filename from each document
+        with open(input_path) as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+
+                doc = json.loads(line)
+                if source_filename := doc.get("source_filename"):
+                    source_filenames.add(source_filename)
+
+    # Convert to SourceFile objects with placeholder metadata
+    return [
+        SourceFile(
+            path=filename,
+            url=f"file://{filename}",  # Placeholder URL
+            hash="",  # Hash not critical for manual workflows
+        )
+        for filename in sorted(source_filenames)
+    ]
+
+
 def _run_build_logic(
     input_file: Path,
-    manifest_file: Path,
+    manifest_file: Path | None,
     output_db: Path,
     output_manifest: Path,
     data_version: str,
@@ -411,8 +465,8 @@ def _run_build_logic(
 
     Args:
         input_file: Input YAML or JSONL file with rules/documents
-        manifest_file: Input manifest.json from preprocess step (for source
-            file metadata)
+        manifest_file: Optional input manifest.json from preprocess step.
+            If None, source file metadata is auto-generated from input_file.
         output_db: Output SQLite database path
         output_manifest: Output manifest.json path
         data_version: Data version string (YYYY.MM format)
@@ -420,7 +474,7 @@ def _run_build_logic(
         console: Rich console for output
 
     Raises:
-        typer.Exit: If input/manifest file not found or build fails
+        typer.Exit: If input file not found or build fails
 
     """
     # Verify input file exists
@@ -428,36 +482,48 @@ def _run_build_logic(
         console.print(f"[red]Error: Input file not found: {input_file}[/red]")
         raise typer.Exit(code=1)
 
-    # Verify manifest file exists
-    if not manifest_file.exists():
-        console.print(f"[red]Error: Manifest file not found: {manifest_file}[/red]")
-        raise typer.Exit(code=1)
-
     # Create output directories
     output_db.parent.mkdir(parents=True, exist_ok=True)
     output_manifest.parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        # Load source files from preprocess manifest
-        console.print("[cyan]Loading source file metadata...[/cyan]")
-        with manifest_file.open() as f:
-            manifest_data = json.load(f)
+        # Load or auto-generate source files
+        if manifest_file and manifest_file.exists():
+            # Load source files from existing manifest
+            console.print("[cyan]Loading source file metadata from manifest...[/cyan]")
+            with manifest_file.open() as f:
+                manifest_data = json.load(f)
 
-        # Convert manifest documents to SourceFile models
-        source_files = []
-        for doc in manifest_data.get("documents", []):
-            source_files.append(
-                SourceFile(
-                    path=doc["filename"],
-                    url=doc["source_url"],
-                    hash=doc["sha256"],
+            # Convert manifest documents to SourceFile models
+            source_files = []
+            for doc in manifest_data.get("documents", []):
+                source_files.append(
+                    SourceFile(
+                        path=doc["filename"],
+                        url=doc["source_url"],
+                        hash=doc["sha256"],
+                    )
                 )
+
+            if not source_files:
+                console.print(
+                    "[yellow]Warning: No source files found in manifest[/yellow]"
+                )
+
+            console.print(f"Loaded {len(source_files)} source file records\n")
+
+        else:
+            # Auto-generate source file metadata from input file
+            console.print(
+                "[cyan]Auto-generating source file metadata from input...[/cyan]"
             )
 
-        if not source_files:
-            console.print("[yellow]Warning: No source files found in manifest[/yellow]")
+            # Extract unique source files from input
+            source_files = _extract_source_files_from_input(input_file)
 
-        console.print(f"Loaded {len(source_files)} source file records\n")
+            console.print(
+                f"Auto-generated {len(source_files)} source file record(s)\n"
+            )
 
         # Initialize IndexBuilder
         console.print("[cyan]Initializing IndexBuilder...[/cyan]")
