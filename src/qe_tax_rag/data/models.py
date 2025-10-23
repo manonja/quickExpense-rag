@@ -1,4 +1,5 @@
-"""Shared Pydantic models for database ingestion.
+"""
+Shared Pydantic models for database ingestion.
 
 This module defines the single source of truth for database chunk models,
 consumed by IndexBuilder and produced by both:
@@ -18,11 +19,17 @@ Design Principles:
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Optional
+
 from pydantic import BaseModel, ConfigDict, Field
+
+if TYPE_CHECKING:
+    from qe_tax_rag.extraction.ca.schema import LineageMetadata
 
 
 class ChunkMetadata(BaseModel):
-    """Metadata stored as JSON in SQLite metadata_json column.
+    """
+    Metadata stored as JSON in SQLite metadata_json column.
 
     This nested structure contains document-level and chunk-level metadata
     that doesn't need SQL filtering (stored as JSON for flexibility).
@@ -39,15 +46,9 @@ class ChunkMetadata(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     # Document-level metadata
-    income_type: list[str] = Field(
-        default_factory=list, description="Income types"
-    )
-    section_title: str | None = Field(
-        default=None, description="Section title"
-    )
-    document_id: str | None = Field(
-        default=None, description="Source document ID"
-    )
+    income_type: list[str] = Field(default_factory=list, description="Income types")
+    section_title: str | None = Field(default=None, description="Section title")
+    document_id: str | None = Field(default=None, description="Source document ID")
 
     # Chunk-level extraction metadata
     extraction_source: str | None = Field(
@@ -56,13 +57,17 @@ class ChunkMetadata(BaseModel):
     extraction_confidence: float | None = Field(
         default=None, ge=0.0, le=1.0, description="Extraction confidence score"
     )
-    source_anchor: str | None = Field(
-        default=None, description="HTML anchor ID"
+    source_anchor: str | None = Field(default=None, description="HTML anchor ID")
+
+    # Lineage tracking (PRE-143): Full extraction pipeline provenance
+    lineage: Optional["LineageMetadata"] = Field(
+        default=None, description="Pipeline lineage with timestamps and stages"
     )
 
 
 class DatabaseChunk(BaseModel):
-    """Flattened chunk ready for database insertion.
+    """
+    Flattened chunk ready for database insertion.
 
     Single source of truth consumed by IndexBuilder. Can be produced by:
     - ExtractedRule (extraction pipeline) via RuleSet.to_database_chunks()

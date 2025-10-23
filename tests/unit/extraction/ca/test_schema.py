@@ -3,11 +3,13 @@
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 from qe_tax_rag.data.models import DatabaseChunk
 from qe_tax_rag.extraction.ca.schema import (
     ApplicabilityType,
     ExpertSource,
     ExtractedRule,
+    LineageMetadata,
     RuleSet,
 )
 from qe_tax_rag.search.models import SourceFile
@@ -59,7 +61,11 @@ def test_ruleset_to_database_chunks_basic(
     assert len(chunks) == 1
     chunk = chunks[0]
     assert isinstance(chunk, DatabaseChunk)
-    assert chunk.content == "You can deduct 50% of meal and entertainment expenses."
+    # Content includes title + content (see RuleSet.to_database_chunks)
+    assert chunk.content == (
+        "Business Meal Expenses\n\n"
+        "You can deduct 50% of meal and entertainment expenses."
+    )
     assert chunk.citation_id == "LINE-8523"
     assert chunk.source_url == "https://www.canada.ca/t4002-24e.html"
     assert chunk.source_hash == "abc123def456"
@@ -207,3 +213,92 @@ def test_ruleset_to_database_chunks_multiple_rules(
     assert chunks[0].metadata.section_title == "Chapter 1"
     assert chunks[1].metadata.section_title == "Chapter 1"
     assert chunks[2].metadata.section_title == "Chapter 2"
+
+
+# ================================
+# LineageMetadata Tests (PRE-143)
+# ================================
+
+
+@pytest.mark.unit
+def test_lineage_metadata_basic() -> None:
+    """Test basic LineageMetadata creation."""
+    lineage = LineageMetadata(
+        source_document="t4002-5.html",
+        expert_source="classic",
+        extraction_timestamp="2025-10-23T14:30:00Z",
+        pipeline_stages=[
+            {"stage": "classic_parser", "timestamp": "2025-10-23T14:30:00Z"},
+            {"stage": "adjudicator", "timestamp": "2025-10-23T14:30:05Z"},
+            {"stage": "yaml_generator", "timestamp": "2025-10-23T14:30:10Z"},
+        ],
+    )
+
+    assert lineage.source_document == "t4002-5.html"
+    assert lineage.expert_source == "classic"
+    assert lineage.extraction_timestamp == "2025-10-23T14:30:00Z"
+    assert len(lineage.pipeline_stages) == 3
+
+
+@pytest.mark.unit
+def test_lineage_chain_with_stages() -> None:
+    """Test lineage_chain computed field with pipeline stages."""
+    lineage = LineageMetadata(
+        source_document="t4002-5.html",
+        expert_source="adjudicated",
+        extraction_timestamp="2025-10-23T14:30:00Z",
+        pipeline_stages=[
+            {"stage": "classic_parser", "timestamp": "2025-10-23T14:30:00Z"},
+            {"stage": "llm_parser", "timestamp": "2025-10-23T14:30:02Z"},
+            {"stage": "adjudicator", "timestamp": "2025-10-23T14:30:05Z"},
+        ],
+    )
+
+    chain = lineage.lineage_chain
+    assert chain.startswith("t4002-5.html |")
+    assert "classic_parser[2025-10-23T14:30:00Z]" in chain
+    assert "llm_parser[2025-10-23T14:30:02Z]" in chain
+    assert "adjudicator[2025-10-23T14:30:05Z]" in chain
+    assert "->" in chain
+
+
+@pytest.mark.unit
+def test_lineage_chain_empty_stages() -> None:
+    """Test lineage_chain computed field with empty pipeline stages."""
+    lineage = LineageMetadata(
+        source_document="t4002-5.html",
+        expert_source="classic",
+        extraction_timestamp="2025-10-23T14:30:00Z",
+        pipeline_stages=[],
+    )
+
+    chain = lineage.lineage_chain
+    assert chain == "t4002-5.html | classic"
+    assert "->" not in chain
+
+
+@pytest.mark.unit
+def test_lineage_metadata_immutable() -> None:
+    """Test LineageMetadata immutability (frozen=True)."""
+    lineage = LineageMetadata(
+        source_document="t4002-5.html",
+        expert_source="classic",
+        extraction_timestamp="2025-10-23T14:30:00Z",
+        pipeline_stages=[],
+    )
+
+    with pytest.raises(ValidationError):
+        lineage.source_document = "modified.html"  # type: ignore[misc]
+
+
+@pytest.mark.unit
+def test_lineage_metadata_extra_fields_forbidden() -> None:
+    """Test LineageMetadata rejects extra fields (extra='forbid')."""
+    with pytest.raises(ValidationError):
+        LineageMetadata(
+            source_document="t4002-5.html",
+            expert_source="classic",
+            extraction_timestamp="2025-10-23T14:30:00Z",
+            pipeline_stages=[],
+            extra_field="should_fail",  # type: ignore[call-arg]
+        )
