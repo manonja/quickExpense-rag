@@ -44,10 +44,10 @@ def parse(html_path: str) -> list[ExtractedRule]:
 
     Returns:
         List of ExtractedRule objects with expert_source=CLASSIC.
-        Returns empty list if no content found for any rules.
+        Returns empty list if no line-numbered rules found (e.g., CCA chapters).
 
     Raises:
-        ParserError: If file cannot be read or no line-numbered rules found.
+        ParserError: If file cannot be read.
 
     Example:
         >>> rules = parse("/path/to/t4002-5.html")
@@ -84,10 +84,11 @@ def parse(html_path: str) -> list[ExtractedRule]:
     rule_headers = soup.find_all(is_line_rule)
 
     if not rule_headers:
-        raise ParserError(
-            f"No line-numbered rules found in {source_file} matching pattern "
-            "'Line XXXX –'. The source HTML structure may have changed."
+        logger.warning(
+            f"No line-numbered rules found in {source_file}. "
+            "This file may contain different content (e.g., CCA sections, introductory chapters)."
         )
+        return []
 
     extracted_rules: list[ExtractedRule] = []
 
@@ -97,7 +98,7 @@ def parse(html_path: str) -> list[ExtractedRule]:
             header_text = header.get_text(strip=True)
             # Remove any img tag remnants from header_text for clean parsing
             clean_header = re.sub(r"<img[^>]*>", "", header_text)
-            match = re.search(r"Line (\d+) – (.+)", clean_header)
+            match = re.search(r"Line (\d+) –\s*(.+)", clean_header)
             if not match:
                 logger.warning(f"Skipping h3 with unparseable format: '{header_text}'")
                 continue
@@ -150,7 +151,7 @@ def parse(html_path: str) -> list[ExtractedRule]:
             )
             extracted_rules.append(rule)
 
-        except Exception as e:
+        except (ValueError, KeyError, AttributeError, TypeError) as e:
             logger.warning(
                 f"Skipping malformed rule '{header.get_text(strip=True)}': {e}"
             )

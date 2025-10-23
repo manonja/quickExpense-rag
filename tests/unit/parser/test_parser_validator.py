@@ -13,7 +13,7 @@ def test_parser_validator_initialization():
 
 def test_validate_parsed_document_all_valid():
     """Test validation passes for valid parsed document."""
-    from scripts.parser.schema import (
+    from qe_tax_rag.parser.schema import (
         Metadata,
         ParsedDocument,
         Section,
@@ -50,7 +50,7 @@ def test_validate_parsed_document_all_valid():
 
 def test_validate_parsed_document_invalid_citation():
     """Test validation detects invalid citation format."""
-    from scripts.parser.schema import (
+    from qe_tax_rag.parser.schema import (
         Metadata,
         ParsedDocument,
         Section,
@@ -87,7 +87,7 @@ def test_validate_parsed_document_invalid_citation():
 
 def test_validate_parsed_document_invalid_expense_type():
     """Test validation detects invalid expense types."""
-    from scripts.parser.schema import Metadata, ParsedDocument
+    from qe_tax_rag.parser.schema import Metadata, ParsedDocument
     from scripts.parser.validator import ParserValidator
 
     doc = ParsedDocument(
@@ -107,7 +107,7 @@ def test_validate_parsed_document_invalid_expense_type():
 
 def test_validate_parsed_document_statistics():
     """Test validation report includes statistics."""
-    from scripts.parser.schema import (
+    from qe_tax_rag.parser.schema import (
         Metadata,
         ParsedDocument,
         Section,
@@ -141,7 +141,7 @@ def test_validate_parsed_document_statistics():
 
 def test_validate_parsed_document_multiple_errors():
     """Test validation collects multiple errors."""
-    from scripts.parser.schema import (
+    from qe_tax_rag.parser.schema import (
         Metadata,
         ParsedDocument,
         Section,

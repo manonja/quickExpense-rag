@@ -156,13 +156,60 @@ def test_raise_parser_error_on_invalid_file_path() -> None:
 
 
 @pytest.mark.unit
-def test_raise_parser_error_when_no_rules_found(tmp_path: Path) -> None:
-    """Test ParserError when HTML has no line-numbered rules."""
-    empty_html = tmp_path / "empty.html"
-    empty_html.write_text(
-        "<html><body><h1>No Rules Here</h1><p>Some content</p></body></html>",
+def test_return_empty_list_for_files_without_line_patterns(tmp_path: Path) -> None:
+    """
+    Parser should return [] (not error) for HTML without 'Line XXXX –' patterns.
+
+    Files like CCA chapters (t4002-6.html) contain valid content but no
+    line-numbered expense rules. This is an expected edge case.
+    """
+    import logging
+
+    # Create HTML file without "Line XXXX –" patterns (CCA chapter example)
+    cca_html = tmp_path / "t4002-cca-chapter.html"
+    cca_html.write_text(
+        """
+        <!DOCTYPE html>
+        <html>
+        <head><title>CCA Chapter</title></head>
+        <body>
+            <main>
+                <h1>Chapter 4 – Capital Cost Allowance</h1>
+                <h2>Basic information about CCA</h2>
+                <h3><a id="ch4cd32321"></a>Basic information about CCA</h3>
+                <p>Capital cost allowance (CCA) is the tax deduction...</p>
+                <h3><a id="ch4IEI"></a>Immediate expensing incentive</h3>
+                <p>Details about the incentive...</p>
+            </main>
+        </body>
+        </html>
+        """,
         encoding="utf-8",
     )
 
-    with pytest.raises(ParserError, match="No line-numbered rules found"):
-        parse(str(empty_html))
+    # This should NOT raise ParserError
+    result = parse(str(cca_html))
+
+    # Assertions
+    assert result == [], "Should return empty list for files without line patterns"
+
+
+@pytest.mark.unit
+def test_parse_rule_with_no_space_after_dash(fixture_html_path: Path) -> None:
+    """
+    Test parser handles titles with no space after en dash.
+
+    Edge case from real CRA HTML where BeautifulSoup's text extraction produces:
+    "Line 8521 –Advertising" (no space between – and Advertising)
+
+    This happens when title text is not wrapped in same tag as the dash.
+    """
+    rules = parse(str(fixture_html_path))
+
+    # Find Line 8521 (Advertising)
+    rule = next((r for r in rules if r.rule_number == 8521), None)
+
+    assert rule is not None, "Line 8521 should be extracted despite missing space"
+    assert rule.title == "Advertising"
+    assert "advertising" in rule.content.lower()
+    assert rule.applies_to == [ApplicabilityType.BUSINESS]

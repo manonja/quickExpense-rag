@@ -2,9 +2,10 @@
 
 import re
 
-# Citation pattern: S#-F#-C#-p#.# (decimal part is optional)
-# Example: S3-F2-C1-p1.25 or S1-F1-C1-p1
-CITATION_REGEX_PATTERN = r"^S\d+-F\d+-C\d+-p\d+(\.\d+)?$"
+# Citation pattern supports two formats:
+# 1. Legacy: S#-F#-C#-p#.# (decimal optional) - e.g., S3-F2-C1-p1.25
+# 2. LINE: LINE-{number} - e.g., LINE-8523, LINE-9200
+CITATION_REGEX_PATTERN = r"^(S\d+-F\d+-C\d+-p\d+(\.\d+)?|LINE-\d+)$"
 
 # Canonical expense types list (matches database schema from TICKET 4.6)
 CANONICAL_EXPENSE_TYPES = [
@@ -101,7 +102,7 @@ class ParserValidator:
             Validation report with 'valid', 'errors', 'warnings', and 'statistics'
 
         """
-        from scripts.parser.schema import ListChunk, ParsedDocument, TextChunk
+        from qe_tax_rag.parser.schema import ListChunk, ParsedDocument, TextChunk
 
         errors: list[str] = []
         warnings: list[str] = []

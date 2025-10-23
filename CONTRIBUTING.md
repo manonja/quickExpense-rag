@@ -1,6 +1,7 @@
 # Contributing to QE Tax RAG
 
-Thank you for your interest in contributing! This guide covers development workflow, testing, and code quality standards.
+Thank you for your interest in contributing! This guide covers development workflow,
+testing, and code quality standards.
 
 ## Development Setup
 
@@ -29,9 +30,10 @@ uv run pre-commit install
 
 Tests are organized by speed and purpose:
 
-- **Unit tests** (`@pytest.mark.unit`): Fast tests (<100ms each), no I/O
+- **Unit tests** (`@pytest.mark.unit`): Fast tests (\<100ms each), no I/O
 - **Integration tests** (`@pytest.mark.integration`): Tests with database/network I/O
-- **Slow tests** (`@pytest.mark.slow`): Tests taking >1 second (embeddings, full operations)
+- **Slow tests** (`@pytest.mark.slow`): Tests taking >1 second (embeddings, full
+  operations)
 
 ### Running Tests
 
@@ -105,12 +107,12 @@ uv run pytest --cov=src/qe_tax_rag --cov-fail-under=85
 
 The project enforces minimum coverage thresholds to ensure code quality:
 
-| Module | Minimum Coverage | Current Status |
-|--------|-----------------|----------------|
-| **Overall** | ≥85% | ✅ 94% |
-| `api.py` | ≥95% | ✅ 100% |
-| `search/hybrid.py` | ≥95% | ✅ 97% |
-| `data/manager.py` | ≥90% | ✅ 99% |
+| Module             | Minimum Coverage | Current Status |
+| ------------------ | ---------------- | -------------- |
+| **Overall**        | ≥85%             | ✅ 94%         |
+| `api.py`           | ≥95%             | ✅ 100%        |
+| `search/hybrid.py` | ≥95%             | ✅ 97%         |
+| `data/manager.py`  | ≥90%             | ✅ 99%         |
 
 **Why these targets?**
 
@@ -239,19 +241,22 @@ uv run pre-commit run --all-files
 GitHub Actions runs on every push and PR:
 
 1. **Linting & Formatting** (pre-commit.yml)
+
    - Ruff linting
    - Ruff formatting
    - Mypy + Pyright type checking
    - Markdown formatting
 
-2. **Tests** (test.yml)
+1. **Tests** (test.yml)
+
    - Runs on Ubuntu 24.04 and macOS
    - Python 3.12
    - Full test suite with coverage
    - **Coverage threshold enforced**: ≥85% required
    - Uploads coverage artifacts
 
-3. **Lock File Check** (lock-check.yml)
+1. **Lock File Check** (lock-check.yml)
+
    - Ensures uv.lock is up-to-date
 
 ### Making CI Pass
@@ -340,8 +345,10 @@ docs/                       # Documentation
 ## Getting Help
 
 - **Issues**: [GitHub Issues](https://github.com/YOUR_USERNAME/qe-tax-rag/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/YOUR_USERNAME/qe-tax-rag/discussions)
+- **Discussions**:
+  [GitHub Discussions](https://github.com/YOUR_USERNAME/qe-tax-rag/discussions)
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the MIT License.
+By contributing, you agree that your contributions will be licensed under the MIT
+License.

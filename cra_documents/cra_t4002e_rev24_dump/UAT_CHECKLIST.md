@@ -1,9 +1,12 @@
 # Task 3.4: Manual User Acceptance Testing
 
 ## Overview
-This checklist guides you through manual testing to ensure the offline CRA T4002 guide functions correctly.
+
+This checklist guides you through manual testing to ensure the offline CRA T4002 guide
+functions correctly.
 
 ## Prerequisites
+
 - All previous tasks (1.1-3.3) must be complete
 - All files downloaded and links rewritten
 - Integrity verification passed
@@ -11,12 +14,15 @@ This checklist guides you through manual testing to ensure the offline CRA T4002
 ## Testing Steps
 
 ### 1. Initial Page Load
+
 - [ ] Open `t4002-1.html` in a web browser (Chrome, Firefox, Safari)
 - [ ] Verify page renders correctly with proper styling
 - [ ] Check that Canada.ca header/footer displays properly
-- [ ] Confirm page title shows "Self-employed Business, Professional, Commission, Farming, and Fishing Income"
+- [ ] Confirm page title shows "Self-employed Business, Professional, Commission,
+  Farming, and Fishing Income"
 
 ### 2. Navigation Testing
+
 Test clicking through all pages from the table of contents:
 
 - [ ] Click "What's new for 2024" → `t4002-2.html` loads
@@ -33,6 +39,7 @@ Test clicking through all pages from the table of contents:
 - [ ] Click "For more information" → `t4002-15.html` loads
 
 ### 3. CSS Rendering Verification
+
 On each page, verify:
 
 - [ ] Page layout is clean and readable
@@ -42,6 +49,7 @@ On each page, verify:
 - [ ] Page is responsive (try resizing browser window)
 
 ### 4. Anchor Link Testing
+
 Test internal section links (examples):
 
 - [ ] On `t4002-3.html`, click a section link (e.g., "Business identification number")
@@ -50,24 +58,29 @@ Test internal section links (examples):
 - [ ] Verify navigation to correct page and section
 
 ### 5. Back/Forward Navigation
+
 - [ ] Use browser back button to return to previous page
 - [ ] Use browser forward button to go forward
 - [ ] Verify browser history works correctly
 
 ### 6. Error Checking
+
 - [ ] Open browser developer console (F12)
 - [ ] Navigate through all pages
 - [ ] Verify no 404 errors for missing files
 - [ ] Verify no console errors related to missing CSS or resources
 
 ### 7. Content Spot Check
+
 On key pages, verify content is complete:
 
-- [ ] `t4002-5.html` (largest file) - scroll through entire page, verify no truncated content
+- [ ] `t4002-5.html` (largest file) - scroll through entire page, verify no truncated
+  content
 - [ ] `t4002-6.html` - verify CCA rate tables display properly
 - [ ] `t4002-10.html` - verify appendix tables render correctly
 
 ### 8. Offline Testing (Optional)
+
 - [ ] Disconnect from internet
 - [ ] Reload pages to confirm they work offline
 - [ ] Verify all navigation still functions
@@ -77,18 +90,19 @@ On key pages, verify content is complete:
 All checkboxes above must be checked (✓) for UAT to pass.
 
 If any issues found:
+
 1. Document the specific issue (which page, what broke)
-2. Check `integrity_report.json` for clues
-3. Re-run relevant Phase 3 scripts if needed
+1. Check `integrity_report.json` for clues
+1. Re-run relevant Phase 3 scripts if needed
 
 ## Sign-Off
 
-- **Tester Name**: ___________________________
-- **Date**: ___________________________
-- **Overall Status**: [ ] PASS  [ ] FAIL
+- **Tester Name**: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+- **Date**: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+- **Overall Status**: [ ] PASS [ ] FAIL
 - **Notes**:
 
----
+______________________________________________________________________
 
 ## Quick Test Command
 

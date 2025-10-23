@@ -367,6 +367,7 @@ def test_generate_performs_readback_verification(
         # Second call: read-back (return corrupted content)
         if call_count["count"] == 2:
             from io import StringIO
+
             return StringIO("invalid: yaml: [syntax")
         return original_open(*args, **kwargs)
 

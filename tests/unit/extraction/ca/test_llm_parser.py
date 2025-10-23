@@ -89,7 +89,7 @@ def test_retries_on_rate_limit_then_succeeds(mock_sleep, mock_genai, tmp_path):
 @patch("qe_tax_rag.extraction.ca.llm_parser.genai.GenerativeModel")
 @patch("qe_tax_rag.extraction.ca.llm_parser.time.sleep")
 def test_raises_error_after_max_retries(mock_sleep, mock_genai, tmp_path):
-    """Test parser raises ParserError after 3 failed retries."""
+    """Test parser raises ParserError after 4 total failed attempts."""
     # Arrange
     html_file = tmp_path / "test.html"
     html_file.write_text("<html><main><p>Test</p></main></html>")
@@ -103,8 +103,9 @@ def test_raises_error_after_max_retries(mock_sleep, mock_genai, tmp_path):
     with pytest.raises(ParserError, match="API call failed permanently"):
         parse(str(html_file))
 
-    assert mock_model.generate_content.call_count == 3
-    assert mock_sleep.call_count == 2  # Sleep between retries
+    # The code is configured for 4 total attempts (1 initial + 3 retries)
+    assert mock_model.generate_content.call_count == 4
+    assert mock_sleep.call_count == 3  # Sleeps after attempts 1, 2, and 3
 
 
 @patch("qe_tax_rag.extraction.ca.llm_parser.genai.GenerativeModel")
@@ -168,17 +169,36 @@ def test_handles_empty_applies_to_list(mock_genai, tmp_path):
 
 
 @patch("qe_tax_rag.extraction.ca.llm_parser.genai.GenerativeModel")
-def test_raises_parser_error_on_malformed_json(mock_genai, tmp_path):
-    """Test parser handles malformed JSON from LLM."""
+def test_returns_empty_list_for_malformed_json(mock_genai, tmp_path, caplog):
+    """
+    Parser should return [] (not crash) when Gemini returns malformed JSON.
+
+    Large HTML files can sometimes cause Gemini to return truncated/malformed
+    JSON responses. The parser should log a warning and return [], allowing
+    the adjudicator to use Classic Parser results as fallback.
+    """
+    import logging
+
     html_file = tmp_path / "test.html"
     html_file.write_text("<html><main><p>Test</p></main></html>")
 
     mock_response = MagicMock()
-    mock_response.text = "NOT VALID JSON {"
+    # Simulate truncated JSON (like the real error from t4002-5.html)
+    mock_response.text = '{"rules": [{"rule_number": 8523, "title": "Meals", "content": "Unterminated string...'
     mock_genai.return_value.generate_content.return_value = mock_response
 
-    with pytest.raises(ParserError, match="Failed to parse JSON"):
-        parse(str(html_file))
+    # This should NOT raise ParserError
+    with caplog.at_level(logging.WARNING):
+        result = parse(str(html_file))
+
+    # Assertions
+    assert result == [], "Should return empty list for malformed JSON"
+    assert (
+        "malformed" in caplog.text.lower() or "failed to parse" in caplog.text.lower()
+    )
+    assert "fallback" in caplog.text.lower(), (
+        "Should mention fallback to Classic Parser"
+    )
 
 
 def test_raises_parser_error_on_invalid_file_path():

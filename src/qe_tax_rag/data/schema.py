@@ -27,6 +27,16 @@ CREATE TABLE IF NOT EXISTS metadata (
 ) WITHOUT ROWID;
 
 -- Main content table storing processed chunks of CRA rules.
+/*
+ * The metadata_json column stores flexible, non-indexed metadata from the
+ * extraction pipeline. Expected fields include:
+ * - income_type: list[str]
+ * - extraction_source: str
+ * - extraction_confidence: float
+ * - source_anchor: str
+ * - section_title: str
+ * - document_id: str
+ */
 CREATE TABLE IF NOT EXISTS rules (
     id INTEGER PRIMARY KEY,
     content TEXT NOT NULL,

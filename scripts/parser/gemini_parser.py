@@ -4,9 +4,9 @@ import json
 from typing import Any
 
 import google.generativeai as genai
+from qe_tax_rag.parser.schema import ParsedDocument
 
 from scripts.parser.retry import retry_with_backoff
-from scripts.parser.schema import ParsedDocument
 from scripts.parser.validator import CANONICAL_EXPENSE_TYPES
 
 

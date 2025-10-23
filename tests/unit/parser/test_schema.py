@@ -6,7 +6,7 @@ from pydantic import ValidationError
 
 def test_metadata_model_valid():
     """Test Metadata model accepts valid data."""
-    from scripts.parser.schema import Metadata
+    from qe_tax_rag.parser.schema import Metadata
 
     metadata = Metadata(
         province=["BC", "ON"],
@@ -21,7 +21,7 @@ def test_metadata_model_valid():
 
 def test_metadata_model_defaults_to_empty_lists():
     """Test Metadata fields default to empty lists."""
-    from scripts.parser.schema import Metadata
+    from qe_tax_rag.parser.schema import Metadata
 
     metadata = Metadata()
 
@@ -32,7 +32,7 @@ def test_metadata_model_defaults_to_empty_lists():
 
 def test_metadata_model_immutable():
     """Test Metadata model is immutable (frozen)."""
-    from scripts.parser.schema import Metadata
+    from qe_tax_rag.parser.schema import Metadata
 
     metadata = Metadata(province=["BC"])
 
@@ -42,7 +42,7 @@ def test_metadata_model_immutable():
 
 def test_text_chunk_model_with_citation():
     """Test TextChunk model with citation."""
-    from scripts.parser.schema import TextChunk
+    from qe_tax_rag.parser.schema import TextChunk
 
     chunk = TextChunk(
         type="paragraph",
@@ -57,7 +57,7 @@ def test_text_chunk_model_with_citation():
 
 def test_text_chunk_model_without_citation():
     """Test TextChunk model without citation (optional)."""
-    from scripts.parser.schema import TextChunk
+    from qe_tax_rag.parser.schema import TextChunk
 
     chunk = TextChunk(type="footnote", text="See section 5 for details.")
 
@@ -67,7 +67,7 @@ def test_text_chunk_model_without_citation():
 
 def test_text_chunk_type_literal_enforcement():
     """Test TextChunk type field only accepts 'paragraph' or 'footnote'."""
-    from scripts.parser.schema import TextChunk
+    from qe_tax_rag.parser.schema import TextChunk
 
     # Valid types
     TextChunk(type="paragraph", text="Test")
@@ -80,7 +80,7 @@ def test_text_chunk_type_literal_enforcement():
 
 def test_list_item_model_simple():
     """Test ListItem model without sub-items."""
-    from scripts.parser.schema import ListItem
+    from qe_tax_rag.parser.schema import ListItem
 
     item = ListItem(
         type="list_item",
@@ -95,7 +95,7 @@ def test_list_item_model_simple():
 
 def test_list_item_model_with_sub_items():
     """Test ListItem model with nested sub-items."""
-    from scripts.parser.schema import ListItem
+    from qe_tax_rag.parser.schema import ListItem
 
     sub_item = ListItem(type="list_item", text="Sub-item detail")
     parent_item = ListItem(type="list_item", text="Parent item", sub_items=[sub_item])
@@ -106,7 +106,7 @@ def test_list_item_model_with_sub_items():
 
 def test_list_chunk_model():
     """Test ListChunk model containing list items."""
-    from scripts.parser.schema import ListChunk, ListItem
+    from qe_tax_rag.parser.schema import ListChunk, ListItem
 
     items = [
         ListItem(type="list_item", text="Item 1"),
@@ -120,7 +120,7 @@ def test_list_chunk_model():
 
 def test_table_chunk_model():
     """Test TableChunk model with tabular data."""
-    from scripts.parser.schema import TableChunk
+    from qe_tax_rag.parser.schema import TableChunk
 
     table = TableChunk(
         type="table",
@@ -139,7 +139,7 @@ def test_table_chunk_model():
 
 def test_section_model():
     """Test Section model with nested content."""
-    from scripts.parser.schema import Section, TextChunk
+    from qe_tax_rag.parser.schema import Section, TextChunk
 
     content = [
         TextChunk(type="paragraph", text="Introduction text"),
@@ -156,7 +156,7 @@ def test_section_model():
 
 def test_parsed_document_model():
     """Test ParsedDocument root model with complete structure."""
-    from scripts.parser.schema import (
+    from qe_tax_rag.parser.schema import (
         Metadata,
         ParsedDocument,
         Section,
@@ -189,8 +189,63 @@ def test_parsed_document_model():
 
 def test_parsed_document_optional_document_id():
     """Test ParsedDocument allows optional document_id."""
-    from scripts.parser.schema import Metadata, ParsedDocument
+    from qe_tax_rag.parser.schema import Metadata, ParsedDocument
 
     doc = ParsedDocument(title="Test Doc", metadata=Metadata(), sections=[])
 
     assert doc.document_id is None
+
+
+# --- NEW TESTS FOR TICKET T1.2 ---
+
+
+def test_metadata_without_income_type() -> None:
+    """Metadata should work without income_type (backward compat)."""
+    from qe_tax_rag.parser.schema import Metadata
+
+    metadata = Metadata(
+        province=["BC"],
+        business_type=["sole_proprietorship"],
+        expense_type=["meals"],
+    )
+    assert metadata.income_type == []  # Default empty list
+
+
+def test_metadata_with_income_type() -> None:
+    """Metadata should accept income_type field."""
+    from qe_tax_rag.parser.schema import Metadata
+
+    metadata = Metadata(
+        province=["BC"],
+        business_type=["sole_proprietorship"],
+        expense_type=["meals"],
+        income_type=["business", "fishing"],  # NEW
+    )
+    assert metadata.income_type == ["business", "fishing"]
+
+
+def test_text_chunk_without_extraction_metadata() -> None:
+    """TextChunk should work without extraction metadata (backward compat)."""
+    from qe_tax_rag.parser.schema import TextChunk
+
+    chunk = TextChunk(type="paragraph", text="Test content", citation_id="S3-F2-C1-p1")
+    assert chunk.extraction_source is None
+    assert chunk.extraction_confidence is None
+    assert chunk.source_anchor is None
+
+
+def test_text_chunk_with_extraction_metadata() -> None:
+    """TextChunk should accept extraction metadata."""
+    from qe_tax_rag.parser.schema import TextChunk
+
+    chunk = TextChunk(
+        type="paragraph",
+        text="Test content",
+        citation_id="LINE-8523",
+        extraction_source="adjudicated",
+        extraction_confidence=0.95,
+        source_anchor="tocch3ln8523",
+    )
+    assert chunk.extraction_source == "adjudicated"
+    assert chunk.extraction_confidence == 0.95
+    assert chunk.source_anchor == "tocch3ln8523"

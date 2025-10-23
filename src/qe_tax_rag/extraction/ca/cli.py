@@ -25,7 +25,7 @@ console = Console()
 
 
 @app.command()
-def main(
+def extract(
     input_path: Annotated[
         Path,
         typer.Argument(
@@ -55,6 +55,13 @@ def main(
         bool,
         typer.Option("--dry-run", help="Run pipeline without generating output files"),
     ] = False,
+    cache_dir: Annotated[
+        Path | None,
+        typer.Option(
+            "--cache-dir",
+            help="Directory to cache LLM responses (improves performance and reduces API costs)",
+        ),
+    ] = None,
 ) -> None:
     """
     Extract tax rules from CRA HTML documents to structured YAML.
@@ -88,7 +95,7 @@ def main(
 
     try:
         # Run extraction
-        result = run_extraction(input_path, output_yaml, manual_review_file, dry_run)
+        result = run_extraction(input_path, output_yaml, manual_review_file, dry_run, cache_dir)
 
         # Render summary report
         _render_summary_report(result, output_yaml, manual_review_file, dry_run)

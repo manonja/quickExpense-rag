@@ -6,7 +6,7 @@ validated ExtractedRule objects from the adjudicator and generating a
 schema-compliant YAML file suitable for distribution.
 
 Key Features:
-- Strips internal pipeline metadata (expert_source, anchor_id, confidence_score)
+- Preserves all extraction metadata fields (expert_source, anchor_id, confidence_score)
 - Wraps rules in RuleSet with schema version and extraction timestamp
 - Adds generation metadata header to output file
 - Performs read-back verification to ensure file integrity
@@ -45,10 +45,12 @@ from qe_tax_rag.extraction.ca.schema import ExtractedRule, RuleSet
 logger: logging.Logger = logging.getLogger(__name__)
 
 # Internal metadata fields to exclude from final YAML output
+# NOTE: Previously excluded fields are now REQUIRED for database building
+# These fields provide crucial observability for RAG quality analysis
 _INTERNAL_METADATA_FIELDS: Final[set[str]] = {
-    "expert_source",    # Tracks which expert generated the rule
-    "anchor_id",        # HTML anchor ID for debugging
-    "confidence_score", # Adjudicator confidence metric
+    # "expert_source",     # REQUIRED for database metadata (extraction_source)
+    # "anchor_id",         # REQUIRED for database metadata (source_anchor)
+    # "confidence_score",  # REQUIRED for database metadata (extraction_confidence)
 }
 
 # Schema version for generated YAML files
@@ -88,6 +90,8 @@ def generate(rules: list[ExtractedRule], output_path: str) -> None:
         data = json.loads(
             rule_set.model_dump_json(
                 exclude={"rules": {"__all__": _INTERNAL_METADATA_FIELDS}}
+                if _INTERNAL_METADATA_FIELDS
+                else None
             )
         )
 

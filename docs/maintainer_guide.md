@@ -1,27 +1,33 @@
 # Maintainer Guide: Document Preprocessing Workflow
 
-This guide documents the manual download and preprocessing workflow for CRA (Canadian Revenue Agency) tax documents. The preprocessing pipeline (TICKET 9A) converts raw HTML/PDF files into clean text for downstream LLM parsing (TICKET 9B: Gemini Flash).
+This guide documents the manual download and preprocessing workflow for CRA (Canadian
+Revenue Agency) tax documents. The preprocessing pipeline (TICKET 9A) converts raw
+HTML/PDF files into clean text for downstream LLM parsing (TICKET 9B: Gemini Flash).
 
----
+______________________________________________________________________
 
 ## Overview
 
-**Why manual downloads?** Automated web scraping is brittle and breaks frequently when CRA updates their website. Manual downloads by the maintainer eliminate this maintenance burden while keeping costs negligible (~$1.59 for 50 documents with Gemini Flash).
+**Why manual downloads?** Automated web scraping is brittle and breaks frequently when
+CRA updates their website. Manual downloads by the maintainer eliminate this maintenance
+burden while keeping costs negligible (~$1.59 for 50 documents with Gemini Flash).
 
 **Workflow Summary**:
 
 1. Maintainer manually downloads CRA HTML/PDF files → `data/raw/`
-2. Preprocessing script extracts clean text → `data/preprocessed/`
-3. Gemini Flash parses text into structured chunks → `data/processed/chunks.jsonl` (TICKET 9B)
-4. Index builder creates searchable database → `data/cra_rules.db` (TICKET 9C)
+1. Preprocessing script extracts clean text → `data/preprocessed/`
+1. Gemini Flash parses text into structured chunks → `data/processed/chunks.jsonl`
+   (TICKET 9B)
+1. Index builder creates searchable database → `data/cra_rules.db` (TICKET 9C)
 
----
+______________________________________________________________________
 
 ## Step 1: Manual Document Download
 
 ### 1.1 Target URLs
 
-**Primary Source**: [CRA Income Tax Folios](https://www.canada.ca/en/revenue-agency/services/tax/technical-information/income-tax/income-tax-folios.html)
+**Primary Source**:
+[CRA Income Tax Folios](https://www.canada.ca/en/revenue-agency/services/tax/technical-information/income-tax/income-tax-folios.html)
 
 **Focus Areas**:
 
@@ -40,12 +46,12 @@ This guide documents the manual download and preprocessing workflow for CRA (Can
 For each relevant folio:
 
 1. **Navigate to the folio page** (e.g., S3-F2-C1: Capital Cost of Depreciable Property)
-2. **Download the HTML version**:
+1. **Download the HTML version**:
    - Right-click → "Save Page As..." → Save as `S3-F2-C1.html`
    - Use the folio ID (e.g., S3-F2-C1) as the filename
-3. **Download the PDF version** (if available):
+1. **Download the PDF version** (if available):
    - Click "Download PDF" link → Save as `S3-F2-C1.pdf`
-4. **Save to `data/raw/`** directory
+1. **Save to `data/raw/`** directory
 
 **Naming Convention**:
 
@@ -76,9 +82,10 @@ https://www.canada.ca/en/revenue-agency/services/tax/technical-information/incom
 - ✅ Capital cost allowance (CCA)
 - ✅ Business use of personal property
 
-**Quality over quantity**: Prefer comprehensive, authoritative folios over all available documents.
+**Quality over quantity**: Prefer comprehensive, authoritative folios over all available
+documents.
 
----
+______________________________________________________________________
 
 ## Step 2: Preprocessing Workflow
 
@@ -129,7 +136,8 @@ data/preprocessed/
   ...
 ```
 
-**Manifest Generation**: The preprocessing script automatically creates `data/raw/manifest.json` with metadata for each document:
+**Manifest Generation**: The preprocessing script automatically creates
+`data/raw/manifest.json` with metadata for each document:
 
 ```json
 [
@@ -159,9 +167,9 @@ head -n 50 data/preprocessed/S3-F2-C1.txt
 **Quality Checks**:
 
 1. **Text is clean**: No HTML tags, no JavaScript, no CSS
-2. **Structure preserved**: Headings, paragraphs, lists are readable
-3. **No excessive whitespace**: Max 2 consecutive newlines
-4. **Encoding correct**: Special characters (é, à, etc.) display properly
+1. **Structure preserved**: Headings, paragraphs, lists are readable
+1. **No excessive whitespace**: Max 2 consecutive newlines
+1. **Encoding correct**: Special characters (é, à, etc.) display properly
 
 **Common Issues**:
 
@@ -169,13 +177,14 @@ head -n 50 data/preprocessed/S3-F2-C1.txt
 - **Garbled text**: Encoding issue - verify UTF-8
 - **Missing sections**: HTML structure unusual - check logs for warnings
 
----
+______________________________________________________________________
 
 ## Step 3: SHA256 Hash Computation
 
 **Purpose**: SHA256 hashes ensure data integrity and track source document changes.
 
-**Automated**: The preprocessing script (`preprocess_file()`) automatically computes SHA256 hashes during processing and stores them in `data/raw/manifest.json`.
+**Automated**: The preprocessing script (`preprocess_file()`) automatically computes
+SHA256 hashes during processing and stores them in `data/raw/manifest.json`.
 
 **Manual Verification** (optional):
 
@@ -187,7 +196,7 @@ shasum -a 256 data/raw/S3-F2-C1.html
 jq '.[] | select(.filename == "S3-F2-C1.html") | .sha256' data/raw/manifest.json
 ```
 
----
+______________________________________________________________________
 
 ## Step 4: Manifest Schema
 
@@ -217,26 +226,27 @@ jq '.[] | select(.filename == "S3-F2-C1.html") | .sha256' data/raw/manifest.json
 - `sha256`: SHA256 hash (64 hex characters) of the original file
 - `created_at`: Manifest creation timestamp (UTC)
 
-**Validation**: The manifest is validated using Pydantic models (`scripts/preprocessor/models.py`):
+**Validation**: The manifest is validated using Pydantic models
+(`scripts/preprocessor/models.py`):
 
 - Filename must end with `.html` or `.pdf`
 - SHA256 must be exactly 64 hexadecimal characters
 - Timestamps must be valid ISO 8601 format
 
----
+______________________________________________________________________
 
 ## Step 5: Next Steps (TICKET 9B: Gemini Parser)
 
 After preprocessing completes, the next step is **TICKET 9B: Gemini Flash Parser**:
 
 1. **Input**: Clean text files in `data/preprocessed/`
-2. **Process**: Gemini Flash parses text into structured chunks with citations
-3. **Output**: `data/processed/chunks.jsonl` with metadata
-4. **Cost**: ~$1.59 for 50 documents (negligible)
+1. **Process**: Gemini Flash parses text into structured chunks with citations
+1. **Output**: `data/processed/chunks.jsonl` with metadata
+1. **Cost**: ~$1.59 for 50 documents (negligible)
 
 See `docs/TICKET-9B-plan.md` (future) for Gemini parsing workflow.
 
----
+______________________________________________________________________
 
 ## Troubleshooting
 
@@ -254,8 +264,9 @@ ls data/raw/
 **Possible Causes**:
 
 1. **Scanned PDF**: PDF contains images, not text. Solution: Use OCR or skip file.
-2. **Unusual HTML structure**: No `<main>`, `<article>`, or `<body>` tags. Check logs for warnings.
-3. **Encoding issue**: File not UTF-8. Re-download or convert encoding.
+1. **Unusual HTML structure**: No `<main>`, `<article>`, or `<body>` tags. Check logs
+   for warnings.
+1. **Encoding issue**: File not UTF-8. Re-download or convert encoding.
 
 **Debug**:
 
@@ -276,7 +287,7 @@ uv run python scripts/cli.py preprocess --verbose
 
 **Solution**: Re-run preprocessing to regenerate manifest with updated hashes.
 
----
+______________________________________________________________________
 
 ## Maintenance Schedule
 
@@ -289,15 +300,15 @@ uv run python scripts/cli.py preprocess --verbose
 **Update Workflow**:
 
 1. Check CRA website for updated folios
-2. Download new/updated documents to `data/raw/`
-3. Re-run preprocessing script
-4. Re-run Gemini parser (TICKET 9B)
-5. Rebuild database (TICKET 9C)
-6. Publish new release (TICKET 12)
+1. Download new/updated documents to `data/raw/`
+1. Re-run preprocessing script
+1. Re-run Gemini parser (TICKET 9B)
+1. Rebuild database (TICKET 9C)
+1. Publish new release (TICKET 12)
 
 **Cost per update**: ~$0.03 per document with Gemini Flash (negligible).
 
----
+______________________________________________________________________
 
 ## Best Practices
 
@@ -316,7 +327,7 @@ uv run python scripts/cli.py preprocess --verbose
 - Don't skip manifest creation (needed for provenance tracking)
 - Don't commit large binary files to git (use `.gitignore`)
 
----
+______________________________________________________________________
 
 ## File Sizes & Storage
 
@@ -333,7 +344,7 @@ uv run python scripts/cli.py preprocess --verbose
 - Commit `data/raw/manifest.json` (small, important for provenance)
 - Keep `data/preprocessed/` in `.gitignore` (regenerable)
 
----
+______________________________________________________________________
 
 ## Contact & Support
 
@@ -341,9 +352,10 @@ uv run python scripts/cli.py preprocess --verbose
 
 **Issues?** Check logs in `.log/` directory (if enabled) or run with `--verbose` flag.
 
-**Updates to this guide?** Maintainers should update this document when workflow changes.
+**Updates to this guide?** Maintainers should update this document when workflow
+changes.
 
----
+______________________________________________________________________
 
-**Last Updated**: 2025-10-15
-**Related Tickets**: TICKET 9A (Preprocessing), TICKET 9B (Gemini Parser), TICKET 9C (Index Builder)
+**Last Updated**: 2025-10-15 **Related Tickets**: TICKET 9A (Preprocessing), TICKET 9B
+(Gemini Parser), TICKET 9C (Index Builder)

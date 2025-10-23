@@ -4,30 +4,38 @@ Document parser using Gemini 2.0 Flash for structured CRA document extraction.
 
 ## Overview
 
-This parser converts preprocessed CRA documents (clean text) into structured JSON chunks compatible with the indexing pipeline (TICKET 9C).
+This parser converts preprocessed CRA documents (clean text) into structured JSON chunks
+compatible with the indexing pipeline (TICKET 9C).
 
 ## Components
 
 ### 1. **Pydantic Schema** (`schema.py`)
+
 Hierarchical models for structured parsing:
+
 - `ParsedDocument` → `Section` → `ContentItem`
 - Content types: `TextChunk`, `ListChunk`, `TableChunk`
 - Includes `to_flat_chunks()` for JSONL conversion
 
 ### 2. **GeminiParser** (`gemini_parser.py`)
+
 Main parser using Gemini API:
+
 - **Model**: `gemini-2.0-flash-exp`
 - **Temperature**: 0.0 (deterministic)
 - **Output**: Structured JSON via `response_mime_type="application/json"`
 - **Retry Logic**: 3 attempts with exponential backoff (1s, 2s, 4s)
 
 ### 3. **Validation** (`validator.py`)
+
 Data integrity checks:
+
 - **Citation Format**: `S\d+-F\d+-C\d+-p\d+(\.\d+)?`
 - **Expense Types**: Against canonical list (16 types)
 - **ParserValidator**: Comprehensive validation with error collection
 
 ### 4. **Retry Logic** (`retry.py`)
+
 Exponential backoff decorator for API resilience
 
 ## Usage
@@ -68,11 +76,13 @@ export QE_TAX_RAG_GEMINI_TEMPERATURE=0.0
 ## Testing
 
 ### Unit Tests (57 tests)
+
 ```bash
 uv run pytest tests/unit/parser/ -v
 ```
 
 ### Integration Test (requires API key)
+
 ```bash
 export GEMINI_API_KEY=your_key_here
 uv run pytest tests/integration/test_gemini_parser_integration.py -v
@@ -87,9 +97,9 @@ uv run pytest tests/integration/test_gemini_parser_integration.py -v
 ## Error Handling
 
 1. **API Failures**: Retry 3x with exponential backoff
-2. **Parsing Errors**: Pydantic validation errors
-3. **Citation Errors**: Logged, continue processing
-4. **Expense Type Warnings**: Unknown types flagged but not fatal
+1. **Parsing Errors**: Pydantic validation errors
+1. **Citation Errors**: Logged, continue processing
+1. **Expense Type Warnings**: Unknown types flagged but not fatal
 
 ## Key Design Decisions
 
@@ -102,7 +112,8 @@ uv run pytest tests/integration/test_gemini_parser_integration.py -v
 ## Next Steps (TICKET 9C)
 
 Parsed chunks feed into the Index Builder:
+
 1. Load `chunks.jsonl` from parser output
-2. Generate embeddings (BGE)
-3. Populate SQLite database
-4. Create manifest with SHA256
+1. Generate embeddings (BGE)
+1. Populate SQLite database
+1. Create manifest with SHA256

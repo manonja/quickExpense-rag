@@ -44,8 +44,7 @@ Search combines three techniques in sequence:
 
 ## Database Schema Contract
 
-The schema (defined in `src/qe_tax_rag/data/schema.py`) defines the database
-structure:
+The schema (defined in `src/qe_tax_rag/data/schema.py`) defines the database structure:
 
 **Tables**:
 
@@ -343,6 +342,17 @@ enforced.
 - All functions must have type hints
 - No `Any` types without justification
 
+### Citation ID Integrity
+
+**CRITICAL**: `citation_id` must NEVER be `None` or empty string (`""`).
+
+- **Database constraint**: `citation_id TEXT UNIQUE NOT NULL` (schema.py:43)
+- **Data quality**: Missing citation_id indicates a fundamental extraction/parsing error
+- **Error handling**: Code MUST raise `ValueError` for missing citation_id, never use fallback to empty string
+- **Formats**: `LINE-{number}` (extraction pipeline) or `S#-F#-C#-p#` (legacy Gemini parser)
+
+**Why no fallbacks**: Empty string would violate database UNIQUE constraint on subsequent inserts, causing silent data corruption. Fail-fast on missing citation_id ensures data integrity.
+
 ### Embedding Model Lock-in
 
 The BGE-small-en-v1.5 model produces 384-dimensional embeddings. Changing models
@@ -450,3 +460,118 @@ docs/                         # Documentation (Diataxis structure)
   reference/                  # API documentation
   explanation/                # Understanding-oriented content
 ```
+
+## Extraction Pipeline (HTML to Database)
+
+The extraction pipeline transforms raw CRA HTML documents into a searchable database through a
+multi-stage process with quality validation at each step.
+
+### Pipeline Architecture
+
+The extraction workflow uses a **Mixture-of-Experts** approach with dual parsers:
+
+1. **Classic Parser** (BeautifulSoup): Fast, deterministic extraction via DOM traversal
+1. **LLM Parser** (Gemini): Semantic understanding and context-aware extraction
+1. **Adjudicator**: Grounded self-correction layer that resolves conflicts between parsers
+1. **Builder**: Converts YAML directly to SQLite via DatabaseChunk model, generates embeddings
+1. **Validator**: Smoke tests to verify database integrity
+
+### Direct YAML-to-Database Conversion
+
+The extraction pipeline uses a streamlined approach that eliminates intermediate transformations:
+
+1. **ExtractedRule** (YAML) → **DatabaseChunk** (Pydantic model) → **SQLite** (FTS5 + vector)
+2. No JSONL intermediate format - direct conversion via `RuleSet.to_database_chunks()`
+3. Type-safe with strict Pydantic validation throughout
+
+#### Key Features
+
+- **Citation Format**: `LINE-{number}` (e.g., `LINE-8523`)
+- **Metadata Preservation**: Includes `income_type`, extraction source, confidence, and anchor
+- **Expense Classification**: Keyword-based classifier infers expense types from content
+- **Supported Types**: meals, travel, vehicle, home_office, advertising, supplies, professional_fees, utilities, insurance, capital, maintenance, salaries, office_equipment, interest, bad_debts
+- **Type Safety**: Pydantic models (`DatabaseChunk`, `ChunkMetadata`) replace dict-based schemas
+
+### Usage Options
+
+**Option 1: Full automated pipeline** (recommended)
+
+```bash
+uv run python scripts/cli.py pipeline-extraction \
+  --input-dir cra_documents/cra_t4002e_rev24_dump/ \
+  --output-db data/cra_rules.db
+```
+
+This command automatically:
+1. Extracts rules from HTML → YAML
+2. Converts YAML directly to SQLite (via DatabaseChunk)
+3. Validates database integrity
+
+**Option 2: Pipeline with intermediate files kept** (for debugging)
+
+```bash
+uv run python scripts/cli.py pipeline-extraction \
+  --input-dir cra_documents/ \
+  --output-db data/rules.db \
+  --intermediate-dir output/ \
+  --keep-intermediate
+```
+
+**Option 3: Manual step-by-step** (for development/testing)
+
+```bash
+# Step 1: Extract HTML → YAML
+uv run extract-rules \
+  cra_documents/cra_t4002e_rev24_dump/t4002-4.html \
+  output/rules.yml
+
+# Step 2: Build database directly from YAML (manifest auto-generated)
+uv run python scripts/cli.py build \
+  --input-file output/rules.yml \
+  --output-db data/rules.db
+
+# Step 3: Validate database integrity
+uv run python scripts/cli.py validate --db-path data/rules.db
+```
+
+**Note on manifests**: The `build` command no longer requires a manifest file. When
+omitted, source file metadata is automatically extracted from the YAML/JSONL input:
+- For YAML: Reads `source_file` field from each `ExtractedRule`
+- For JSONL: Reads `source_filename` from each `ParsedDocument`
+- Creates `SourceFile` entries with placeholder URLs and empty hashes
+
+This simplifies manual workflows while preserving backward compatibility with existing
+manifests. If you have a custom manifest, use `--manifest-file path/to/manifest.json`.
+
+### Error Handling
+
+The pipeline uses **fail-fast** error handling with stage-specific messages:
+
+- **Stage 1/2 (Extraction)**: HTML parsing, adjudication, YAML generation
+- **Stage 2/2 (Build)**: YAML→DatabaseChunk conversion, embedding generation, database construction
+- **Stage 3/2 (Validation)**: Schema verification, row counts, embedding dimensions, search tests
+
+If a stage fails:
+
+- Error message identifies the specific stage: `❌ Stage X/2 (Name) failed: <error>`
+- Pipeline stops immediately (no cascading failures)
+- Intermediate files are preserved for debugging
+- Logs include full stack traces for troubleshooting
+
+### Intermediate File Management
+
+The pipeline uses smart cleanup:
+
+- **Temp directory created**: Automatic cleanup on success (unless `--keep-intermediate`)
+- **Custom intermediate dir**: Never deleted automatically
+- **Pipeline failure**: Always preserves intermediate files for debugging
+- **Success with `--keep-intermediate`**: Shows path to preserved files
+
+### Development Tips
+
+1. **Start with manual step-by-step** to understand each stage
+1. **Use `--keep-intermediate`** when developing or debugging
+1. **Check intermediate YAML** for data quality before building database
+1. **Run validation** after building to catch schema/data inconsistencies
+1. **Test with small HTML sets** first (1-5 files) before full processing
+- Code should never have bare exceptions or exceptions that don't actually serve a purpose beside logging. We want the raw exception and stack trace to help us debug.

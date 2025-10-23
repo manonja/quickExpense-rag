@@ -3,17 +3,18 @@
 ## Overview
 
 The CRA T4002 guide contains business expense rules structured using semantic HTML with:
+
 - Hierarchical headings (h2, h3, h4, h5)
 - Unique anchor IDs for cross-referencing
 - Icons indicating rule applicability (business, farm, fish)
 - Structured lists, tables, and examples
 - Panels/sections for notes and warnings
 
----
+______________________________________________________________________
 
 ## Example 1: Simple Business Expense Rule
-**Source**: t4002-5.html (Chapter 3: Expenses)
-**Rule**: Prepaid Expenses
+
+**Source**: t4002-5.html (Chapter 3: Expenses) **Rule**: Prepaid Expenses
 
 ### HTML Structure:
 
@@ -30,16 +31,17 @@ The CRA T4002 guide contains business expense rules structured using semantic HT
 ```
 
 ### Key Elements:
+
 - **Anchor ID**: `tocch3aprpgxpnss` (for cross-referencing)
 - **Structure**: h3 heading → paragraphs → external link
 - **Formatting**: `<strong>` for emphasis, `<span class="nowrap">` for date formatting
 - **Example embedded**: Concrete dollar amounts and scenarios
 
----
+______________________________________________________________________
 
 ## Example 2: Rule with Icons and Line Numbers
-**Source**: t4002-5.html
-**Rule**: Meals and Entertainment Expenses (Line 8523)
+
+**Source**: t4002-5.html **Rule**: Meals and Entertainment Expenses (Line 8523)
 
 ### HTML Structure:
 
@@ -75,6 +77,7 @@ The CRA T4002 guide contains business expense rules structured using semantic HT
 ```
 
 ### Key Elements:
+
 - **Icons**: Business and fish icons indicate applicability
 - **Line number**: `Line 8523` is the form line reference
 - **50% rule**: Clear percentage-based deduction limit
@@ -82,11 +85,11 @@ The CRA T4002 guide contains business expense rules structured using semantic HT
 - **Internal links**: `#tocch3dcnvtnxpnss` for related content
 - **External links**: Statistics Canada reference
 
----
+______________________________________________________________________
 
 ## Example 3: Rule with Formula and Examples
-**Source**: t4002-5.html
-**Rule**: Private Health Services Plan (PHSP) Deduction
+
+**Source**: t4002-5.html **Rule**: Private Health Services Plan (PHSP) Deduction
 
 ### HTML Structure:
 
@@ -145,15 +148,17 @@ The CRA T4002 guide contains business expense rules structured using semantic HT
 ```
 
 ### Key Elements:
+
 - **Abbreviations**: `<abbr>` tags with titles for accessibility
 - **Formula**: Mathematical formula with variable definitions
 - **Panel structure**: Bootstrap-style panels with headings
 - **Multiple examples**: Real scenarios with specific names and calculations
 - **Progressive complexity**: Example 2 builds on Example 1
 
----
+______________________________________________________________________
 
 ## Example 4: Note Panels (Warnings/Important Information)
+
 **Source**: t4002-5.html
 
 ### HTML Structure:
@@ -187,14 +192,16 @@ The CRA T4002 guide contains business expense rules structured using semantic HT
 ```
 
 ### Key Elements:
+
 - **Panel styling**: Bootstrap panel classes
 - **Conditional notes**: Business vs farm vs fishing specific guidance
 - **Cross-references**: Links to other chapters and form lines
 - **Visual hierarchy**: Panels visually separate from main content
 
----
+______________________________________________________________________
 
 ## Example 5: Exclusion List (What NOT to Claim)
+
 **Source**: t4002-5.html
 
 ### HTML Structure:
@@ -223,21 +230,24 @@ The CRA T4002 guide contains business expense rules structured using semantic HT
 ```
 
 ### Key Elements:
+
 - **Negative rule**: What NOT to do
 - **Nested lists**: Sub-items for specific industries
 - **Qualified statements**: "most" indicates exceptions exist
 - **Internal cross-references**: Links to specific line numbers for exceptions
 
----
+______________________________________________________________________
 
 ## Common HTML Patterns
 
 ### 1. Anchor ID Naming Convention
+
 - `tocch[chapter][section]` - Table of contents chapter/section
 - `tocch3ln8523` - Chapter 3, Line 8523
 - Descriptive: `tocch3aprpgxpnss` (prepaid expenses)
 
 ### 2. Cross-Reference Links
+
 ```html
 <!-- Internal to same file -->
 <a href="#tocch3dcnvtnxpnss">Convention expenses</a>
@@ -250,6 +260,7 @@ The CRA T4002 guide contains business expense rules structured using semantic HT
 ```
 
 ### 3. Icons for Applicability
+
 ```html
 <img alt="business icon" src="..." title="business icon"/> <!-- Business/Professional -->
 <img alt="farm icon" src="..." title="farm icon"/>         <!-- Farming -->
@@ -257,6 +268,7 @@ The CRA T4002 guide contains business expense rules structured using semantic HT
 ```
 
 ### 4. Abbreviations
+
 ```html
 <abbr title="goods and services tax/harmonized sales tax">GST/HST</abbr>
 <abbr title="private health services plan">PHSP</abbr>
@@ -264,28 +276,31 @@ The CRA T4002 guide contains business expense rules structured using semantic HT
 ```
 
 ### 5. No-Wrap Formatting
+
 ```html
 <span class="nowrap">December 31, 2024</span>
 <span class="nowrap">Line 8523 –</span>
 <span class="nowrap">30 kilometres</span>
 ```
 
----
+______________________________________________________________________
 
 ## Data Extraction Recommendations for RAG
 
 ### Structured Fields to Extract:
+
 1. **Rule ID**: Anchor ID (e.g., `tocch3ln8523`)
-2. **Rule Title**: Heading text (e.g., "Line 8523 – Meals and entertainment")
-3. **Applicability**: Icons present (business/farm/fish)
-4. **Content Type**: Rule, example, note, warning
-5. **Deduction Limits**: Percentages, dollar amounts
-6. **Formulas**: Mathematical expressions
-7. **Exceptions**: List items under "does not apply" sections
-8. **Cross-References**: Internal and external links
-9. **Examples**: Named scenarios with calculations
+1. **Rule Title**: Heading text (e.g., "Line 8523 – Meals and entertainment")
+1. **Applicability**: Icons present (business/farm/fish)
+1. **Content Type**: Rule, example, note, warning
+1. **Deduction Limits**: Percentages, dollar amounts
+1. **Formulas**: Mathematical expressions
+1. **Exceptions**: List items under "does not apply" sections
+1. **Cross-References**: Internal and external links
+1. **Examples**: Named scenarios with calculations
 
 ### Sample JSON Extraction:
+
 ```json
 {
   "rule_id": "tocch3ln8523",
@@ -308,7 +323,6 @@ The CRA T4002 guide contains business expense rules structured using semantic HT
 }
 ```
 
----
+______________________________________________________________________
 
-Generated: 2025-10-16
-Source: CRA T4002 Self-employed Business Guide (2024 Revision)
+Generated: 2025-10-16 Source: CRA T4002 Self-employed Business Guide (2024 Revision)

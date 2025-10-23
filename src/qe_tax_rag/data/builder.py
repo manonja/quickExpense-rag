@@ -3,9 +3,9 @@ Index builder for QuickExpense RAG.
 
 Implements User Story 2: Maintainer Indexing Workflow
 
-This module provides the IndexBuilder class that orchestrates the final stage
-of the data pipeline:
-1. Loads flattened chunks from JSONL (Gemini parser output)
+This module provides the IndexBuilder class that orchestrates building a searchable
+index from document chunks:
+1. Loads chunks from YAML (extraction pipeline) or JSONL (Gemini parser)
 2. Generates BGE embeddings in batches
 3. Populates SQLite with rules, FTS index, vector embeddings, expense type links
 4. Validates integrity and generates manifest with SHA256 hash
@@ -19,16 +19,16 @@ import logging
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 import numpy.typing as npt
-from scripts.parser.schema import ParsedDocument
 from tqdm import tqdm
 
+from qe_tax_rag.data.models import DatabaseChunk
 from qe_tax_rag.data.schema import CREATE_TABLES_SQL, init_metadata, optimize_database
 from qe_tax_rag.embeddings.encoder import _EmbeddingService
 from qe_tax_rag.exceptions import EmbeddingError, QeTaxRagError
+from qe_tax_rag.parser.schema import ParsedDocument
 from qe_tax_rag.search.models import IndexManifest, SourceFile
 
 logger = logging.getLogger(__name__)
@@ -36,12 +36,12 @@ logger = logging.getLogger(__name__)
 
 class IndexBuilder:
     """
-    Builds searchable SQLite database from Gemini-parsed CRA document chunks.
+    Builds searchable SQLite index from CRA document chunks.
 
     Implements User Story 2: Maintainer Indexing Workflow
 
-    This class orchestrates the final stage of the data pipeline:
-    1. Loads flattened chunks from JSONL (Gemini parser output)
+    This class orchestrates building a searchable index from document chunks:
+    1. Loads chunks from YAML (extraction pipeline) or JSONL (Gemini parser)
     2. Generates BGE embeddings in batches
     3. Populates SQLite with rules, FTS index, vector embeddings, expense type links
     4. Validates integrity and generates manifest with SHA256 hash
@@ -52,8 +52,8 @@ class IndexBuilder:
     Example:
         >>> from qe_tax_rag.embeddings.encoder import embedding_service
         >>> builder = IndexBuilder(db_path="cra_rules.db", encoder=embedding_service)
-        >>> builder.build_from_jsonl(
-        ...     jsonl_path="chunks.jsonl",
+        >>> builder.build_index(
+        ...     input_path="rules.yml",
         ...     manifest_path="manifest.json",
         ...     source_files=[SourceFile(...)],
         ...     data_version="2024.12",
@@ -73,31 +73,34 @@ class IndexBuilder:
         self.db_path = Path(db_path)
         self.encoder = encoder
 
-    def build_from_jsonl(
+    def build_index(
         self,
-        jsonl_path: str,
+        input_path: str | Path,
         manifest_path: str,
         source_files: list[SourceFile],
         data_version: str,
         continue_on_error: bool = False,
     ) -> None:
         """
-        Main entry point to build index from JSONL file.
+        Build searchable index from YAML or JSONL chunks file.
+
+        Auto-detects format based on file extension (.yml, .yaml, .jsonl).
 
         Args:
-            jsonl_path: Path to JSONL file with ParsedDocument objects
+            input_path: Path to YAML or JSONL file with rules/documents
             manifest_path: Where to write manifest.json
             source_files: List of SourceFile models with hash/URL metadata
             data_version: Version string (YYYY.MM format)
             continue_on_error: If True, skip chunks with embedding errors
 
         Raises:
-            ValueError: Duplicate citation_id found
+            ValueError: Duplicate citation_id found or unsupported format
             EmbeddingError: Embedding generation failed (if continue_on_error=False)
             sqlite3.IntegrityError: Database constraint violation
 
         """
-        logger.info(f"Starting index build: {jsonl_path} → {self.db_path}")
+        input_path = Path(input_path)
+        logger.info(f"Starting index build: {input_path} → {self.db_path}")
         logger.info(
             f"Data version: {data_version}, continue_on_error: {continue_on_error}"
         )
@@ -110,9 +113,9 @@ class IndexBuilder:
             logger.info("Phase 1: Setting up database schema...")
             self._setup_database(conn, data_version)
 
-            # Phase 2: Load and flatten chunks from JSONL
+            # Phase 2: Load and flatten chunks (auto-detects YAML vs JSONL)
             logger.info("Phase 2: Loading and flattening chunks...")
-            chunks = self._load_and_flatten_chunks(jsonl_path, source_files)
+            chunks = self._load_and_flatten_chunks(input_path, source_files)
 
             # Phase 3: Populate expense types table
             logger.info("Phase 3: Populating expense types...")
@@ -194,32 +197,96 @@ class IndexBuilder:
         logger.info("Database schema initialized")
 
     def _load_and_flatten_chunks(
-        self, jsonl_path: str, source_files: list[SourceFile]
-    ) -> list[dict[str, Any]]:
+        self, input_path: Path, source_files: list[SourceFile]
+    ) -> list[DatabaseChunk]:
         """
-        Load documents from JSONL and flatten into chunks.
+        Load chunks from YAML (extraction pipeline) or JSONL (Gemini parser).
 
-        Reads JSONL file line by line, parses each line into a ParsedDocument,
-        calls to_flat_chunks() to flatten hierarchical structure, and accumulates
-        all chunks. Detects duplicate citation_ids early (fail fast).
+        Auto-detects format and returns unified DatabaseChunk list.
+
+        Args:
+            input_path: Path to YAML or JSONL file
+            source_files: List of SourceFile metadata
+
+        Returns:
+            List of DatabaseChunk objects ready for embedding and insertion
+
+        Raises:
+            ValueError: If duplicate citation_id detected or unsupported format
+
+        """
+        if input_path.suffix in [".yml", ".yaml"]:
+            # Extraction pipeline: YAML → DatabaseChunk
+            chunks = self._load_from_yaml(input_path, source_files)
+        elif input_path.suffix == ".jsonl":
+            # Gemini parser: JSONL → DatabaseChunk
+            chunks = self._load_from_jsonl(input_path, source_files)
+        else:
+            raise ValueError(
+                f"Unsupported input format: {input_path.suffix}. "
+                f"Expected .yml, .yaml, or .jsonl"
+            )
+
+        # Check for duplicate citation_ids across all chunks
+        seen_citations: set[str] = set()
+        for chunk in chunks:
+            if chunk.citation_id in seen_citations:
+                raise ValueError(
+                    f"Duplicate citation_id found: {chunk.citation_id}. "
+                    "Each citation_id must be unique across all documents."
+                )
+            seen_citations.add(chunk.citation_id)
+
+        logger.info(f"Loaded {len(chunks)} chunks from {input_path}")
+        return chunks
+
+    def _load_from_yaml(
+        self, yaml_path: Path, source_files: list[SourceFile]
+    ) -> list[DatabaseChunk]:
+        """
+        Load extraction pipeline YAML and convert to DatabaseChunk.
+
+        Args:
+            yaml_path: Path to YAML file with RuleSet
+            source_files: List of SourceFile metadata
+
+        Returns:
+            List of DatabaseChunk objects
+
+        """
+        import yaml
+
+        from qe_tax_rag.extraction.ca.schema import RuleSet
+
+        logger.info(f"Loading extraction YAML: {yaml_path}")
+
+        with open(yaml_path) as f:
+            data = yaml.safe_load(f)
+
+        ruleset = RuleSet.model_validate(data)
+
+        # Create filename stem → SourceFile mapping
+        source_map = {Path(sf.path).stem: sf for sf in source_files}
+
+        return ruleset.to_database_chunks(source_map)
+
+    def _load_from_jsonl(
+        self, jsonl_path: Path, source_files: list[SourceFile]
+    ) -> list[DatabaseChunk]:
+        """
+        Load Gemini parser JSONL and convert to DatabaseChunk.
 
         Args:
             jsonl_path: Path to JSONL file with ParsedDocument objects
-            source_files: List of SourceFile models to lookup source_url and source_hash
+            source_files: List of SourceFile metadata
 
         Returns:
-            List of chunk dictionaries with keys: citation_id, content, expense_types,
-            source_url, source_hash, province, business_type, metadata
-
-        Raises:
-            ValueError: If duplicate citation_id detected
+            List of DatabaseChunk objects
 
         """
-        # Create document_id -> SourceFile mapping for fast lookup
-        source_map = {Path(sf.path).stem: sf for sf in source_files}
+        logger.info(f"Loading JSONL: {jsonl_path}")
 
-        all_chunks = []
-        seen_citations: set[str] = set()
+        chunks: list[DatabaseChunk] = []
 
         with open(jsonl_path) as f:
             for line_num, line in enumerate(f, start=1):
@@ -227,60 +294,17 @@ class IndexBuilder:
                 if not line:
                     continue
 
-                # Parse document
                 try:
                     doc = ParsedDocument.model_validate_json(line)
+                    chunks.extend(doc.to_database_chunks(source_files))
                 except Exception as e:
                     logger.error(f"Failed to parse line {line_num}: {e}")
                     raise
 
-                # Get source file for this document
-                source_file = source_map.get(doc.document_id)
-                if not source_file:
-                    logger.warning(
-                        f"No source file found for document_id: {doc.document_id}"
-                    )
-                    # Use first source file as fallback
-                    source_file = source_files[0] if source_files else None
-                    if not source_file:
-                        raise ValueError("No source files provided")
-
-                # Flatten document to chunks
-                chunks = doc.to_flat_chunks(source_url=str(source_file.url))
-
-                # Add source_hash to each chunk and check for duplicates
-                for chunk in chunks:
-                    citation_id = chunk.get("citation_id")
-                    if not citation_id:
-                        logger.warning(
-                            f"Chunk missing citation_id in document {doc.document_id}"
-                        )
-                        continue
-
-                    # Duplicate detection
-                    if citation_id in seen_citations:
-                        raise ValueError(
-                            f"Duplicate citation_id found: {citation_id}. "
-                            "Each citation_id must be unique across all documents."
-                        )
-                    seen_citations.add(citation_id)
-
-                    # Add source_hash
-                    chunk["source_hash"] = source_file.hash
-
-                    # Extract expense_types from nested metadata to top level (for easier access)
-                    metadata = chunk.get("metadata", {})
-                    chunk["expense_types"] = metadata.get("expense_type", [])
-                    chunk["province"] = metadata.get("province")
-                    chunk["business_type"] = metadata.get("business_type")
-
-                    all_chunks.append(chunk)
-
-        logger.info(f"Loaded {len(all_chunks)} chunks from {jsonl_path}")
-        return all_chunks
+        return chunks
 
     def _populate_expense_types(
-        self, conn: sqlite3.Connection, chunks: list[dict[str, Any]]
+        self, conn: sqlite3.Connection, chunks: list[DatabaseChunk]
     ) -> dict[str, int]:
         """
         Identify unique expense types, populate table, return name-to-ID map.
@@ -291,7 +315,7 @@ class IndexBuilder:
 
         Args:
             conn: SQLite connection
-            chunks: List of chunk dictionaries
+            chunks: List of DatabaseChunk objects
 
         Returns:
             Dictionary mapping expense type name (str) to database ID (int)
@@ -300,9 +324,8 @@ class IndexBuilder:
         # Collect unique expense types from all chunks
         expense_types: set[str] = set()
         for chunk in chunks:
-            chunk_types = chunk.get("expense_types", [])
-            if chunk_types:
-                expense_types.update(chunk_types)
+            if chunk.expense_types:
+                expense_types.update(chunk.expense_types)
 
         # If no expense types found, return empty dict
         if not expense_types:
@@ -321,8 +344,8 @@ class IndexBuilder:
         return expense_type_map
 
     def _embed_chunks_in_batches(
-        self, chunks: list[dict[str, Any]], continue_on_error: bool
-    ) -> list[tuple[dict[str, Any], npt.NDArray[np.float32]]]:
+        self, chunks: list[DatabaseChunk], continue_on_error: bool
+    ) -> list[tuple[DatabaseChunk, npt.NDArray[np.float32]]]:
         """
         Generate embeddings for all chunks in batches with progress bar.
 
@@ -331,12 +354,12 @@ class IndexBuilder:
         continue_on_error flag.
 
         Args:
-            chunks: List of chunk dictionaries
+            chunks: List of DatabaseChunk objects
             continue_on_error: If True, log errors and skip failed batches;
                              if False, raise EmbeddingError on first failure
 
         Returns:
-            List of (chunk_dict, embedding_vector) tuples for successfully
+            List of (DatabaseChunk, embedding_vector) tuples for successfully
             embedded chunks
 
         Raises:
@@ -347,8 +370,8 @@ class IndexBuilder:
             return []
 
         # Extract content texts for embedding
-        texts = [chunk["content"] for chunk in chunks]
-        results: list[tuple[dict[str, Any], npt.NDArray[np.float32]]] = []
+        texts = [chunk.content for chunk in chunks]
+        results: list[tuple[DatabaseChunk, npt.NDArray[np.float32]]] = []
 
         # Process in batches of 32
         batch_size = 32
@@ -389,7 +412,7 @@ class IndexBuilder:
     def _insert_data(
         self,
         conn: sqlite3.Connection,
-        embedded_chunks: list[tuple[dict[str, Any], npt.NDArray[np.float32]]],
+        embedded_chunks: list[tuple[DatabaseChunk, npt.NDArray[np.float32]]],
         expense_type_map: dict[str, int],
         source_files: list[SourceFile],
     ) -> None:
@@ -405,7 +428,7 @@ class IndexBuilder:
 
         Args:
             conn: SQLite connection (within transaction)
-            embedded_chunks: List of (chunk_dict, embedding_vector) tuples
+            embedded_chunks: List of (DatabaseChunk, embedding_vector) tuples
             expense_type_map: Mapping of expense type name to database ID
             source_files: List of SourceFile models for source_hash lookup
 
@@ -420,13 +443,13 @@ class IndexBuilder:
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    chunk["content"],
-                    chunk["citation_id"],
-                    chunk["source_url"],
-                    chunk["source_hash"],
-                    json.dumps(chunk.get("province")),
-                    json.dumps(chunk.get("business_type")),
-                    json.dumps(chunk.get("metadata", {})),
+                    chunk.content,
+                    chunk.citation_id,
+                    chunk.source_url,
+                    chunk.source_hash,
+                    json.dumps(chunk.province),
+                    json.dumps(chunk.business_type),
+                    json.dumps(chunk.metadata.model_dump()),
                     datetime.now(timezone.utc).isoformat(),
                 ),
             )
@@ -439,8 +462,7 @@ class IndexBuilder:
             )
 
             # 3. Insert into rule_expense_type_links (many-to-many)
-            expense_types = chunk.get("expense_types", [])
-            for expense_type in expense_types:
+            for expense_type in chunk.expense_types:
                 type_id = expense_type_map.get(expense_type)
                 if type_id:
                     conn.execute(

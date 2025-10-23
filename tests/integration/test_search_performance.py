@@ -61,11 +61,11 @@ class TestSearchPerformance:
         avg_time = total_time / num_iterations
 
         # Print performance metrics
-        print(f"\n--- Performance Benchmark ---")  # noqa: T201
-        print(f"Total searches: {num_iterations}")  # noqa: T201
-        print(f"Total time: {total_time:.2f}s")  # noqa: T201
-        print(f"Average time per search: {avg_time * 1000:.2f}ms")  # noqa: T201
-        print(f"Searches per second: {num_iterations / total_time:.2f}")  # noqa: T201
+        print(f"\n--- Performance Benchmark ---")
+        print(f"Total searches: {num_iterations}")
+        print(f"Total time: {total_time:.2f}s")
+        print(f"Average time per search: {avg_time * 1000:.2f}ms")
+        print(f"Searches per second: {num_iterations / total_time:.2f}")
 
         # Performance assertion: average search should be < 250ms
         # This is a reasonable target for hybrid search with a small fixture DB
@@ -105,11 +105,11 @@ class TestSearchPerformance:
         p99_index = int(len(latencies_sorted) * 0.99)
         p99_latency = latencies_sorted[p99_index]
 
-        print(f"\n--- Latency Distribution ---")  # noqa: T201
-        print(f"Min: {min(latencies) * 1000:.2f}ms")  # noqa: T201
-        print(f"Median: {latencies_sorted[len(latencies_sorted) // 2] * 1000:.2f}ms")  # noqa: T201
-        print(f"p99: {p99_latency * 1000:.2f}ms")  # noqa: T201
-        print(f"Max: {max(latencies) * 1000:.2f}ms")  # noqa: T201
+        print(f"\n--- Latency Distribution ---")
+        print(f"Min: {min(latencies) * 1000:.2f}ms")
+        print(f"Median: {latencies_sorted[len(latencies_sorted) // 2] * 1000:.2f}ms")
+        print(f"p99: {p99_latency * 1000:.2f}ms")
+        print(f"Max: {max(latencies) * 1000:.2f}ms")
 
         # p99 should be < 300ms for small fixture DB
         assert p99_latency < 0.3, (
@@ -136,9 +136,9 @@ class TestSearchPerformance:
 
         search_time = end_time - start_time
 
-        print(f"\n--- Filtered Search Performance ---")  # noqa: T201
-        print(f"Search time: {search_time * 1000:.2f}ms")  # noqa: T201
-        print(f"Results returned: {len(results)}")  # noqa: T201
+        print(f"\n--- Filtered Search Performance ---")
+        print(f"Search time: {search_time * 1000:.2f}ms")
+        print(f"Results returned: {len(results)}")
 
         # Filtered search should be very fast (< 100ms)
         assert search_time < 0.1, (

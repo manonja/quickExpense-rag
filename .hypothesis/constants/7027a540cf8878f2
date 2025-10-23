@@ -1,0 +1,4 @@
+# file: /Users/manonjacquin/Documents_local/POCs/quickExpense-rag/src/qe_tax_rag/extraction/ca/classic_parser.py
+# hypothesis_version: 6.142.3
+
+[1.0, '<img[^>]*>', 'Line (\\d+) –\\s*(.+)', 'Unknown Chapter', '\\n{3,}', '^\\s*Line \\d+ –', 'a', 'alt', 'business icon', 'farm icon', 'fish icon', 'h1', 'h2', 'h3', 'id', 'img', 'lxml', 'ol', 'p', 'ul', 'utf-8']

@@ -1,0 +1,4 @@
+# file: /Users/manonjacquin/Documents_local/POCs/quickExpense-rag/src/qe_tax_rag/extraction/ca/llm_parser.py
+# hypothesis_version: 6.142.3
+
+[0.8, 1000000, 'anchor_id', 'application/json', 'applies_to', 'chapter', 'content', 'html.parser', 'main', 'rule_number', 'rules', 'section', 'source_citation', 'title', 'utf-8', '{}']
