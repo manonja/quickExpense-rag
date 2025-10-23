@@ -517,13 +517,15 @@ uv run python scripts/cli.py pipeline-extraction \
   --keep-intermediate
 ```
 
-**Option 3: Manual step-by-step** (for development)
+**Option 3: Manual step-by-step** (for development/testing)
 
 ```bash
 # Step 1: Extract HTML → YAML
-uv run extract-rules run input/ output/rules.yml
+uv run extract-rules \
+  cra_documents/cra_t4002e_rev24_dump/t4002-4.html \
+  output/rules.yml
 
-# Step 2: Build database directly from YAML
+# Step 2: Build database directly from YAML (manifest auto-generated)
 uv run python scripts/cli.py build \
   --input-file output/rules.yml \
   --output-db data/rules.db
@@ -531,6 +533,15 @@ uv run python scripts/cli.py build \
 # Step 3: Validate database integrity
 uv run python scripts/cli.py validate --db-path data/rules.db
 ```
+
+**Note on manifests**: The `build` command no longer requires a manifest file. When
+omitted, source file metadata is automatically extracted from the YAML/JSONL input:
+- For YAML: Reads `source_file` field from each `ExtractedRule`
+- For JSONL: Reads `source_filename` from each `ParsedDocument`
+- Creates `SourceFile` entries with placeholder URLs and empty hashes
+
+This simplifies manual workflows while preserving backward compatibility with existing
+manifests. If you have a custom manifest, use `--manifest-file path/to/manifest.json`.
 
 ### Error Handling
 
