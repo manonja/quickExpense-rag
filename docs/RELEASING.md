@@ -35,7 +35,7 @@ uv pip install build twine hatchling
    - Add new `## [X.Y.Z] - YYYY-MM-DD` section
    - Document all changes under Added/Changed/Fixed/Removed
    - Add link at bottom:
-     `[X.Y.Z]: https://github.com/manonja/qe-tax-rag/releases/tag/vX.Y.Z`
+     `[X.Y.Z]: https://github.com/manonja/quickExpense-rag/releases/tag/vX.Y.Z`
 1. Commit version bump:
    ```bash
    git add src/qe_tax_rag/__init__.py CHANGELOG.md
@@ -199,7 +199,7 @@ uv run twine upload dist/*
 
 ### Step 9: Create GitHub Release
 
-1. Go to https://github.com/manonja/qe-tax-rag/releases
+1. Go to https://github.com/manonja/quickExpense-rag/releases
 1. Click "Create a new release"
 1. Select tag: `v0.1.0`
 1. Release title: `v0.1.0`

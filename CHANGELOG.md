@@ -138,5 +138,5 @@ export QE_TAX_RAG_CACHE_DIR="/custom/path"
 - Lightweight package (\<5MB wheel, database downloaded separately)
 - Type-safe with mypy and pyright strict mode
 
-[0.1.0]: https://github.com/manonja/qe-tax-rag/releases/tag/v0.1.0
-[0.2.0]: https://github.com/manonja/qe-tax-rag/releases/tag/v0.2.0
+[0.1.0]: https://github.com/manonja/quickExpense-rag/releases/tag/v0.1.0
+[0.2.0]: https://github.com/manonja/quickExpense-rag/releases/tag/v0.2.0

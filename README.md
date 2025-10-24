@@ -103,10 +103,10 @@ QE Tax RAG uses a multi-stage hybrid search approach:
 
 - **Code**: Distributed via PyPI (`pip install qe-tax-rag`)
 - **Database**: Downloaded from
-  [GitHub Releases](https://github.com/manonja/qe-tax-rag/releases) on first `init()`
+  [GitHub Releases](https://github.com/manonja/quickExpense-rag/releases) on first `init()`
   call (~1.7 MB)
 - **Current Release**:
-  [data-v2025.10.23](https://github.com/manonja/qe-tax-rag/releases/tag/data-v2025.10.23)
+  [data-v2025.10.23](https://github.com/manonja/quickExpense-rag/releases/tag/data-v2025.10.23)
   \- 63 chunks from CRA T4002 guide
 - **Versioning**: Schema version + data version stored in database metadata
 - **Integrity**: SHA256 checksums verified automatically on download
@@ -370,7 +370,7 @@ and advanced patterns.
 - Check internet connection and GitHub accessibility
 - Verify firewall isn't blocking `github.com`
 - Try manual download from
-  [GitHub Releases](https://github.com/manonja/qe-tax-rag/releases)
+  [GitHub Releases](https://github.com/manonja/quickExpense-rag/releases)
 - Place downloaded `cra_rules.db` in cache dir: `~/.cache/qe_tax_rag/`
 
 ### Version Mismatch

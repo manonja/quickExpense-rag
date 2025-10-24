@@ -135,11 +135,11 @@ After publishing:
 1. Go to: https://github.com/manonja/quickExpense-rag/releases
 2. Confirm `data-v2025.10.23` appears in releases list
 3. Click on the release
-4. Verify download URL works: https://github.com/manonja/qe-tax-rag/releases/download/data-v2025.10.23/cra_rules.db
+4. Verify download URL works: https://github.com/manonja/quickExpense-rag/releases/download/data-v2025.10.23/cra_rules.db
 5. Test download:
 
    ```bash
-   curl -L -O https://github.com/manonja/qe-tax-rag/releases/download/data-v2025.10.23/cra_rules.db
+   curl -L -O https://github.com/manonja/quickExpense-rag/releases/download/data-v2025.10.23/cra_rules.db
    shasum -a 256 cra_rules.db
    # Should output: c8f7a98c418b9c82d22653c6f74ac3a9677c3679ee7dd80e924270fe84bdfef5
 ````

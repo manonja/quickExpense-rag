@@ -186,7 +186,7 @@ advice specific to your situation.
 - Check internet connection
 - Verify GitHub is accessible (not blocked by firewall)
 - Try manual download:
-  [Release URL](https://github.com/manonja/qe-tax-rag/releases/download/data-v2025.10.23/cra_rules.db)
+  [Release URL](https://github.com/manonja/quickExpense-rag/releases/download/data-v2025.10.23/cra_rules.db)
 - Place downloaded file in: `~/.cache/qe_tax_rag/cra_rules.db`
 
 ### Missing API Key
