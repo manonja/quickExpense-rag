@@ -43,6 +43,7 @@ data/raw/*.pdf
 data/preprocessed/*.txt
 data/processed/*.jsonl
 data/*.db
+data/manifest.json
 logs/
 
 # Environment variables
