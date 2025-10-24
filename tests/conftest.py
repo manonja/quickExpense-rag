@@ -259,8 +259,18 @@ def mock_embedding_service(monkeypatch):
     """
     from qe_tax_rag.embeddings.encoder import _EmbeddingService
 
-    def mock_embed_documents(self, texts):
+    def mock_embed_documents(_self, texts):
         """Return zero vectors for all inputs."""
         return [np.zeros(384, dtype=np.float32) for _ in texts]
 
     monkeypatch.setattr(_EmbeddingService, "embed_documents", mock_embed_documents)
+
+
+def pytest_addoption(parser):
+    """Add custom command-line options for pytest."""
+    parser.addoption(
+        "--db-path",
+        action="store",
+        default=None,
+        help="Path to database for MVP search validation tests",
+    )
