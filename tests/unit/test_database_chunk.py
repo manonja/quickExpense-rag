@@ -180,7 +180,9 @@ def test_content_includes_title(simple_ruleset, source_files_mapping):
     assert "50% of the lesser" in chunk.content
 
 
-def test_content_format_preserves_original_content(complex_ruleset, source_files_mapping):
+def test_content_format_preserves_original_content(
+    complex_ruleset, source_files_mapping
+):
     """Original rule content preserved after title prepending."""
     chunks = complex_ruleset.to_database_chunks(source_files_mapping)
 

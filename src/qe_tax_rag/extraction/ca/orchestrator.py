@@ -111,6 +111,7 @@ def run_extraction(
 
             # Circuit breaker: increment counter for parser failures
             from qe_tax_rag.extraction.ca.exceptions import ParserError
+
             if isinstance(e, ParserError):
                 consecutive_parser_failures += 1
                 logger.warning(

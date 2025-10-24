@@ -6,7 +6,10 @@ outputs while maintaining citation_id uniqueness and data integrity.
 
 import pytest
 from hypothesis import given, strategies as st
-from qe_tax_rag.extraction.ca.adjudicator import _triage_rules, _normalize_rule_for_comparison
+from qe_tax_rag.extraction.ca.adjudicator import (
+    _triage_rules,
+    _normalize_rule_for_comparison,
+)
 from qe_tax_rag.extraction.ca.schema import ExtractedRule
 from tests.strategies import extracted_rule_strategy
 
@@ -51,7 +54,14 @@ def test_triage_produces_no_duplicate_rule_numbers(
 
 
 @pytest.mark.unit
-@given(st.lists(extracted_rule_strategy(), min_size=1, max_size=20, unique_by=lambda r: r.rule_number))
+@given(
+    st.lists(
+        extracted_rule_strategy(),
+        min_size=1,
+        max_size=20,
+        unique_by=lambda r: r.rule_number,
+    )
+)
 def test_triage_handles_empty_llm_rules(
     classic_rules: list[ExtractedRule],
 ) -> None:
@@ -78,7 +88,14 @@ def test_triage_handles_empty_llm_rules(
 
 
 @pytest.mark.unit
-@given(st.lists(extracted_rule_strategy(), min_size=1, max_size=20, unique_by=lambda r: r.rule_number))
+@given(
+    st.lists(
+        extracted_rule_strategy(),
+        min_size=1,
+        max_size=20,
+        unique_by=lambda r: r.rule_number,
+    )
+)
 def test_triage_handles_empty_classic_rules(
     llm_rules: list[ExtractedRule],
 ) -> None:
@@ -105,7 +122,14 @@ def test_triage_handles_empty_classic_rules(
 
 
 @pytest.mark.unit
-@given(st.lists(extracted_rule_strategy(), min_size=0, max_size=20, unique_by=lambda r: r.rule_number))
+@given(
+    st.lists(
+        extracted_rule_strategy(),
+        min_size=0,
+        max_size=20,
+        unique_by=lambda r: r.rule_number,
+    )
+)
 def test_triage_perfect_matches_when_both_parsers_agree(
     rules: list[ExtractedRule],
 ) -> None:
@@ -186,7 +210,12 @@ def test_normalize_rule_sorts_applies_to(rule: ExtractedRule) -> None:
 
 @pytest.mark.unit
 @given(
-    st.lists(extracted_rule_strategy(), min_size=1, max_size=10, unique_by=lambda r: r.rule_number)
+    st.lists(
+        extracted_rule_strategy(),
+        min_size=1,
+        max_size=10,
+        unique_by=lambda r: r.rule_number,
+    )
 )
 def test_triage_no_null_rule_numbers_in_output(
     rules: list[ExtractedRule],
