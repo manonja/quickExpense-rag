@@ -103,14 +103,14 @@ def basic_search_example(query: str) -> list[SearchResult]:
     print("=" * 70 + "\n")
 
     print(f'Query: "{query}"')
-    print(f"Filters: province='BC', expense_types=['meals']")
+    print(f"Filters: expense_types=['meals']")
     print(f"Top K: 3\n")
 
     try:
         # Execute hybrid search
+        # Note: CRA T4002 contains federal rules (no province-specific data)
         results = qe.search(
             query=query,
-            province="BC",
             expense_types=["meals"],
             top_k=3,
         )
@@ -480,7 +480,7 @@ def main() -> None:
     parser.add_argument(
         "--query",
         type=str,
-        default="Can I deduct restaurant meals for client meetings in BC?",
+        default="Can I deduct restaurant meals for client meetings?",
         help="Tax-related question to search",
     )
     args = parser.parse_args()
