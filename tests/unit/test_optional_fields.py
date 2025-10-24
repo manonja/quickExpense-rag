@@ -255,7 +255,7 @@ def test_rule_with_special_characters_in_content(source_files_mapping_stub):
     rule = ExtractedRule(
         rule_number=3333,
         title="Rule with $pecial Ch@racters & Symbols!",
-        content="Content with <HTML> tags, [brackets], and \"quotes\"",
+        content='Content with <HTML> tags, [brackets], and "quotes"',
         applies_to=[ApplicabilityType.BUSINESS],
         source_citation="Line 3333",
         chapter="Chapter 1",

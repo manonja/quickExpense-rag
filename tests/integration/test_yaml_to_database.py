@@ -33,9 +33,7 @@ def simple_rule_yaml_path():
 @pytest.fixture
 def complex_rule_yaml_path():
     """Path to complex_rule.yml fixture."""
-    return (
-        Path(__file__).parent.parent / "fixtures" / "conversion" / "complex_rule.yml"
-    )
+    return Path(__file__).parent.parent / "fixtures" / "conversion" / "complex_rule.yml"
 
 
 @pytest.fixture

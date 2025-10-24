@@ -183,5 +183,3 @@ def test_classifier_returns_multiple_types(keywords: list[str]) -> None:
 
     # Check that result has no duplicates
     assert len(result) == len(set(result))
-
-

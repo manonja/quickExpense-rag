@@ -26,7 +26,9 @@ def set_dummy_api_key(module_monkeypatch: pytest.MonkeyPatch) -> None:
     VCR is replaying responses. The client may have pre-flight checks that
     fail if the key is missing entirely.
     """
-    module_monkeypatch.setenv("QE_TAX_RAG_EXTRACTION_GEMINI_API_KEY", "dummy-key-for-vcr")
+    module_monkeypatch.setenv(
+        "QE_TAX_RAG_EXTRACTION_GEMINI_API_KEY", "dummy-key-for-vcr"
+    )
 
 
 @pytest.fixture

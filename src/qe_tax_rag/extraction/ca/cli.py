@@ -95,7 +95,9 @@ def extract(
 
     try:
         # Run extraction
-        result = run_extraction(input_path, output_yaml, manual_review_file, dry_run, cache_dir)
+        result = run_extraction(
+            input_path, output_yaml, manual_review_file, dry_run, cache_dir
+        )
 
         # Render summary report
         _render_summary_report(result, output_yaml, manual_review_file, dry_run)
@@ -139,15 +141,15 @@ def _render_summary_report(
         console.print("[bold]Adjudication Breakdown:[/bold]")
         console.print(
             f"  ✓ Perfect Matches:    {stats['perfect_matches']:>3} "
-            f"({stats['perfect_matches']/total*100:.0f}%)"
+            f"({stats['perfect_matches'] / total * 100:.0f}%)"
         )
         console.print(
             f"  ⚡ Auto-corrected:     {stats['auto_corrected']:>3} "
-            f"({stats['auto_corrected']/total*100:.0f}%)"
+            f"({stats['auto_corrected'] / total * 100:.0f}%)"
         )
         console.print(
             f"  ⚠️  Manual Review:      {stats['manual_review']:>3} "
-            f"({stats['manual_review']/total*100:.0f}%)"
+            f"({stats['manual_review'] / total * 100:.0f}%)"
         )
         console.print()
 

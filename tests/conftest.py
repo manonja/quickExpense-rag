@@ -263,8 +263,4 @@ def mock_embedding_service(monkeypatch):
         """Return zero vectors for all inputs."""
         return [np.zeros(384, dtype=np.float32) for _ in texts]
 
-    monkeypatch.setattr(
-        _EmbeddingService, "embed_documents", mock_embed_documents
-    )
-
-
+    monkeypatch.setattr(_EmbeddingService, "embed_documents", mock_embed_documents)

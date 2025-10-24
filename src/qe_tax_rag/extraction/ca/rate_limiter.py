@@ -127,7 +127,9 @@ class RateLimiter:
                         self.state["day_str"] = current_day_str
 
                     if self.state["daily_count"] >= self.rpd_limit:
-                        msg = f"Daily rate limit of {self.rpd_limit} requests exhausted."
+                        msg = (
+                            f"Daily rate limit of {self.rpd_limit} requests exhausted."
+                        )
                         logger.error(msg)
                         raise RateLimitError(msg)
 
@@ -143,9 +145,7 @@ class RateLimiter:
                         oldest_request_ts = self.state["timestamps"][0]
                         wait_time = oldest_request_ts - one_minute_ago
                         if wait_time > 0:
-                            logger.info(
-                                f"RPM limit reached. Waiting {wait_time:.2f}s."
-                            )
+                            logger.info(f"RPM limit reached. Waiting {wait_time:.2f}s.")
                             time.sleep(wait_time)
                             now_utc_ts = datetime.now(self.timezone).timestamp()
 
