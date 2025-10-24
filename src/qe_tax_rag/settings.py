@@ -28,8 +28,7 @@ class Settings(BaseSettings):
         description="Directory to cache the downloaded database.",
     )
     db_download_url: str = Field(
-        # Placeholder URL, should be updated when a release exists
-        default="https://github.com/manonja/qe-tax-rag/releases/download/data-v2025.10/cra_rules.db",
+        default="https://github.com/manonja/qe-tax-rag/releases/download/data-v2025.10.23/cra_rules.db",
         description="URL to download the SQLite database from.",
     )
     db_filename: str = Field(
@@ -83,12 +82,12 @@ class Settings(BaseSettings):
 
     # Database verification settings (bundled with library)
     database_sha256: str = Field(
-        default="",  # Will be updated when production database is built
+        default="c8f7a98c418b9c82d22653c6f74ac3a9677c3679ee7dd80e924270fe84bdfef5",
         description="Expected SHA256 checksum of the database file.",
     )
     database_version: str = Field(
-        default="2025.10",
-        description="Expected data version in YYYY.MM format.",
+        default="2025.10.23",
+        description="Expected data version in YYYY.MM.DD format.",
     )
     schema_version: str = Field(
         default="1.0",
