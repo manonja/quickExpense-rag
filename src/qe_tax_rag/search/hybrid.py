@@ -4,12 +4,16 @@ Hybrid search engine combining FTS5 keyword and vector semantic search.
 Uses Reciprocal Rank Fusion (RRF) to merge rankings from both search methods.
 """
 
+import json
+import logging
 import sqlite3
 from pathlib import Path
 from typing import Any
 
 from qe_tax_rag.embeddings.encoder import _EmbeddingService
 from qe_tax_rag.search.models import ExpenseQuery, SearchResult
+
+logger = logging.getLogger(__name__)
 
 # Type aliases for ranked search results
 RankedResult = tuple[int, float]  # (rule_id, score/distance)
@@ -200,6 +204,10 @@ class HybridSearchEngine:
         if not candidate_ids:
             return []
 
+        # Escape FTS5 special characters by wrapping in quotes
+        # This handles queries like "LINE-8523" where hyphen is treated as operator
+        fts_query = f'"{query_text}"'
+
         # Build SQL query for FTS5 search
         placeholders = ", ".join(["?"] * len(candidate_ids))
         sql = f"""
@@ -214,8 +222,8 @@ class HybridSearchEngine:
         # Execute query
         conn = sqlite3.connect(self.db_path)
         try:
-            # Parameters: candidate_ids + query_text + k
-            params = [*candidate_ids, query_text, k]
+            # Parameters: candidate_ids + fts_query + k
+            params = [*candidate_ids, fts_query, k]
             cursor = conn.execute(sql, params)
             rows = cursor.fetchall()
 
@@ -329,6 +337,7 @@ class HybridSearchEngine:
                 r.province,
                 r.business_type,
                 r.retrieved_at,
+                r.metadata_json,
                 GROUP_CONCAT(et.name) as expense_type_names
             FROM rules r
             LEFT JOIN rule_expense_type_links retl ON r.id = retl.rule_id
@@ -354,20 +363,47 @@ class HybridSearchEngine:
                     continue  # Skip if rule was deleted
 
                 # Parse expense types (comma-separated string → list)
-                expense_types_str = row[7]  # GROUP_CONCAT result
+                expense_types_str = row[8]  # GROUP_CONCAT result (updated index)
                 expense_types = (
                     expense_types_str.split(",") if expense_types_str else []
                 )
 
+                # Parse lineage from metadata_json
+                lineage_info = None
+                metadata_json_str = row[7]  # metadata_json column
+                if metadata_json_str:
+                    try:
+                        metadata = json.loads(metadata_json_str)
+                        lineage_dict = metadata.get("lineage")
+
+                        if lineage_dict:
+                            from qe_tax_rag.search.models import LineageInfo
+
+                            lineage_info = LineageInfo(**lineage_dict)
+                    except (json.JSONDecodeError, ValueError) as e:
+                        # Log but don't fail - lineage is optional
+                        logger.warning("Failed to parse lineage for %s: %s", row[2], e)
+
+                # Handle database edge cases
+                source_url = row[3]
+                # Convert file:// URLs to https://www.canada.ca placeholder
+                if source_url.startswith("file://"):
+                    source_url = "https://www.canada.ca/en/revenue-agency.html"
+
+                # Convert "null" strings to None for optional enum fields
+                province = row[4] if row[4] != "null" else None
+                business_type = row[5] if row[5] != "null" else None
+
                 result = SearchResult(
                     content=row[1],
                     citation_id=row[2],
-                    source_url=row[3],
+                    source_url=source_url,
                     score=1.0,  # Placeholder score (will be replaced by RRF in Phase 5)
-                    province=row[4],
-                    business_type=row[5],
+                    province=province,
+                    business_type=business_type,
                     expense_types=expense_types,
                     retrieved_at=row[6],
+                    lineage=lineage_info,
                 )
                 results.append(result)
 

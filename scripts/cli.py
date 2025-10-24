@@ -521,9 +521,7 @@ def _run_build_logic(
             # Extract unique source files from input
             source_files = _extract_source_files_from_input(input_file)
 
-            console.print(
-                f"Auto-generated {len(source_files)} source file record(s)\n"
-            )
+            console.print(f"Auto-generated {len(source_files)} source file record(s)\n")
 
         # Initialize IndexBuilder
         console.print("[cyan]Initializing IndexBuilder...[/cyan]")
@@ -842,6 +840,123 @@ def validate(
             "Please review the details above.[/bold red]"
         )
         raise typer.Exit(code=1)
+
+
+@app.command()
+def search(
+    query: str = typer.Argument(..., help="Search query text"),
+    db_path: Path = typer.Option(  # noqa: B008
+        Path("output/PRE-144/mvp_rules.db"),
+        "--db-path",
+        "-d",
+        help="Path to SQLite database",
+    ),
+    province: str | None = typer.Option(
+        None, "--province", "-p", help="Filter by province (BC, AB, ON, etc.)"
+    ),
+    business_type: str | None = typer.Option(
+        None, "--business-type", "-b", help="Filter by business type"
+    ),
+    expense_types: list[str] | None = typer.Option(  # noqa: B008
+        None,
+        "--expense-type",
+        "-e",
+        help="Filter by expense types (can repeat: -e meals -e vehicle)",
+    ),
+    top_k: int = typer.Option(5, "--top-k", "-k", help="Number of results to return"),
+) -> None:
+    """
+    Search CRA tax rules database with lineage tracing.
+
+    Examples:
+        uv run python scripts/cli.py search "meal expenses"
+        uv run python scripts/cli.py search "LINE-8523" --top-k 1
+        uv run python scripts/cli.py search "vehicle" --province BC --top-k 3
+
+    """
+    from qe_tax_rag.search.enums import BusinessType, Province
+    from qe_tax_rag.search.hybrid import HybridSearchEngine
+    from qe_tax_rag.search.models import ExpenseQuery
+    from rich.table import Table
+
+    console.print("[bold blue]QE Tax RAG Search[/bold blue]")
+    console.print(f"Query: {query}")
+    console.print(f"Database: {db_path}\n")
+
+    # Verify database exists
+    if not db_path.exists():
+        console.print(f"[red]Error: Database not found: {db_path}[/red]")
+        raise typer.Exit(code=1)
+
+    try:
+        # Parse enum filters if provided
+        province_enum = Province(province) if province else None
+        business_type_enum = BusinessType(business_type) if business_type else None
+
+        # Build search query
+        search_query = ExpenseQuery(
+            query=query,
+            province=province_enum,
+            business_type=business_type_enum,
+            expense_types=expense_types if expense_types else None,
+            top_k=top_k,
+        )
+
+        # Initialize search engine
+        engine = HybridSearchEngine(db_path=db_path, encoder=embedding_service)
+
+        # Execute search
+        console.print("[cyan]Searching...[/cyan]\n")
+        results = engine.search(search_query)
+
+        # Display results
+        if not results:
+            console.print("[yellow]No results found.[/yellow]")
+            return
+
+        console.print(f"[green]Found {len(results)} results:[/green]\n")
+
+        # Create Rich table
+        table = Table(
+            title="Search Results", show_header=True, header_style="bold cyan"
+        )
+        table.add_column("Citation ID", style="cyan", no_wrap=True)
+        table.add_column("Content Preview", style="white", max_width=60)
+        table.add_column("Lineage Chain", style="yellow", max_width=40)
+        table.add_column("Source", style="green", max_width=20)
+
+        for result in results:
+            # Truncate content for preview
+            content_preview = (
+                result.content[:150] + "..."
+                if len(result.content) > 150
+                else result.content
+            )
+
+            # Extract lineage info
+            lineage_chain = result.lineage.lineage_chain if result.lineage else "N/A"
+            source_doc = result.lineage.source_document if result.lineage else "N/A"
+
+            table.add_row(
+                result.citation_id,
+                content_preview,
+                lineage_chain,
+                source_doc,
+            )
+
+        console.print(table)
+
+        # Display legal disclaimer
+        console.print("\n[bold yellow]⚠️  DISCLAIMER[/bold yellow]")
+        console.print(results[0].disclaimer)
+
+    except ValueError as e:
+        console.print(f"[red]Error: Invalid filter value: {e}[/red]")
+        raise typer.Exit(code=1) from e
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        logger.exception("Search failed")
+        raise typer.Exit(code=1) from e
 
 
 @app.command(name="pipeline-extraction")

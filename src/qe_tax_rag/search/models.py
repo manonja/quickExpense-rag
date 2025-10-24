@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Tuple
+from typing import Any, Tuple
 
 from pydantic import (
     AnyUrl,
@@ -45,6 +45,26 @@ class ExpenseQuery(BaseModel):
     top_k: int = Field(5, ge=1, le=50, description="Number of results to return.")
 
 
+class LineageInfo(BaseModel):
+    """Lineage metadata tracking extraction provenance."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    source_document: str = Field(
+        ..., description="Source HTML filename (e.g., 't4002-5.html')"
+    )
+    expert_source: str = Field(
+        ..., description="Extraction method ('classic' or 'adjudicated')"
+    )
+    extraction_timestamp: datetime = Field(
+        ..., description="When the rule was extracted (ISO 8601 UTC)"
+    )
+    pipeline_stages: list[dict[str, Any]] = Field(
+        ..., description="Extraction pipeline stages with timestamps"
+    )
+    lineage_chain: str = Field(..., description="Human-readable lineage trail")
+
+
 class SearchResult(BaseModel):
     """A single search result item with critical legal disclaimers."""
 
@@ -65,6 +85,9 @@ class SearchResult(BaseModel):
     expense_types: list[str]
     retrieved_at: datetime = Field(
         ..., description="The timestamp when the source document was retrieved."
+    )
+    lineage: LineageInfo | None = Field(
+        None, description="Extraction lineage metadata (if available)"
     )
 
     @field_validator("source_url")

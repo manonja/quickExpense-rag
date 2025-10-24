@@ -1,0 +1,62 @@
+# MVP Search Validation Queries
+# PRE-145: Search Validation with Lineage Verification
+#
+# This fixture defines 10 critical queries for validating search functionality
+# and lineage traceability. Success threshold: 7/10 queries must pass.
+
+queries:
+  # Citation lookup (FTS5 exact match)
+  - query: "LINE-8523"
+    description: "Direct citation lookup by ID"
+    expected_min_results: 1
+    search_type: "keyword"
+
+  - query: "line 8523"
+    description: "Case-insensitive citation lookup"
+    expected_min_results: 1
+    search_type: "keyword"
+
+  # Topic-based (hybrid: keyword + semantic)
+  - query: "meal expenses"
+    description: "Common user query about meals"
+    expected_min_results: 2
+    search_type: "hybrid"
+
+  - query: "vehicle deduction"
+    description: "Vehicle expense rules"
+    expected_min_results: 1
+    search_type: "hybrid"
+
+  - query: "home office expenses"
+    description: "Home office deduction query"
+    expected_min_results: 1
+    search_type: "hybrid"
+
+  # Semantic matching (vector search strength)
+  - query: "dining restaurant costs"
+    description: "Semantic match for meal expenses"
+    expected_min_results: 1
+    search_type: "semantic"
+
+  - query: "car automobile transportation"
+    description: "Semantic match for vehicle expenses"
+    expected_min_results: 1
+    search_type: "semantic"
+
+  # Business-specific
+  - query: "sole proprietorship business expenses"
+    description: "Business type specific query"
+    expected_min_results: 1
+    search_type: "hybrid"
+
+  # Technical tax terms (FTS5 strength) - Edge case
+  - query: "CCA capital cost allowance"
+    description: "Tax-specific terminology (may not be in 63-chunk sample)"
+    expected_min_results: 0
+    search_type: "keyword"
+
+  # Edge case: query with no results
+  - query: "cryptocurrency mining equipment"
+    description: "Modern edge case likely not in CRA docs"
+    expected_min_results: 0
+    search_type: "none"
