@@ -1,0 +1,22 @@
+# Optional dependencies for QE Tax RAG examples
+# Install with: pip install -r examples/requirements.txt
+
+# Core library (if not already installed)
+qe-tax-rag>=0.1.0
+
+# LLM API clients (choose at least one)
+openai>=1.0.0              # OpenAI GPT models
+anthropic>=0.25.0          # Anthropic Claude models
+google-generativeai>=0.4.0 # Google Gemini models
+
+# Environment management
+python-dotenv>=1.0.0       # Load .env files for API keys
+
+# Optional: Jupyter notebook support
+# Uncomment if running .ipynb examples
+# jupyter>=1.0.0
+# ipykernel>=6.0.0
+
+# Optional: Rich console output
+# Uncomment for enhanced terminal formatting
+# rich>=13.0.0
