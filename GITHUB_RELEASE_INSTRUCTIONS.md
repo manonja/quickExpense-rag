@@ -45,14 +45,14 @@ Production SQLite database with CRA business expense rules.
 **SHA256 Checksum:**
 ```
 
-c8f7a98c418b9c82d22653c6f74ac3a9677c3679ee7dd80e924270fe84bdfef5
+960601b0e7a1b73e59ce8f857b603516382341ba22729da9d90858bbf0f6125b
 
 ````
 
 **Verify download:**
 ```bash
 shasum -a 256 cra_rules.db
-# Should match: c8f7a98c418b9c82d22653c6f74ac3a9677c3679ee7dd80e924270fe84bdfef5
+# Should match: 960601b0e7a1b73e59ce8f857b603516382341ba22729da9d90858bbf0f6125b
 ````
 
 ## Usage
@@ -141,7 +141,7 @@ After publishing:
    ```bash
    curl -L -O https://github.com/manonja/quickExpense-rag/releases/download/data-v2025.10.23/cra_rules.db
    shasum -a 256 cra_rules.db
-   # Should output: c8f7a98c418b9c82d22653c6f74ac3a9677c3679ee7dd80e924270fe84bdfef5
+   # Should output: 960601b0e7a1b73e59ce8f857b603516382341ba22729da9d90858bbf0f6125b
 ````
 
 ### Step 8: Update Library (if needed)

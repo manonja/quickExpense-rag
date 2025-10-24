@@ -82,7 +82,7 @@ class Settings(BaseSettings):
 
     # Database verification settings (bundled with library)
     database_sha256: str = Field(
-        default="c8f7a98c418b9c82d22653c6f74ac3a9677c3679ee7dd80e924270fe84bdfef5",
+        default="960601b0e7a1b73e59ce8f857b603516382341ba22729da9d90858bbf0f6125b",
         description="Expected SHA256 checksum of the database file.",
     )
     database_version: str = Field(
