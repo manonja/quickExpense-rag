@@ -531,11 +531,34 @@ def _adjudicate_item_with_llm(
                 f"LLM reported insufficient evidence: {data['analysis']}"
             )
 
-        # Validate and create ExtractedRule
+        # Validate and create ExtractedRule with lineage propagation (PRE-143)
         corrected_rule_data = data["corrected_rule"]
         corrected_rule_data["expert_source"] = ExpertSource.ADJUDICATED
         corrected_rule_data["confidence_score"] = 0.95
 
+        # Propagate and extend lineage_stages
+        # For conflicts: combine both parsers' stages
+        # For orphans: use the single parser's stages
+        combined_lineage_stages: list[dict[str, str]] = []
+        if classic_rule and llm_rule:  # CONFLICT case
+            # Merge lineage stages from both parsers (chronologically)
+            combined_lineage_stages.extend(classic_rule.lineage_stages)
+            combined_lineage_stages.extend(llm_rule.lineage_stages)
+        elif classic_rule:  # Classic orphan
+            combined_lineage_stages.extend(classic_rule.lineage_stages)
+        elif llm_rule:  # LLM orphan
+            combined_lineage_stages.extend(llm_rule.lineage_stages)
+
+        # Add adjudicator stage
+        adjudication_timestamp = datetime.now(timezone.utc).isoformat()
+        combined_lineage_stages.append(
+            {
+                "stage": "adjudicator",
+                "timestamp": adjudication_timestamp,
+            }
+        )
+
+        corrected_rule_data["lineage_stages"] = combined_lineage_stages
         corrected_rule = ExtractedRule.model_validate(corrected_rule_data)
 
         # Log success

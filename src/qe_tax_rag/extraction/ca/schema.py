@@ -6,7 +6,7 @@ import re
 from enum import StrEnum
 from typing import TYPE_CHECKING, ClassVar
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 if TYPE_CHECKING:
     from qe_tax_rag.data.models import DatabaseChunk
@@ -27,6 +27,61 @@ class ApplicabilityType(StrEnum):
     BUSINESS = "business"
     FARMING = "farming"
     FISHING = "fishing"
+
+
+class LineageMetadata(BaseModel):
+    """
+    Provenance metadata tracking extraction pipeline stages.
+
+    Captures the full lineage of a chunk through the extraction pipeline,
+    including source document, expert source, timestamps, and pipeline stages.
+
+    This model supports validation (PRE-143) and future audit requirements.
+
+    Fields:
+        source_document: Source HTML filename (e.g., "t4002-5.html")
+        expert_source: Which expert generated this rule
+            ("classic", "llm", "adjudicated")
+        extraction_timestamp: ISO 8601 timestamp when extraction started
+        pipeline_stages: List of pipeline stage records with timestamps
+            Example: [{"stage": "classic_parser", "timestamp": "2025-10-23T14:30:00Z"}]
+
+    Computed Fields:
+        lineage_chain: Human-readable lineage string
+            Format: "t4002-5.html | classic_parser[2025-10-23T14:30:00]
+                     -> adjudicator[...] -> yaml_generator[...]"
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    source_document: str = Field(description="Source HTML filename")
+    expert_source: str = Field(description="Expert that generated this rule")
+    extraction_timestamp: str = Field(
+        description="ISO 8601 timestamp when extraction started"
+    )
+    pipeline_stages: list[dict[str, str]] = Field(
+        description="Pipeline stage records with stage name and timestamp"
+    )
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def lineage_chain(self) -> str:
+        """
+        Generate human-readable lineage chain.
+
+        Returns:
+            Formatted string showing source document and pipeline flow.
+            Example: "t4002-5.html | classic_parser[2025-10-23T14:30:00]
+                      -> adjudicator[2025-10-23T14:30:05]"
+
+        """
+        if not self.pipeline_stages:
+            return f"{self.source_document} | {self.expert_source}"
+
+        stage_str = " -> ".join(
+            f"{stage['stage']}[{stage['timestamp']}]" for stage in self.pipeline_stages
+        )
+        return f"{self.source_document} | {stage_str}"
 
 
 class ExtractedRule(BaseModel):
@@ -71,9 +126,16 @@ class ExtractedRule(BaseModel):
         description="Expert confidence. Classic parser = 1.0",
     )
 
+    # Lineage tracking (PRE-143): Pipeline stage timestamps
+    lineage_stages: list[dict[str, str]] = Field(
+        default_factory=list,
+        description="Pipeline stages with timestamps for lineage tracking",
+    )
+
 
 class ExpenseTypeClassifier:
-    """Keyword-based expense type classifier.
+    """
+    Keyword-based expense type classifier.
 
     Simple, deterministic classifier using keyword matching.
     Good enough for MVP - can be replaced with ML model later if needed.
@@ -109,7 +171,8 @@ class ExpenseTypeClassifier:
     }
 
     def infer_expense_types(self, rule: ExtractedRule) -> list[str]:
-        """Infer expense types from rule title and content.
+        """
+        Infer expense types from rule title and content.
 
         Args:
             rule: ExtractedRule to classify
@@ -117,6 +180,7 @@ class ExpenseTypeClassifier:
         Returns:
             List of expense types (can be multiple).
             Falls back to ["general"] if no matches.
+
         """
         # Combine title and content for matching
         text = (rule.title + " " + rule.content).lower()
@@ -150,7 +214,8 @@ class RuleSet(BaseModel):
         source_files: dict[str, SourceFile],
         expense_classifier: ExpenseTypeClassifier | None = None,
     ) -> list[DatabaseChunk]:
-        """Convert rules directly to database-ready chunks.
+        """
+        Convert rules directly to database-ready chunks.
 
         REPLACES: YAMLTransformer.transform_yaml_to_jsonl()
         ELIMINATES: ParsedDocument intermediate representation
@@ -176,11 +241,12 @@ class RuleSet(BaseModel):
             ...     "t4002-5": SourceFile(
             ...         path="t4002-5.html",
             ...         url="https://www.canada.ca/...",
-            ...         hash="abc123"
+            ...         hash="abc123",
             ...     )
             ... }
             >>> ruleset = RuleSet.model_validate(yaml_data)
             >>> chunks = ruleset.to_database_chunks(source_files)
+
         """
         from pathlib import Path
 
@@ -202,6 +268,16 @@ class RuleSet(BaseModel):
                     f"Available keys: {list(source_files.keys())}"
                 )
 
+            # Construct LineageMetadata from rule's lineage_stages (PRE-143)
+            lineage_metadata = None
+            if rule.lineage_stages:
+                lineage_metadata = LineageMetadata(
+                    source_document=rule.source_file,
+                    expert_source=rule.expert_source.value,
+                    extraction_timestamp=self.extraction_timestamp,
+                    pipeline_stages=rule.lineage_stages,
+                )
+
             chunks.append(
                 DatabaseChunk(
                     content=f"{rule.title}\n\n{rule.content}",
@@ -218,8 +294,16 @@ class RuleSet(BaseModel):
                         extraction_source=rule.expert_source.value,
                         extraction_confidence=rule.confidence_score,
                         source_anchor=rule.anchor_id,
+                        lineage=lineage_metadata,
                     ),
                 )
             )
 
         return chunks
+
+
+# Rebuild ChunkMetadata after LineageMetadata is defined (PRE-143)
+# This resolves the forward reference to LineageMetadata
+from qe_tax_rag.data.models import ChunkMetadata  # noqa: E402
+
+ChunkMetadata.model_rebuild()

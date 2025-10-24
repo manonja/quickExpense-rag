@@ -10,6 +10,7 @@ Extraction scope: Only h3 tags matching "Line XXXX –" pattern.
 
 import logging
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 
 from bs4 import BeautifulSoup, Tag
@@ -69,6 +70,9 @@ def parse(html_path: str) -> list[ExtractedRule]:
 
     soup = BeautifulSoup(html_content, "lxml")
     source_file = Path(html_path).name
+
+    # Record timestamp for lineage tracking (PRE-143)
+    timestamp = datetime.now(timezone.utc).isoformat()
 
     # Extract global chapter from h1
     h1_tag = soup.find("h1")
@@ -135,7 +139,7 @@ def parse(html_path: str) -> list[ExtractedRule]:
             raw_content = "\n\n".join(content_parts)
             content = re.sub(r"\n{3,}", "\n\n", raw_content).strip()
 
-            # Create ExtractedRule
+            # Create ExtractedRule with lineage tracking (PRE-143)
             rule = ExtractedRule(
                 rule_number=rule_number,
                 title=title,
@@ -148,6 +152,7 @@ def parse(html_path: str) -> list[ExtractedRule]:
                 expert_source=ExpertSource.CLASSIC,
                 anchor_id=anchor_id,
                 confidence_score=1.0,  # Deterministic parser
+                lineage_stages=[{"stage": "classic_parser", "timestamp": timestamp}],
             )
             extracted_rules.append(rule)
 
