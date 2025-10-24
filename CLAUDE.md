@@ -14,6 +14,23 @@ for hybrid search.
 MUST include prominent legal disclaimers stating the content is informational only and
 users must consult qualified tax professionals.
 
+## Current Project Status (Epic 0 Complete)
+
+**✅ Epic 0: Make Search Work - COMPLETE**
+
+- **Production Database**: Released as [data-v2025.10.23](https://github.com/manonja/quickExpense-rag/releases/tag/data-v2025.10.23)
+- **Data Source**: Single HTML file (t4002-5.html) from CRA T4002 Business and Professional Income Guide
+- **Coverage**: 63 searchable expense rules
+- **Search Quality**: 10/10 test queries successful (100% success rate)
+- **Lineage**: 100% coverage with extraction timestamps and source tracking
+- **RAG Examples**: Full integration examples with Gemini, OpenAI, Anthropic
+
+**Current Data Limitations:**
+- Database contains **federal CRA rules only** (no province or business-type specific metadata)
+- `metadata_json` does NOT contain `province` or `business_type` fields
+- Filtering by `province` or `business_type` will return 0 results
+- Future epics will expand to full T4002 guide (247+ rules) and add provincial rules
+
 ## Architecture Pattern
 
 This project uses **src-layout** structure following Arkalos principles:
@@ -28,8 +45,8 @@ This project uses **src-layout** structure following Arkalos principles:
 
 Search combines three techniques in sequence:
 
-1. **Metadata filtering** - SQL WHERE clause filters by
-   province/business_type/expense_type
+1. **Metadata filtering** - SQL WHERE clause filters by expense_type
+   - **Note**: `province` and `business_type` filters NOT supported in current data (federal rules only)
 1. **FTS5 keyword search** - Exact term matching on filtered candidates
 1. **Vector semantic search** - BGE-small-en-v1.5 embeddings with cosine similarity
 1. **RRF fusion** - Reciprocal Rank Fusion merges rankings: `score = 1/(k + rank)`
@@ -407,6 +424,15 @@ Settings use `pydantic-settings` with environment variable support:
 - `embedding_model`: BGE model name (default: "BAAI/bge-small-en-v1.5")
 - `default_top_k`: Default number of search results (default: 5)
 - `db_download_url`: GitHub Releases URL for database
+
+### Local Development with API Keys
+
+For RAG examples and extraction pipeline:
+
+- Create `.env.local` file (git-ignored) with API keys
+- **Testing RAG examples**: `export $(grep GEMINI_API_KEY .env.local | xargs) && uv run python examples/basic_rag.py`
+- **Extraction pipeline**: Set `GEMINI_API_KEY` in `.env.local` for LLM parser
+- `.env.example` shows all available keys (Gemini, OpenAI, Anthropic)
 
 ## Version Compatibility
 

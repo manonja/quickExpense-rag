@@ -5,6 +5,76 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-10-24
+
+### Added
+
+#### Epic 0 Completion: Make Search Work
+
+- **Production Database Release** - Published `data-v2025.10.23` to GitHub Releases
+  - 63 searchable CRA expense rules from single source file (t4002-5.html)
+  - 100% lineage coverage with extraction timestamps and source tracking
+  - SHA256 checksum verification: `960601b0e7a1b73e59ce8f857b603516382341ba22729da9d90858bbf0f6125b`
+  - Database auto-downloads on first `qe.init()` call
+
+- **Search Validation** - Validated hybrid search functionality
+  - 10/10 test queries successful (100% success rate)
+  - FTS5 keyword search + BGE-small-en-v1.5 vector embeddings
+  - Reciprocal Rank Fusion (RRF) ranking validated
+  - Sub-250ms query performance maintained
+
+- **RAG Integration Examples** - Complete examples for building tax Q&A chatbots
+  - `examples/basic_rag.py` - Full RAG pipeline with Gemini, OpenAI, or Anthropic
+  - `examples/README.md` - Setup guide and troubleshooting
+  - 6-section tutorial: environment, database init, search, RAG pipeline, output, advanced patterns
+
+- **Lineage Metadata** - Minimal lineage tracking implemented
+  - Every chunk has `lineage_chain` showing transformation path (e.g., "t4002-5.html | classic_parser -> adjudicator")
+  - Extraction timestamps and source file tracking
+  - Expert source attribution (classic vs adjudicated)
+  - Supports debugging and quality assessment
+
+### Fixed
+
+- **get_version() Returns Actual Metadata** - Fixed hardcoded "not_initialized" values
+  - Now queries database metadata table for real `data_version` and `schema_version`
+  - Returns "not_initialized" only when called before `qe.init()`
+  - Examples now display correct version info
+
+- **Province Filter Removed from Examples** - Fixed 0-results issue in `basic_rag.py`
+  - Current database contains federal CRA rules (no province-specific metadata)
+  - Removed `province="BC"` filter that was excluding all results
+  - Updated query text to reflect federal scope
+
+### Changed
+
+- **Data Source** - Current database built from single HTML file
+  - Source: `t4002-5.html` from CRA T4002 Business and Professional Income Guide
+  - Coverage: 63 expense rules (subset of full guide)
+  - Future epics will expand to full T4002 coverage (247+ rules)
+
+- **Metadata Limitations** - Documented what metadata is NOT present
+  - No `province` or `business_type` fields (federal rules apply Canada-wide)
+  - Filtering by province returns 0 results
+  - Examples updated to reflect this limitation
+
+### Documentation
+
+- Added GitHub Release instructions for data distribution
+- Created comprehensive RAG integration guide
+- Updated `.env.example` with API key configuration for RAG examples
+- Added release notes for data-v2025.10.23
+
+### Quality Metrics (Epic 0)
+
+- ✅ Working hybrid search (FTS5 + vector) for basic queries
+- ✅ Every result has lineage_chain (100% coverage)
+- ✅ Can trace results to source files via lineage
+- ✅ Zero critical errors in search/retrieval
+- ✅ 10/10 test queries return relevant results (100% vs 70% threshold)
+- ✅ 100% chunks have valid citation_id and lineage
+- ✅ CLI search command enables interactive exploration
+
 ## [0.2.0] - 2025-10-16
 
 ### Changed

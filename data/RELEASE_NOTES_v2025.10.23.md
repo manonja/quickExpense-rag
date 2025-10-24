@@ -51,7 +51,6 @@ qe.init()
 # Search expense rules
 results = qe.search(
     query="restaurant meals for client meetings",
-    province="BC",
     expense_types=["meals"]
 )
 ```

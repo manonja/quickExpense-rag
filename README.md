@@ -19,6 +19,17 @@ A Python library for semantic search over Canadian Revenue Agency (CRA) business
 rules. Built for ML engineers building expense classification agents and developers who
 need programmatic access to CRA expense rule information.
 
+## Project Status
+
+**✅ Epic 0 Complete: Make Search Work**
+
+- **Production Database**: 63 CRA expense rules from T4002 guide (t4002-5.html)
+- **Search Validated**: 10/10 test queries successful (100% success rate)
+- **Lineage Tracking**: 100% coverage with source traceability
+- **RAG Examples**: Full integration examples with Gemini, OpenAI, Anthropic
+- **Data Scope**: Current database covers single HTML source (future: full T4002 guide)
+- **GitHub Release**: [data-v2025.10.23](https://github.com/manonja/quickExpense-rag/releases/tag/data-v2025.10.23)
+
 ## Key Features
 
 - 🔍 **Hybrid Search**: Combines keyword (FTS5) + semantic search (vector embeddings)
@@ -54,11 +65,11 @@ import qe_tax_rag as qe
 qe.init()
 
 # Search for expense rules
+# Note: Current database contains federal rules (no province-specific data)
 results = qe.search(
-    query="restaurant expense while traveling for training",
-    province="BC",
-    business_type="sole_proprietorship",
-    expense_types=["meals", "travel"]
+    query="restaurant meals for client meetings",
+    expense_types=["meals", "travel"],
+    top_k=5
 )
 
 # Access results
@@ -107,10 +118,18 @@ QE Tax RAG uses a multi-stage hybrid search approach:
   call (~1.7 MB)
 - **Current Release**:
   [data-v2025.10.23](https://github.com/manonja/quickExpense-rag/releases/tag/data-v2025.10.23)
-  \- 63 chunks from CRA T4002 guide
+  - **Source**: Single HTML file (t4002-5.html) from CRA T4002 Business and Professional Income Guide
+  - **Coverage**: 63 searchable expense rules
+  - **Lineage**: 100% coverage with extraction timestamps and source tracking
+  - **Note**: Future releases will expand to full T4002 guide (247+ rules)
 - **Versioning**: Schema version + data version stored in database metadata
 - **Integrity**: SHA256 checksums verified automatically on download
 - **Updates**: Database versions released independently from code versions
+
+**Current Limitations:**
+- Database contains federal CRA rules only (no province or business-type specific metadata)
+- Filtering by `province` or `business_type` parameters will return 0 results
+- Use `expense_types` filtering for categorizing rules
 
 ### Architecture
 
