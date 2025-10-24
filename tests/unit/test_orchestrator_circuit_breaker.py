@@ -86,9 +86,9 @@ class TestOrchestratorCircuitBreaker:
         )
 
         # Assert - Circuit breaker should have opened
-        assert mock_llm.call_count == 3, (
-            "Should stop after 3 failures (circuit breaker)"
-        )
+        assert (
+            mock_llm.call_count == 3
+        ), "Should stop after 3 failures (circuit breaker)"
         assert mock_classic.call_count == 3, "Should stop classic parser too"
 
         # Only 3 files should be marked as failed (not 5)
@@ -153,9 +153,9 @@ class TestOrchestratorCircuitBreaker:
         )
 
         # Assert - All 5 files should be processed (success reset counter)
-        assert mock_llm.call_count == 5, (
-            "Should process all files (counter reset after success)"
-        )
+        assert (
+            mock_llm.call_count == 5
+        ), "Should process all files (counter reset after success)"
         assert len(result["failed_files"]) == 4  # 4 failures, 1 success
         assert result["processed_files"] == 1  # 1 file succeeded
 
@@ -195,9 +195,9 @@ class TestOrchestratorCircuitBreaker:
         )
 
         # Assert - All 5 files should be attempted (non-parser errors ignored)
-        assert mock_classic.call_count == 5, (
-            "Should process all files (non-parser error)"
-        )
+        assert (
+            mock_classic.call_count == 5
+        ), "Should process all files (non-parser error)"
         assert mock_llm.call_count == 4  # Only called for non-failing classic runs
         assert len(result["failed_files"]) == 1  # Only the OSError file
         assert result["processed_files"] == 4

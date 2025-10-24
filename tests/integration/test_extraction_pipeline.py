@@ -71,9 +71,9 @@ def test_full_document_set_performance_baseline(tmp_path: Path) -> None:
     # Check LINE-{number} citation format
     cursor = conn.execute("SELECT citation_id FROM rules LIMIT 5")
     citations = [row[0] for row in cursor.fetchall()]
-    assert all(c.startswith("LINE-") for c in citations), (
-        f"Expected LINE-* citations, got: {citations}"
-    )
+    assert all(
+        c.startswith("LINE-") for c in citations
+    ), f"Expected LINE-* citations, got: {citations}"
     print(f"   ✅ Citation format correct: {citations[0]}")
 
     # Check extraction metadata present
@@ -91,9 +91,9 @@ def test_full_document_set_performance_baseline(tmp_path: Path) -> None:
 
     # Check vector embeddings generated
     vec_count = conn.execute("SELECT COUNT(*) FROM rules_vec").fetchone()[0]
-    assert vec_count == rule_count, (
-        f"Vector count mismatch: {vec_count} != {rule_count}"
-    )
+    assert (
+        vec_count == rule_count
+    ), f"Vector count mismatch: {vec_count} != {rule_count}"
     print(f"   ✅ Vector embeddings generated ({vec_count} vectors)")
 
     conn.close()

@@ -24,6 +24,7 @@ class LLMResponseCache:
 
         Args:
             cache_dir: The directory where cache data will be stored.
+
         """
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -41,6 +42,7 @@ class LLMResponseCache:
 
         Returns:
             A SHA256 hex digest to use as a cache key.
+
         """
         hasher = hashlib.sha256()
         hasher.update(prompt.encode("utf-8"))
@@ -59,6 +61,7 @@ class LLMResponseCache:
 
         Returns:
             The cached response text, or None if not found.
+
         """
         key = self._generate_key(prompt, model_name, content)
         cached_value = self._cache.get(key)
@@ -79,6 +82,7 @@ class LLMResponseCache:
             model_name: The name of the LLM model.
             content: The source content.
             response_text: The raw text of the LLM response to cache.
+
         """
         key = self._generate_key(prompt, model_name, content)
         self._cache.set(key, response_text)

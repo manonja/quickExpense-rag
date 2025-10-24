@@ -6,6 +6,7 @@ import pytest
 import vcr
 import yaml
 from qe_tax_rag.extraction.ca.orchestrator import run_extraction
+
 from tests.conftest import normalize_yaml_for_golden_comparison
 
 # Configure VCR for these tests

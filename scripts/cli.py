@@ -15,7 +15,6 @@ from rich.progress import track
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from parser.gemini_parser import GeminiParser
 from preprocessor.models import DownloadMetadata, PreprocessManifest
 from preprocessor.text_extractor import TextExtractor
 from qe_tax_rag.data.builder import IndexBuilder
@@ -23,6 +22,8 @@ from qe_tax_rag.data.validator import IndexValidator
 from qe_tax_rag.embeddings.encoder import embedding_service
 from qe_tax_rag.extraction.ca.orchestrator import run_extraction
 from qe_tax_rag.search.models import SourceFile
+
+from parser.gemini_parser import GeminiParser
 
 # Initialize Typer app and Rich console
 app = typer.Typer(help="QE Tax RAG Preprocessing CLI")

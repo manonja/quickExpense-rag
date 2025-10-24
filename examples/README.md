@@ -1,10 +1,12 @@
 # QE Tax RAG Examples
 
-This directory contains working examples demonstrating how to use QE Tax RAG for building tax Q&A systems with Retrieval-Augmented Generation (RAG).
+This directory contains working examples demonstrating how to use QE Tax RAG for
+building tax Q&A systems with Retrieval-Augmented Generation (RAG).
 
 ## ⚠️ IMPORTANT: NOT TAX ADVICE
 
-**These examples are for educational purposes only and do not constitute tax advice.** Always consult with a qualified tax professional before making financial decisions.
+**These examples are for educational purposes only and do not constitute tax advice.**
+Always consult with a qualified tax professional before making financial decisions.
 
 ## Available Examples
 
@@ -18,11 +20,11 @@ Two formats demonstrating the same workflow:
 Both examples demonstrate:
 
 1. **Environment Setup** - Loading API keys and configuring the library
-2. **Database Initialization** - Downloading and verifying the CRA rules database
-3. **Basic Search** - Querying expense rules without LLM integration
-4. **RAG Pipeline** - Building context and generating AI responses with citations
-5. **Output Formatting** - Displaying results with proper disclaimers
-6. **Advanced Patterns** - Error handling, caching, multi-turn conversations
+1. **Database Initialization** - Downloading and verifying the CRA rules database
+1. **Basic Search** - Querying expense rules without LLM integration
+1. **RAG Pipeline** - Building context and generating AI responses with citations
+1. **Output Formatting** - Displaying results with proper disclaimers
+1. **Advanced Patterns** - Error handling, caching, multi-turn conversations
 
 ## Prerequisites
 
@@ -36,7 +38,8 @@ Both examples demonstrate:
 At least one LLM API key:
 
 - **OpenAI** - Get key from [platform.openai.com](https://platform.openai.com)
-- **Anthropic Claude** - Get key from [console.anthropic.com](https://console.anthropic.com)
+- **Anthropic Claude** - Get key from
+  [console.anthropic.com](https://console.anthropic.com)
 - **Google Gemini** - Get key from [ai.google.dev](https://ai.google.dev)
 
 ## Setup Instructions
@@ -83,7 +86,8 @@ ANTHROPIC_API_KEY=sk-ant-...
 GEMINI_API_KEY=...
 ```
 
-**Note:** You only need ONE API key to run the examples. The code includes examples for all three providers.
+**Note:** You only need ONE API key to run the examples. The code includes examples for
+all three providers.
 
 ### 3. Run the Examples
 
@@ -118,9 +122,9 @@ Then run cells sequentially or use "Run All".
 On first run, the library will:
 
 1. Download the CRA rules database (~1.7 MB) from GitHub Releases
-2. Verify SHA256 checksum
-3. Cache the database locally (`~/.cache/qe_tax_rag/`)
-4. Display database metadata (version, schema, chunk count)
+1. Verify SHA256 checksum
+1. Cache the database locally (`~/.cache/qe_tax_rag/`)
+1. Display database metadata (version, schema, chunk count)
 
 Subsequent runs use the cached database.
 
@@ -181,7 +185,8 @@ advice specific to your situation.
 
 - Check internet connection
 - Verify GitHub is accessible (not blocked by firewall)
-- Try manual download: [Release URL](https://github.com/manonja/qe-tax-rag/releases/download/data-v2025.10.23/cra_rules.db)
+- Try manual download:
+  [Release URL](https://github.com/manonja/qe-tax-rag/releases/download/data-v2025.10.23/cra_rules.db)
 - Place downloaded file in: `~/.cache/qe_tax_rag/cra_rules.db`
 
 ### Missing API Key
@@ -192,7 +197,8 @@ advice specific to your situation.
 
 - Ensure `.env` file exists in project root
 - Check API key is not empty: `OPENAI_API_KEY=sk-...`
-- Verify environment variable is loaded: `python -c "import os; print(os.getenv('OPENAI_API_KEY'))"`
+- Verify environment variable is loaded:
+  `python -c "import os; print(os.getenv('OPENAI_API_KEY'))"`
 - Restart terminal/IDE after editing `.env`
 
 ### Import Errors
@@ -284,8 +290,10 @@ results2 = cached_search("meal expenses", province="BC")
 
 - **Main Documentation:** [README.md](../README.md)
 - **API Reference:** See docstrings in library code
-- **GitHub Issues:** [Report bugs or request features](https://github.com/manonja/quickExpense-rag/issues)
-- **CRA Source:** [T4002 Guide](https://www.canada.ca/en/revenue-agency/services/forms-publications/publications/t4002.html)
+- **GitHub Issues:**
+  [Report bugs or request features](https://github.com/manonja/quickExpense-rag/issues)
+- **CRA Source:**
+  [T4002 Guide](https://www.canada.ca/en/revenue-agency/services/forms-publications/publications/t4002.html)
 
 ## License
 

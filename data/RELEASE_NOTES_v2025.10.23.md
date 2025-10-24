@@ -2,9 +2,8 @@
 
 ## Release Information
 
-**Tag:** `data-v2025.10.23`
-**Title:** CRA Tax Rules Database - October 2025
-**Database File:** `cra_rules.db` (1.7 MB)
+**Tag:** `data-v2025.10.23` **Title:** CRA Tax Rules Database - October 2025 **Database
+File:** `cra_rules.db` (1.7 MB)
 
 ## Database Statistics
 
@@ -21,11 +20,13 @@
 ## File Verification
 
 **SHA256 Checksum:**
+
 ```
 c8f7a98c418b9c82d22653c6f74ac3a9677c3679ee7dd80e924270fe84bdfef5
 ```
 
 **Verify download:**
+
 ```bash
 shasum -a 256 cra_rules.db
 # Should match: c8f7a98c418b9c82d22653c6f74ac3a9677c3679ee7dd80e924270fe84bdfef5
@@ -34,11 +35,13 @@ shasum -a 256 cra_rules.db
 ## Usage
 
 Install the library:
+
 ```bash
 pip install qe-tax-rag
 ```
 
 The database will be downloaded automatically on first use:
+
 ```python
 import qe_tax_rag as qe
 
@@ -62,7 +65,9 @@ This database has been validated through comprehensive testing:
 - **Integrity Checks:** All database constraints verified
 - **Embedding Quality:** All 63 chunks have valid 384-dim vectors
 
-See [PR #44](https://github.com/manonja/quickExpense-rag/pull/44) and [PR #45](https://github.com/manonja/quickExpense-rag/pull/45) for full validation reports.
+See [PR #44](https://github.com/manonja/quickExpense-rag/pull/44) and
+[PR #45](https://github.com/manonja/quickExpense-rag/pull/45) for full validation
+reports.
 
 ## Technical Details
 

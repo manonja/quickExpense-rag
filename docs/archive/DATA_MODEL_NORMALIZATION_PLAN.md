@@ -2,39 +2,53 @@
 
 ## Executive Summary
 
-After critical analysis with Zen, identified that we have **TWO competing pipelines** creating unnecessary schema translation:
+After critical analysis with Zen, identified that we have **TWO competing pipelines**
+creating unnecessary schema translation:
 
-1. **Legacy Pipeline** (`scripts/`): TextExtractor → Gemini Parser → ParsedDocument → SQLite
-2. **Current Pipeline** (`src/extraction/ca/`): HTML → Classic/LLM → ExtractedRule → **Transformer** → ParsedDocument → SQLite
+1. **Legacy Pipeline** (`scripts/`): TextExtractor → Gemini Parser → ParsedDocument →
+   SQLite
+1. **Current Pipeline** (`src/extraction/ca/`): HTML → Classic/LLM → ExtractedRule →
+   **Transformer** → ParsedDocument → SQLite
 
-**Root Cause**: The extraction pipeline forces `ExtractedRule` through `ParsedDocument` just to reuse `IndexBuilder`, creating ~500 LOC of translation logic.
+**Root Cause**: The extraction pipeline forces `ExtractedRule` through `ParsedDocument`
+just to reuse `IndexBuilder`, creating ~500 LOC of translation logic.
 
-**Solution**: Bypass `ParsedDocument` in extraction pipeline - go directly from `RuleSet` to database-ready chunks.
+**Solution**: Bypass `ParsedDocument` in extraction pipeline - go directly from
+`RuleSet` to database-ready chunks.
 
----
+______________________________________________________________________
 
 ## Critical Analysis: Why Current Separation Is Not Justified
 
 ### Where Consolidation WOULD Help
 
 **1. The `ParsedDocument` schema is NOT being used by the Gemini parser anymore**
-- `scripts/parser/gemini_parser.py` exists but is a **DIFFERENT** Gemini parser than the extraction pipeline
-- The extraction pipeline (`src/qe_tax_rag/extraction/ca/`) uses `ExtractedRule` → `RuleSet` → YAML
-- The `scripts/parser/` Gemini parser uses `ParsedDocument` for a **separate legacy workflow** (preprocess → parse → build)
+
+- `scripts/parser/gemini_parser.py` exists but is a **DIFFERENT** Gemini parser than the
+  extraction pipeline
+- The extraction pipeline (`src/qe_tax_rag/extraction/ca/`) uses `ExtractedRule` →
+  `RuleSet` → YAML
+- The `scripts/parser/` Gemini parser uses `ParsedDocument` for a **separate legacy
+  workflow** (preprocess → parse → build)
 - **This is duplication, not separation of concerns!**
 
 **2. The Transformer is doing unnecessary schema translation**
+
 - `YAMLTransformer` converts `ExtractedRule` → `ParsedDocument` → JSONL
+
 - But `ExtractedRule` already has ALL the information needed for the database:
+
   - `rule_number` → `LINE-{number}` (citation_id)
   - `content` → content
   - `applies_to` → income_type
   - `expert_source` + `confidence_score` → extraction metadata
   - `anchor_id` → source_anchor
 
-- **The transformer is creating artificial complexity by forcing extraction data through a generic "document parser" schema**
+- **The transformer is creating artificial complexity by forcing extraction data through
+  a generic "document parser" schema**
 
 **3. ParsedDocument has features the extraction pipeline doesn't need**
+
 - `ListChunk`, `TableChunk`, nested `ListItem.sub_items`
 - Section hierarchy with `section_level`
 - These exist for the **Gemini parser** use case, not the HTML extraction use case
@@ -43,14 +57,17 @@ After critical analysis with Zen, identified that we have **TWO competing pipeli
 ### Where Separation IS Justified
 
 **1. Different input sources, different concerns**
+
 - Extraction pipeline: HTML with line numbers, icons, anchors → highly structured
 - Gemini parser: Raw text → needs to infer structure
 - **BUT**: These use DIFFERENT pipelines today, so shared schema isn't helping
 
 **2. Future extensibility argument is weak**
+
 - "We might add PDF parser or API scraper" - speculative (YAGNI)
 - Current extraction pipeline is CRA-HTML-specific by design (`/ca/` subdirectory)
-- If we add another jurisdiction or source, create `/us/` or `/pdf/` with appropriate schemas
+- If we add another jurisdiction or source, create `/us/` or `/pdf/` with appropriate
+  schemas
 
 ### The Real Problem: Two Competing Pipelines
 
@@ -62,28 +79,35 @@ Pipeline 2 (CURRENT - src/qe_tax_rag/extraction/ca/):
 HTML → Classic+LLM Parser → ExtractedRule → Transformer → ParsedDocument → JSONL → SQLite
 ```
 
-**The extraction pipeline is being forced through ParsedDocument just to reuse IndexBuilder!**
+**The extraction pipeline is being forced through ParsedDocument just to reuse
+IndexBuilder!**
 
 ### Verdict
 
-**The current separation is NOT justified**. It's not elegant layering - it's **accidental complexity** from having two parallel pipelines that converged at the wrong layer.
+**The current separation is NOT justified**. It's not elegant layering - it's
+**accidental complexity** from having two parallel pipelines that converged at the wrong
+layer.
 
-**Recommendation**: Skip ParsedDocument entirely in the extraction pipeline. Have `RuleSet` provide a `.to_database_chunks()` method that returns properly typed chunks directly consumable by `IndexBuilder`.
+**Recommendation**: Skip ParsedDocument entirely in the extraction pipeline. Have
+`RuleSet` provide a `.to_database_chunks()` method that returns properly typed chunks
+directly consumable by `IndexBuilder`.
 
 This would:
+
 - ✅ Remove the entire transformer module (500+ LOC eliminated)
 - ✅ Remove impedance mismatch between extraction and database
 - ✅ Keep schemas DRY (Don't Repeat Yourself)
 - ✅ Preserve type safety end-to-end
 - ✅ Allow legacy Gemini parser pipeline to keep using `ParsedDocument` if needed
 
----
+______________________________________________________________________
 
 ## Proposed Architecture
 
 ### Phase 1: Create Shared Chunk Model (2 hours)
 
-**Location**: `src/qe_tax_rag/data/models.py` (NEW FILE - shared between extraction and parsing)
+**Location**: `src/qe_tax_rag/data/models.py` (NEW FILE - shared between extraction and
+parsing)
 
 ```python
 """Shared models for database ingestion."""
@@ -633,18 +657,21 @@ def pipeline_extraction(
 ### Phase 6: Remove Dead Code (30 min)
 
 **DELETE**:
+
 - [ ] `src/qe_tax_rag/extraction/ca/transformer.py` (~600 LOC)
 - [ ] `tests/unit/extraction/ca/test_transformer.py` (~400 LOC)
 
 **UPDATE** (deprecation):
+
 - [ ] `ParsedDocument.to_flat_chunks()` - mark as deprecated, keep for backward compat
 - [ ] Add migration guide in docstring
 
----
+______________________________________________________________________
 
 ## Benefits
 
 ### Immediate Wins
+
 - ✅ **Eliminate 1000+ LOC** (transformer + tests)
 - ✅ **Single source of truth**: `DatabaseChunk` consumed by `IndexBuilder`
 - ✅ **Type safety**: No more `dict[str, Any]` between stages
@@ -652,25 +679,27 @@ def pipeline_extraction(
 - ✅ **Clearer architecture**: Extraction pipeline is self-contained
 
 ### Long-Term Wins
+
 - ✅ **Easier testing**: Mock `DatabaseChunk` instead of dict structures
 - ✅ **Better validation**: Pydantic validates at conversion, not insertion
 - ✅ **Simpler debugging**: One fewer transformation layer to trace through
 - ✅ **Flexible input**: `IndexBuilder` accepts YAML OR JSONL automatically
 
----
+______________________________________________________________________
 
 ## Migration Risk Assessment
 
 **LOW RISK** - Changes are additive with clear rollback:
 
 1. **Phase 1-2**: Add new methods alongside existing (no breakage)
-2. **Phase 3-4**: Update IndexBuilder to use new methods (backward compatible via auto-detection)
-3. **Phase 5**: Update CLI to skip transformer (opt-in change)
-4. **Phase 6**: Remove old code only after full validation
+1. **Phase 3-4**: Update IndexBuilder to use new methods (backward compatible via
+   auto-detection)
+1. **Phase 5**: Update CLI to skip transformer (opt-in change)
+1. **Phase 6**: Remove old code only after full validation
 
 **Rollback Strategy**: Revert CLI changes in Phase 5, transformer continues to work
 
----
+______________________________________________________________________
 
 ## Acceptance Criteria
 
@@ -683,7 +712,7 @@ def pipeline_extraction(
 - [ ] Performance neutral or improved (less I/O, fewer conversions)
 - [ ] Documentation updated (CLAUDE.md, architecture diagrams)
 
----
+______________________________________________________________________
 
 ## Estimated Effort
 
@@ -697,26 +726,27 @@ def pipeline_extraction(
 
 **Bonus**: Delete 1000+ LOC afterward 🎉
 
----
+______________________________________________________________________
 
 ## Follow-Up Work (Optional)
 
 After successful migration:
 
-1. **Performance benchmarking**: Measure pipeline speed improvement (expect 10-20% faster)
-2. **Memory profiling**: Verify reduced memory usage (one less full-data copy)
-3. **Documentation**: Update architecture diagrams showing simplified flow
-4. **Monitoring**: Add metrics for YAML vs JSONL input detection
+1. **Performance benchmarking**: Measure pipeline speed improvement (expect 10-20%
+   faster)
+1. **Memory profiling**: Verify reduced memory usage (one less full-data copy)
+1. **Documentation**: Update architecture diagrams showing simplified flow
+1. **Monitoring**: Add metrics for YAML vs JSONL input detection
 
----
+______________________________________________________________________
 
 ## Questions for User
 
 1. Should we keep `to_flat_chunks()` for backward compatibility, or break the API?
-2. Do we want to support both YAML and JSONL in production, or deprecate JSONL?
-3. Should `DatabaseChunk` go in `data/models.py` or a new `models/` package?
+1. Do we want to support both YAML and JSONL in production, or deprecate JSONL?
+1. Should `DatabaseChunk` go in `data/models.py` or a new `models/` package?
 
----
+______________________________________________________________________
 
 ## References
 

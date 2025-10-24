@@ -72,6 +72,7 @@ def extract_pdf_text(pdf_path: Path) -> str:
     Raises:
         FileNotFoundError: If PDF file doesn't exist
         ValueError: If PDF extraction fails
+
     """
     logger.info(f"Extracting text from PDF: {pdf_path}")
 
@@ -111,6 +112,7 @@ def load_yaml_rules(yaml_path: Path) -> list[dict[str, Any]]:
     Raises:
         FileNotFoundError: If YAML file doesn't exist
         ValueError: If YAML parsing fails
+
     """
     logger.info(f"Loading YAML rules: {yaml_path}")
 
@@ -148,6 +150,7 @@ def semantic_chunk_match(
         - confidence: str ("high", "medium", "low")
         - reasoning: str
         - pdf_excerpt: str (relevant PDF text if found)
+
     """
     # Respect rate limits
     rate_limiter = get_rate_limiter()
@@ -229,6 +232,7 @@ def validate_coverage(
 
     Returns:
         Validation report dictionary with metrics
+
     """
     logger.info(f"Starting validation: {yaml_path} against {pdf_path}")
 

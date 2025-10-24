@@ -1,17 +1,17 @@
 # Testing Plan: Extraction Pipeline Validation (REVISED)
 
-**Date:** 2025-10-21
-**Status:** Ready for Implementation
-**Approach:** Test-Driven Development with Progressive Validation
-**Architecture:** HTML → YAML → SQLite (Direct, No JSONL Transformer)
+**Date:** 2025-10-21 **Status:** Ready for Implementation **Approach:** Test-Driven
+Development with Progressive Validation **Architecture:** HTML → YAML → SQLite (Direct,
+No JSONL Transformer)
 
----
+______________________________________________________________________
 
 ## Critical Architecture Changes
 
 ### What Changed and Why
 
 **Previous Architecture (INCORRECT)**:
+
 ```
 HTML → YAML → JSONL → SQLite
        ↓       ↓        ↓
@@ -20,6 +20,7 @@ HTML → YAML → JSONL → SQLite
 ```
 
 **Revised Architecture (CORRECT)**:
+
 ```
 HTML → YAML → SQLite
        ↓      ↓
@@ -29,13 +30,17 @@ HTML → YAML → SQLite
 
 ### Key Improvements
 
-1. **Eliminated JSONL Transformer**: Direct YAML→SQLite loading reduces complexity and eliminates transformation bugs
-2. **Unified Pydantic v2 Data Model**: Single canonical schema ensures type safety throughout pipeline
-3. **Section-Level Granularity**: Each section = one searchable database chunk (not document-level)
-4. **Normalized Metadata**: Extraction pipeline populates type-safe fields (`expense_types`, `provinces`), not inferred later
-5. **Batch Embedding Generation**: Efficient bulk processing during YAML→SQLite loading
+1. **Eliminated JSONL Transformer**: Direct YAML→SQLite loading reduces complexity and
+   eliminates transformation bugs
+1. **Unified Pydantic v2 Data Model**: Single canonical schema ensures type safety
+   throughout pipeline
+1. **Section-Level Granularity**: Each section = one searchable database chunk (not
+   document-level)
+1. **Normalized Metadata**: Extraction pipeline populates type-safe fields
+   (`expense_types`, `provinces`), not inferred later
+1. **Batch Embedding Generation**: Efficient bulk processing during YAML→SQLite loading
 
----
+______________________________________________________________________
 
 ## Unified Pydantic v2 Data Models
 
@@ -172,46 +177,51 @@ extracted_content = ExtractedContent(**data)  # Pydantic validation
 ```
 
 **Why `model_dump(mode='json')`?**
+
 - Converts `datetime` → ISO 8601 strings
 - Converts `UUID` → string representation
 - Ensures YAML is interoperable and human-readable
 
----
+______________________________________________________________________
 
 ## Overview
 
 This revised plan validates the extraction pipeline through 4 progressive tickets:
 
 1. **TICKET 1:** HTML → YAML extraction (four-pronged validation)
-2. **TICKET 2:** YAML → SQLite database construction (direct, no JSONL)
-3. **TICKET 3:** End-to-end single HTML → complete database
-4. **TICKET 4:** Full batch processing (multiple HTML files)
+1. **TICKET 2:** YAML → SQLite database construction (direct, no JSONL)
+1. **TICKET 3:** End-to-end single HTML → complete database
+1. **TICKET 4:** Full batch processing (multiple HTML files)
 
 **Principles Applied:** MECE, 80/20, YAGNI, Progressive Validation
 
----
+______________________________________________________________________
 
 ## TICKET 1: HTML → YAML (Four-Pronged Validation)
 
 ### Goal
 
-Achieve **100% confidence** that the extraction pipeline (Classic Parser + LLM Parser + Adjudicator) produces valid, schema-compliant YAML from HTML documents.
+Achieve **100% confidence** that the extraction pipeline (Classic Parser + LLM Parser +
+Adjudicator) produces valid, schema-compliant YAML from HTML documents.
 
 ### Four-Pronged Testing Strategy
 
 #### Prong 1: Classic Parser (BeautifulSoup) Standalone
 
-**Goal**: Verify `html_str → ExtractedContent` works correctly for BeautifulSoup parser in isolation.
+**Goal**: Verify `html_str → ExtractedContent` works correctly for BeautifulSoup parser
+in isolation.
 
 **Test Module**: `tests/unit/extraction/test_classic_parser.py`
 
 **Fixtures**:
+
 - `valid_complete.html` - Golden case with all expected structures
 - `complex_tables.html` - Stress test for table parsing
 - `empty_sections.html` - Structure present but no content
 - `no_title.html` - Missing metadata fields
 
 **Test Function**:
+
 ```python
 import pytest
 from pathlib import Path
@@ -240,6 +250,7 @@ def test_classic_parser_standalone(html_fixture, expected_dict):
 ```
 
 **Property-Based Test (Hypothesis)**:
+
 ```python
 from hypothesis import given, strategies as st, settings
 
@@ -260,13 +271,15 @@ def test_classic_parser_never_crashes(html):
 
 #### Prong 2: LLM Parser (Gemini) Standalone
 
-**Goal**: Verify `html_str → ExtractedContent` works for Gemini parser with mocked API responses.
+**Goal**: Verify `html_str → ExtractedContent` works for Gemini parser with mocked API
+responses.
 
 **Test Module**: `tests/unit/extraction/test_llm_parser.py`
 
 **Fixtures**: Same HTML fixtures as Classic parser
 
 **Mocking Strategy**:
+
 ```python
 import pytest
 from unittest.mock import MagicMock
@@ -301,13 +314,16 @@ def test_llm_parser_standalone(mocker):
 
 #### Prong 3: Adjudicator (4 Scenarios)
 
-**Goal**: Test the adjudication logic under controlled conditions with known disagreements.
+**Goal**: Test the adjudication logic under controlled conditions with known
+disagreements.
 
 **Test Module**: `tests/unit/extraction/test_adjudicator.py`
 
-**Fixture Strategy**: Create Python modules with Pydantic objects defining known scenarios.
+**Fixture Strategy**: Create Python modules with Pydantic objects defining known
+scenarios.
 
 **Fixture Structure**:
+
 ```
 tests/fixtures/adjudicator/
 ├── scenario_agreement.py
@@ -317,6 +333,7 @@ tests/fixtures/adjudicator/
 ```
 
 **Example Fixture** (`scenario_classic_wrong.py`):
+
 ```python
 from src.qe_tax_rag.extraction.models import ExtractedContent, Section
 
@@ -349,6 +366,7 @@ expected_result = llm_result
 ```
 
 **Test Function**:
+
 ```python
 import pytest
 from src.qe_tax_rag.extraction.adjudicator import Adjudicator
@@ -371,15 +389,20 @@ def test_adjudicator_classic_wrong():
 **Four Scenarios to Test**:
 
 1. **Agreement**: Both parsers produce identical `ExtractedContent`
+
    - **Expected**: Adjudicator returns either result (they're the same)
 
-2. **Classic Wrong**: Classic parser missing a section, LLM correct
+1. **Classic Wrong**: Classic parser missing a section, LLM correct
+
    - **Expected**: Adjudicator chooses LLM's complete result
 
-3. **LLM Wrong**: LLM hallucinates a fake section, Classic correct
+1. **LLM Wrong**: LLM hallucinates a fake section, Classic correct
+
    - **Expected**: Adjudicator filters out hallucinated section
 
-4. **Both Wrong (Merge)**: Classic has Section A, LLM has Section B (both missing the other)
+1. **Both Wrong (Merge)**: Classic has Section A, LLM has Section B (both missing the
+   other)
+
    - **Expected**: Adjudicator merges both, returning Sections A + B
 
 #### Prong 4: Full E2E Orchestration
@@ -391,6 +414,7 @@ def test_adjudicator_classic_wrong():
 **Fixtures**: 3-5 real CRA HTML documents from `cra_documents/cra_t4002e_rev24_dump/`
 
 **Test Function**:
+
 ```python
 import pytest
 from pathlib import Path
@@ -424,12 +448,14 @@ def test_full_extraction_orchestrator():
 
 ### Acceptance Criteria (TICKET 1)
 
-1. ✅ **Prong 1**: Classic parser tested standalone with 8+ fixtures, property test passes 100 examples
-2. ✅ **Prong 2**: LLM parser tested standalone with mocked API, 100% deterministic
-3. ✅ **Prong 3**: Adjudicator tested with 4 scenarios (agreement, classic wrong, LLM wrong, both wrong)
-4. ✅ **Prong 4**: Full E2E orchestrator tested with real CRA HTML, produces valid YAML
-5. ✅ All YAML output validated against Pydantic `ExtractedContent` model
-6. ✅ YAML serialization uses `model_dump(mode='json')` + `yaml.dump()`
+1. ✅ **Prong 1**: Classic parser tested standalone with 8+ fixtures, property test
+   passes 100 examples
+1. ✅ **Prong 2**: LLM parser tested standalone with mocked API, 100% deterministic
+1. ✅ **Prong 3**: Adjudicator tested with 4 scenarios (agreement, classic wrong, LLM
+   wrong, both wrong)
+1. ✅ **Prong 4**: Full E2E orchestrator tested with real CRA HTML, produces valid YAML
+1. ✅ All YAML output validated against Pydantic `ExtractedContent` model
+1. ✅ YAML serialization uses `model_dump(mode='json')` + `yaml.dump()`
 
 ### Manual Testing Commands (TICKET 1)
 
@@ -520,12 +546,14 @@ uv run python validate_yaml.py
 ### 80/20 Focus (TICKET 1)
 
 ✅ **Test This:**
+
 - YAML structural integrity (Pydantic validation)
 - Parser isolation (each component tested independently)
 - Adjudication logic correctness (4 scenarios)
 - E2E orchestration (full pipeline integration)
 
 ❌ **Skip This:**
+
 - LLM accuracy auditing (trust Gemini's capabilities)
 - Exhaustive HTML edge cases (focus on representative samples)
 - Performance benchmarking (optimization is YAGNI)
@@ -534,27 +562,29 @@ uv run python validate_yaml.py
 
 None (foundational ticket)
 
----
+______________________________________________________________________
 
 ## TICKET 2: YAML → SQLite (Direct, No JSONL Transformer)
 
 ### Goal
 
-Build a loader that directly deserializes YAML into `ExtractedContent` objects and stores each `Section` as a searchable database chunk with embeddings.
+Build a loader that directly deserializes YAML into `ExtractedContent` objects and
+stores each `Section` as a searchable database chunk with embeddings.
 
 ### Acceptance Criteria
 
 1. ✅ Deserialize YAML → `ExtractedContent` Pydantic objects
-2. ✅ Each `Section` → one database row (`DatabaseChunk`)
-3. ✅ `citation_id` generation: `f"{source_document_id}-{section_id}"`
-4. ✅ Embedding generation: batch process, concatenate `title + "\n\n" + content_text`
-5. ✅ FTS5 index functional (MATCH queries work)
-6. ✅ Vector search functional (cosine similarity queries work)
-7. ✅ Property-based testing: Loader handles any valid `ExtractedContent` object
+1. ✅ Each `Section` → one database row (`DatabaseChunk`)
+1. ✅ `citation_id` generation: `f"{source_document_id}-{section_id}"`
+1. ✅ Embedding generation: batch process, concatenate `title + "\n\n" + content_text`
+1. ✅ FTS5 index functional (MATCH queries work)
+1. ✅ Vector search functional (cosine similarity queries work)
+1. ✅ Property-based testing: Loader handles any valid `ExtractedContent` object
 
 ### Architecture
 
 **Data Flow**:
+
 ```
 YAML File
    ↓ (yaml.safe_load)
@@ -572,11 +602,13 @@ SQLite Database
 ### Embedding Generation Strategy
 
 **What to Embed**: Concatenate section title and content
+
 ```python
 embedding_text = f"{section.title}\n\n{section.content_text}"
 ```
 
 **When to Embed**: Batch processing for efficiency
+
 ```python
 # Collect all sections from all YAML files
 all_sections = []
@@ -858,6 +890,7 @@ def test_loader_handles_any_valid_extracted_content(extracted, tmp_path):
 ### 80/20 Focus (TICKET 2)
 
 ✅ **Test This:**
+
 - YAML deserialization correctness (Pydantic validation)
 - Section-to-chunk mapping (1:1 correspondence)
 - Citation ID generation (`{doc_id}-{section_id}`)
@@ -866,6 +899,7 @@ def test_loader_handles_any_valid_extracted_content(extracted, tmp_path):
 - Structural robustness (property-based testing)
 
 ❌ **Skip This:**
+
 - Semantic quality of embeddings (trust BGE model)
 - Vector search ranking quality (defer to TICKET 3 E2E)
 - Performance optimization (YAGNI)
@@ -874,7 +908,7 @@ def test_loader_handles_any_valid_extracted_content(extracted, tmp_path):
 
 TICKET 1 (requires `ExtractedContent` model and valid YAML fixtures)
 
----
+______________________________________________________________________
 
 ## TICKET 3: Single HTML → Database (E2E Integration)
 
@@ -885,10 +919,10 @@ Validate the full pipeline integration (HTML → YAML → SQLite) for a single H
 ### Acceptance Criteria
 
 1. ✅ Single HTML file processed through full pipeline without errors
-2. ✅ Valid SQLite database produced at specified path
-3. ✅ Database contains chunks derived from source HTML (section count matches)
-4. ✅ Searchable terms from HTML found via FTS5 query
-5. ✅ Hybrid search (FTS5 + vector) returns relevant results
+1. ✅ Valid SQLite database produced at specified path
+1. ✅ Database contains chunks derived from source HTML (section count matches)
+1. ✅ Searchable terms from HTML found via FTS5 query
+1. ✅ Hybrid search (FTS5 + vector) returns relevant results
 
 ### Manual Testing Commands (TICKET 3)
 
@@ -1035,12 +1069,14 @@ def test_single_html_to_database_e2e(golden_html, tmp_path):
 ### 80/20 Focus (TICKET 3)
 
 ✅ **Test This:**
+
 - Pipeline orchestration and integration
 - Inter-component handoffs (file I/O)
 - Basic database queryability (FTS5 + vector)
 - Search API functionality
 
 ❌ **Skip This:**
+
 - Re-testing component internals (trust TICKET 1 & 2)
 - Exhaustive search quality validation
 - Performance optimization
@@ -1049,22 +1085,23 @@ def test_single_html_to_database_e2e(golden_html, tmp_path):
 
 TICKET 1 (HTML → YAML), TICKET 2 (YAML → SQLite)
 
----
+______________________________________________________________________
 
 ## TICKET 4: Batch HTML → Database (Production CLI)
 
 ### Goal
 
-Validate production CLI handles batch processing with error resilience and proper aggregation.
+Validate production CLI handles batch processing with error resilience and proper
+aggregation.
 
 ### Acceptance Criteria
 
 1. ✅ CLI processes directory with multiple HTML files
-2. ✅ Single aggregated SQLite database produced
-3. ✅ Chunk count in DB matches total sections across all valid HTML files
-4. ✅ Mix of valid/invalid HTML handled gracefully (logs errors, continues processing)
-5. ✅ Final database queryable with data from all successfully processed documents
-6. ✅ Progress reporting and logging functional
+1. ✅ Single aggregated SQLite database produced
+1. ✅ Chunk count in DB matches total sections across all valid HTML files
+1. ✅ Mix of valid/invalid HTML handled gracefully (logs errors, continues processing)
+1. ✅ Final database queryable with data from all successfully processed documents
+1. ✅ Progress reporting and logging functional
 
 ### Manual Testing Commands (TICKET 4)
 
@@ -1296,6 +1333,7 @@ def test_pipeline_handles_partial_failures(mixed_html_dir, tmp_path):
 ### 80/20 Focus (TICKET 4)
 
 ✅ **Test This:**
+
 - CLI interface and argument parsing
 - Batch processing multiple files
 - Error resilience (continue on partial failures)
@@ -1303,6 +1341,7 @@ def test_pipeline_handles_partial_failures(mixed_html_dir, tmp_path):
 - Progress reporting and logging
 
 ❌ **Skip This:**
+
 - Per-document content validation (trust TICKET 3)
 - Performance optimization (YAGNI for 247 files)
 - Edge cases in individual parsers (covered in TICKET 1)
@@ -1311,7 +1350,7 @@ def test_pipeline_handles_partial_failures(mixed_html_dir, tmp_path):
 
 TICKET 3 (E2E single file pipeline)
 
----
+______________________________________________________________________
 
 ## Comprehensive Fixture Strategy
 
@@ -1347,26 +1386,26 @@ tests/fixtures/
 
 ### Coverage Matrix
 
-| Fixture | Prong 1 (Classic) | Prong 2 (LLM) | Prong 3 (Adj) | Prong 4 (E2E) | TICKET 2 | TICKET 3 | TICKET 4 |
-|---------|-------------------|---------------|---------------|---------------|----------|----------|----------|
-| `valid_complete.html` | ✅ | ✅ | ✅ | ✅ | - | ✅ | - |
-| `malformed.html` | ✅ | ✅ | - | - | - | - | - |
-| `empty_sections.html` | ✅ | ✅ | - | - | - | - | - |
-| `unicode.html` | ✅ | ✅ | - | - | - | - | - |
-| `complex_tables.html` | ✅ | - | - | - | - | - | - |
-| `classic_fails.html` | ✅ | ✅ | ✅ | - | - | - | - |
-| `llm_fails.html` | ✅ | ✅ | ✅ | - | - | - | - |
-| `cra_t4002_sample.html` | - | - | - | ✅ | - | ✅ | - |
-| `cra_t4002_full.html` | - | - | - | ✅ | - | - | ✅ |
-| `scenario_agreement.py` | - | - | ✅ | - | - | - | - |
-| `scenario_classic_wrong.py` | - | - | ✅ | - | - | - | - |
-| `scenario_llm_wrong.py` | - | - | ✅ | - | - | - | - |
-| `scenario_both_wrong.py` | - | - | ✅ | - | - | - | - |
-| `valid_complete.yml` | - | - | - | - | ✅ | - | - |
-| `empty_sections.yml` | - | - | - | - | ✅ | - | - |
-| `unicode.yml` | - | - | - | - | ✅ | - | - |
+| Fixture                     | Prong 1 (Classic) | Prong 2 (LLM) | Prong 3 (Adj) | Prong 4 (E2E) | TICKET 2 | TICKET 3 | TICKET 4 |
+| --------------------------- | ----------------- | ------------- | ------------- | ------------- | -------- | -------- | -------- |
+| `valid_complete.html`       | ✅                | ✅            | ✅            | ✅            | -        | ✅       | -        |
+| `malformed.html`            | ✅                | ✅            | -             | -             | -        | -        | -        |
+| `empty_sections.html`       | ✅                | ✅            | -             | -             | -        | -        | -        |
+| `unicode.html`              | ✅                | ✅            | -             | -             | -        | -        | -        |
+| `complex_tables.html`       | ✅                | -             | -             | -             | -        | -        | -        |
+| `classic_fails.html`        | ✅                | ✅            | ✅            | -             | -        | -        | -        |
+| `llm_fails.html`            | ✅                | ✅            | ✅            | -             | -        | -        | -        |
+| `cra_t4002_sample.html`     | -                 | -             | -             | ✅            | -        | ✅       | -        |
+| `cra_t4002_full.html`       | -                 | -             | -             | ✅            | -        | -        | ✅       |
+| `scenario_agreement.py`     | -                 | -             | ✅            | -             | -        | -        | -        |
+| `scenario_classic_wrong.py` | -                 | -             | ✅            | -             | -        | -        | -        |
+| `scenario_llm_wrong.py`     | -                 | -             | ✅            | -             | -        | -        | -        |
+| `scenario_both_wrong.py`    | -                 | -             | ✅            | -             | -        | -        | -        |
+| `valid_complete.yml`        | -                 | -             | -             | -             | ✅       | -        | -        |
+| `empty_sections.yml`        | -                 | -             | -             | -             | ✅       | -        | -        |
+| `unicode.yml`               | -                 | -             | -             | -             | ✅       | -        | -        |
 
----
+______________________________________________________________________
 
 ## Implementation Order
 
@@ -1414,27 +1453,31 @@ tests/fixtures/
 **Suggested Implementation Sequence:**
 
 1. **TICKET 1** (3-4 days) - Four-pronged extraction validation
+
    - Day 1: Prong 1 (Classic parser) + fixtures
    - Day 2: Prong 2 (LLM parser with mocks) + Prong 3 (Adjudicator)
    - Day 3: Prong 4 (E2E orchestration) + property tests
    - Day 4: Integration and debugging
 
-2. **TICKET 2** (2-3 days) - Direct YAML→SQLite loader
+1. **TICKET 2** (2-3 days) - Direct YAML→SQLite loader
+
    - Day 1: Pydantic deserialization + section mapping
    - Day 2: Embedding generation + database insertion
    - Day 3: Property-based testing + debugging
 
-3. **TICKET 3** (1-2 days) - Single file E2E integration
+1. **TICKET 3** (1-2 days) - Single file E2E integration
+
    - Day 1: Integration test + search API validation
    - Day 2: Edge case testing + documentation
 
-4. **TICKET 4** (1-2 days) - Production batch CLI
+1. **TICKET 4** (1-2 days) - Production batch CLI
+
    - Day 1: Batch processing + error handling
    - Day 2: Progress reporting + E2E testing
 
 **Total Estimated Time:** 7-11 days
 
----
+______________________________________________________________________
 
 ## Key Principles Applied
 
@@ -1443,7 +1486,8 @@ tests/fixtures/
 - Each ticket tests a distinct pipeline stage
 - No overlap between tickets
 - Together, they cover the entire pipeline
-- Four prongs in TICKET 1 are mutually exclusive (Classic vs. LLM vs. Adjudicator vs. E2E)
+- Four prongs in TICKET 1 are mutually exclusive (Classic vs. LLM vs. Adjudicator vs.
+  E2E)
 
 ### 80/20 (Pareto Principle)
 
@@ -1467,26 +1511,26 @@ tests/fixtures/
 - E2E tests (TICKET 4) validate production workflow
 - Catch bugs early in smaller, focused tests
 
----
+______________________________________________________________________
 
 ## Success Criteria
 
 ### Definition of Done (All Tickets)
 
 1. ✅ All automated tests pass (`uv run pytest -v`)
-2. ✅ Manual testing commands documented and verified
-3. ✅ Test coverage >80% for core pipeline logic
-4. ✅ CI/CD pipeline includes all tests
-5. ✅ Documentation updated with new architecture
+1. ✅ Manual testing commands documented and verified
+1. ✅ Test coverage >80% for core pipeline logic
+1. ✅ CI/CD pipeline includes all tests
+1. ✅ Documentation updated with new architecture
 
 ### Quality Gates
 
-- **Unit Tests (TICKET 1-2):** <100ms per test, >90% pass rate
-- **Integration Tests (TICKET 3):** <5s per test, >85% pass rate
-- **E2E Tests (TICKET 4):** <60s per test, 100% pass rate
+- **Unit Tests (TICKET 1-2):** \<100ms per test, >90% pass rate
+- **Integration Tests (TICKET 3):** \<5s per test, >85% pass rate
+- **E2E Tests (TICKET 4):** \<60s per test, 100% pass rate
 - **Property Tests (Hypothesis):** 50-100 examples per test, 0 failures
 
----
+______________________________________________________________________
 
 ## Troubleshooting Guide
 
@@ -1547,20 +1591,20 @@ cat tests/fixtures/adjudicator/scenario_classic_wrong.py
 # Fix: Verify expected_result matches adjudicator logic
 ```
 
----
+______________________________________________________________________
 
 ## Next Steps
 
 1. **Review this revised plan** with the team
-2. **Create GitHub issues** for each ticket (4 issues)
-3. **Set up test fixtures** (8 synthetic HTML + 3 real-world + 4 adjudicator scenarios)
-4. **Create Pydantic models** in `src/qe_tax_rag/models.py`
-5. **Implement TICKET 1 (Prong 1)** first (Classic parser tests)
-6. **Run manual tests** after each prong/ticket completion
-7. **Update CI/CD** to include all new tests
-8. **Document findings** and edge cases discovered
+1. **Create GitHub issues** for each ticket (4 issues)
+1. **Set up test fixtures** (8 synthetic HTML + 3 real-world + 4 adjudicator scenarios)
+1. **Create Pydantic models** in `src/qe_tax_rag/models.py`
+1. **Implement TICKET 1 (Prong 1)** first (Classic parser tests)
+1. **Run manual tests** after each prong/ticket completion
+1. **Update CI/CD** to include all new tests
+1. **Document findings** and edge cases discovered
 
----
+______________________________________________________________________
 
 **Happy Testing! 🎉**
 

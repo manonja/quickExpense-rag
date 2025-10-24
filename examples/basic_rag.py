@@ -21,11 +21,11 @@ import os
 import sys
 from typing import Any
 
-# Environment variables
-from dotenv import load_dotenv
-
 # QE Tax RAG library
 import qe_tax_rag as qe
+
+# Environment variables
+from dotenv import load_dotenv
 from qe_tax_rag.search.models import SearchResult
 
 # Load environment variables from .env file
@@ -96,12 +96,13 @@ def basic_search_example(query: str) -> list[SearchResult]:
 
     Returns:
         List of search results with citations and lineage
+
     """
     print("\n" + "=" * 70)
     print("SECTION 3: BASIC SEARCH (NO LLM)")
     print("=" * 70 + "\n")
 
-    print(f"Query: \"{query}\"")
+    print(f'Query: "{query}"')
     print(f"Filters: province='BC', expense_types=['meals']")
     print(f"Top K: 3\n")
 
@@ -153,6 +154,7 @@ def build_context_from_results(results: list[SearchResult]) -> str:
 
     Returns:
         Formatted context string with citations and source URLs
+
     """
     if not results:
         return "No relevant CRA rules found for this query."
@@ -179,6 +181,7 @@ def call_gemini_api(query: str, context: str) -> dict[str, Any]:
 
     Returns:
         Dictionary with 'response' and 'citations' keys
+
     """
     try:
         import google.generativeai as genai  # type: ignore
@@ -233,7 +236,7 @@ def show_alternative_providers() -> None:
     print("Alternative LLM Providers (Code Snippets)")
     print("-" * 70 + "\n")
 
-    openai_snippet = '''
+    openai_snippet = """
 # OpenAI GPT Example
 from openai import OpenAI
 
@@ -247,9 +250,9 @@ response = client.chat.completions.create(
     temperature=0.1
 )
 answer = response.choices[0].message.content
-'''
+"""
 
-    anthropic_snippet = '''
+    anthropic_snippet = """
 # Anthropic Claude Example
 from anthropic import Anthropic
 
@@ -264,7 +267,7 @@ response = client.messages.create(
     temperature=0.1
 )
 answer = response.content[0].text
-'''
+"""
 
     print("OpenAI GPT-4:")
     print(openai_snippet)
@@ -285,6 +288,7 @@ def rag_pipeline_example(query: str, results: list[SearchResult]) -> None:
     Args:
         query: User's tax question
         results: Search results from basic_search_example()
+
     """
     print("\n" + "=" * 70)
     print("SECTION 4: RAG PIPELINE WITH LLM")
@@ -332,15 +336,11 @@ def rag_pipeline_example(query: str, results: list[SearchResult]) -> None:
         # Extract and display citations
         print("\n📚 Citations:")
         for i, search_result in enumerate(results, 1):
-            print(
-                f"  [{i}] {search_result.citation_id} - {search_result.source_url}"
-            )
+            print(f"  [{i}] {search_result.citation_id} - {search_result.source_url}")
 
         # Legal disclaimer
         print("\n⚠️  IMPORTANT DISCLAIMER:")
-        print(
-            "    This AI-generated response is for informational purposes only."
-        )
+        print("    This AI-generated response is for informational purposes only.")
         print("    It is NOT professional tax advice. Consult a qualified tax")
         print("    professional for advice specific to your situation.")
 
@@ -383,7 +383,7 @@ def show_advanced_patterns() -> None:
     print("SECTION 6: ADVANCED PATTERNS")
     print("=" * 70 + "\n")
 
-    multi_turn_example = '''
+    multi_turn_example = """
 # Multi-Turn Conversation Example
 conversation_history = []
 
@@ -399,9 +399,9 @@ results2 = qe.search("electric vehicle", top_k=3)
 context2 = build_context_from_results(results2)
 conversation_history.append({"role": "user", "content": "What about electric vehicles?"})
 # ... pass conversation_history to LLM for context ...
-'''
+"""
 
-    caching_example = '''
+    caching_example = """
 # Caching Search Results Example
 from functools import lru_cache
 
@@ -414,9 +414,9 @@ results1 = cached_search("meal expenses", province="BC")
 
 # Second call: returns cached results (instant)
 results2 = cached_search("meal expenses", province="BC")
-'''
+"""
 
-    error_handling_example = '''
+    error_handling_example = """
 # Robust Error Handling Example
 def safe_rag_query(query: str, max_retries: int = 3):
     for attempt in range(max_retries):
@@ -438,7 +438,7 @@ def safe_rag_query(query: str, max_retries: int = 3):
                 continue
             else:
                 return f"Failed after {max_retries} attempts: {e}"
-'''
+"""
 
     print("6a. Multi-Turn Conversations:")
     print(multi_turn_example)

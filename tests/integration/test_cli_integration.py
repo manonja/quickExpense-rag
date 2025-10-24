@@ -64,9 +64,9 @@ def test_auto_transform_flag_success(html_test_dir: Path, tmp_path: Path) -> Non
     )
 
     # Assert CLI execution
-    assert result.returncode == 0, (
-        f"CLI command failed.\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
-    )
+    assert (
+        result.returncode == 0
+    ), f"CLI command failed.\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
     assert "Auto-transforming YAML to JSONL" in result.stdout
     assert "Pipeline completed successfully" in result.stdout
 
@@ -122,11 +122,11 @@ def test_auto_transform_without_output_jsonl_fails(
 
     # Assert failure conditions
     assert result.returncode == 1, "CLI should have failed but exited with code 0."
-    assert "--output-jsonl is required" in result.stderr, (
-        "Error message not found in stderr."
-    )
+    assert (
+        "--output-jsonl is required" in result.stderr
+    ), "Error message not found in stderr."
 
     # Assert that the YAML file was still created before the failure
-    assert yml_path.exists(), (
-        "YAML file should have been created before the transform step."
-    )
+    assert (
+        yml_path.exists()
+    ), "YAML file should have been created before the transform step."

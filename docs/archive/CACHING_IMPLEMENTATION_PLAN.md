@@ -1,64 +1,74 @@
 # Smart Caching & Stepwise Testing Plan
 
-**Date**: 2025-10-18
-**Status**: Ready for Implementation
-**Estimated Time**: ~75 minutes
-**Expected Cost Savings**: 90%+ on subsequent pipeline runs
+**Date**: 2025-10-18 **Status**: Ready for Implementation **Estimated Time**: ~75
+minutes **Expected Cost Savings**: 90%+ on subsequent pipeline runs
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
-This plan implements a **content-addressable caching layer** for the LLM parser to prevent burning API credits during development. It follows the **80/20 principle**: simple, battle-tested `diskcache` library with SHA256 content hashing, plus a **stepwise testing strategy** (1 file → 3 files → full corpus) to validate incrementally without wasting credits.
+This plan implements a **content-addressable caching layer** for the LLM parser to
+prevent burning API credits during development. It follows the **80/20 principle**:
+simple, battle-tested `diskcache` library with SHA256 content hashing, plus a **stepwise
+testing strategy** (1 file → 3 files → full corpus) to validate incrementally without
+wasting credits.
 
-**Critical Discovery**: Your background extraction job is currently failing with `404 models/gemini-1.5-flash is not found`. We need to fix the model name mismatch first.
+**Critical Discovery**: Your background extraction job is currently failing with
+`404 models/gemini-1.5-flash is not found`. We need to fix the model name mismatch
+first.
 
----
+______________________________________________________________________
 
 ## Problem Statement
 
 ### Current State (Anti-Pattern)
+
 - LLM parser calls Gemini API for **every HTML file** on **every run**
 - No caching = re-processing already-seen files after failures
 - Development iteration = burning credits unnecessarily
 - **Analogous to**: `SELECT * FROM LARGE_TABLE` in production DB
 
 ### Target State (Solution)
+
 - Cache Gemini responses using content-addressable keys
 - Cache HIT = instant response, zero API cost
 - Cache MISS = new/changed files only trigger API calls
 - Progressive testing: validate with 1 file before processing all 13
 
----
+______________________________________________________________________
 
 ## Critical Issues Identified
 
 ### Issue 1: Model Name 404 Error
 
 **Error from background job**:
+
 ```
 NotFound: 404 models/gemini-1.5-flash is not found for API version v1beta
 ```
 
 **Root Cause**: Mismatch between configured model and actual API call
+
 - `settings.py` shows: `llm_model_name: str = "gemini-2.0-flash-exp"`
 - API error indicates: Code is using `gemini-1.5-flash`
 
 **Resolution**: Find and fix the hardcoded or overridden model name
 
----
+______________________________________________________________________
 
 ## Implementation Plan
 
 ### Phase 1: Fix Model Name Bug (5 minutes)
 
 **Action Items**:
+
 1. Kill the failing background extraction job (Bash f1509b)
-2. Search codebase for any hardcoded `gemini-1.5-flash` references
-3. Verify `settings.py` is correctly loaded and not overridden
-4. Test with a single file to confirm API connectivity
+1. Search codebase for any hardcoded `gemini-1.5-flash` references
+1. Verify `settings.py` is correctly loaded and not overridden
+1. Test with a single file to confirm API connectivity
 
 **Validation**:
+
 ```bash
 # Should succeed without 404 errors
 uv run extract-rules extract \
@@ -67,7 +77,7 @@ uv run extract-rules extract \
   --verbose
 ```
 
----
+______________________________________________________________________
 
 ### Phase 2: Implement Smart Caching (30 minutes)
 
@@ -80,6 +90,7 @@ uv add diskcache
 ```
 
 **Why `diskcache`?**
+
 - Mature, pure-Python library
 - SQLite-backed, thread-safe, persistent storage
 - Dictionary-like interface (simple to use)
@@ -188,6 +199,7 @@ class LLMResponseCache:
 ```
 
 **Key Design Decisions**:
+
 - **Content-addressable**: Cache key = SHA256(prompt + model + content)
 - **Auto-invalidation**: HTML changes → different hash → cache miss
 - **Raw response caching**: Store JSON string, not parsed Pydantic objects
@@ -236,6 +248,7 @@ settings = Settings()
 ```
 
 **Configuration Options**:
+
 - CLI flag: `--cache-dir .llm_cache/` (explicit, recommended)
 - Environment variable: `QE_TAX_RAG_EXTRACTION_CACHE_DIR=/path/to/cache`
 - Default: `None` (caching disabled)
@@ -245,10 +258,11 @@ settings = Settings()
 **File**: `src/qe_tax_rag/extraction/ca/llm_parser.py`
 
 Key changes:
+
 1. Import `LLMResponseCache`
-2. Add `cache_dir` parameter to `parse()` function
-3. Check cache before API call
-4. Store successful responses
+1. Add `cache_dir` parameter to `parse()` function
+1. Check cache before API call
+1. Store successful responses
 
 ```python
 """LLM-based parser for CRA tax documents using Gemini API."""
@@ -441,6 +455,7 @@ def parse(
 ```
 
 **Log Messages Added**:
+
 - `Cache HIT for {html_path}. Skipping API call.`
 - `Cache MISS for {html_path}. Calling Gemini API.`
 
@@ -549,7 +564,7 @@ def _run_extraction_pipeline(
     # ... rest of existing code ...
 ```
 
----
+______________________________________________________________________
 
 ### Phase 3: Stepwise Testing Strategy (20 minutes)
 
@@ -569,6 +584,7 @@ uv run extract-rules extract \
 ```
 
 **Expected Output**:
+
 ```
 INFO - LLM response cache initialized at: .llm_cache/
 INFO - Cache MISS for cra_documents/.../t4002-2.html. Calling Gemini API.
@@ -576,6 +592,7 @@ INFO - LLM parser extracted 15 rules from t4002-2.html
 ```
 
 **Verification**:
+
 - ✅ `.llm_cache/` directory created
 - ✅ Cache contains SQLite files (`cache.db`, etc.)
 - ✅ No 404 model errors
@@ -595,6 +612,7 @@ uv run extract-rules extract \
 ```
 
 **Expected Output**:
+
 ```
 INFO - LLM response cache initialized at: .llm_cache/
 INFO - Cache HIT for cra_documents/.../t4002-2.html. Skipping API call.
@@ -602,6 +620,7 @@ INFO - LLM parser extracted 15 rules from t4002-2.html
 ```
 
 **Verification**:
+
 - ✅ No API call made (check logs for "Calling Gemini API" - should be absent)
 - ✅ Execution time < 5 seconds (vs ~30s for API call)
 - ✅ Output identical to Test 1
@@ -626,11 +645,13 @@ git checkout cra_documents/cra_t4002e_rev24_dump/t4002-2.html
 ```
 
 **Expected Output**:
+
 ```
 INFO - Cache MISS for cra_documents/.../t4002-2.html. Calling Gemini API.
 ```
 
 **Verification**:
+
 - ✅ Cache MISS triggered (content hash changed)
 - ✅ New cache entry created
 - ✅ Original file restored via git
@@ -653,6 +674,7 @@ uv run extract-rules extract \
 ```
 
 **Expected Output**:
+
 ```
 INFO - Discovered 3 HTML files
 INFO - Cache HIT for test_subset/t4002-2.html. Skipping API call.
@@ -661,11 +683,13 @@ INFO - Cache MISS for test_subset/t4002-4.html. Calling Gemini API.
 ```
 
 **Verification**:
+
 - ✅ 1 cache HIT (t4002-2 from Test 1)
 - ✅ 2 cache MISSes (new files)
 - ✅ Total API calls: 2 (not 3)
 
 **Cleanup**:
+
 ```bash
 rm -rf test_subset/
 ```
@@ -685,6 +709,7 @@ uv run extract-rules extract \
 ```
 
 **Expected Output**:
+
 ```
 INFO - Discovered 13 HTML files
 INFO - Cache HIT for ... (files from previous tests)
@@ -693,6 +718,7 @@ Total API calls: ~10 (not 13)
 ```
 
 **Second Run** (complete cache):
+
 ```bash
 # Re-run to verify full cache coverage
 uv run extract-rules extract \
@@ -704,6 +730,7 @@ uv run extract-rules extract \
 ```
 
 **Expected Output**:
+
 ```
 INFO - Discovered 13 HTML files
 [13x] INFO - Cache HIT for ...
@@ -712,12 +739,13 @@ Total API calls: 0
 ```
 
 **Verification**:
+
 - ✅ All 13 files cached
 - ✅ Zero API calls on second run
 - ✅ Near-instant execution
 - ✅ Output files identical
 
----
+______________________________________________________________________
 
 ### Phase 4: Documentation & Cleanup (10 minutes)
 
@@ -725,7 +753,7 @@ Total API calls: 0
 
 Add caching section to developer guide:
 
-```markdown
+````markdown
 ## LLM Response Caching
 
 The extraction pipeline supports opt-in caching of LLM responses to reduce API costs during development.
@@ -738,7 +766,7 @@ uv run extract-rules extract \
   input/ \
   output/rules.yml \
   --cache-dir .llm_cache/
-```
+````
 
 ### How It Works
 
@@ -765,13 +793,14 @@ uv run extract-rules extract input/ output.yml
 - **First run**: Normal API latency (~30s per file)
 - **Cached runs**: Near-instant (\<1s per file)
 - **Cost savings**: 90%+ on subsequent runs
-```
+
+````
 
 #### Add .llm_cache/ to .gitignore
 
 ```bash
 echo ".llm_cache/" >> .gitignore
-```
+````
 
 #### Delete zen_generated.code
 
@@ -779,7 +808,7 @@ echo ".llm_cache/" >> .gitignore
 rm zen_generated.code
 ```
 
----
+______________________________________________________________________
 
 ## Testing Checklist
 
@@ -797,18 +826,18 @@ rm zen_generated.code
 - [ ] Phase 3.5: Full corpus (13 files) test passed
 - [ ] Phase 4: Documentation updated, cleanup complete
 
----
+______________________________________________________________________
 
 ## Key Benefits
 
-| Metric | Without Cache | With Cache (2nd run) |
-|--------|---------------|----------------------|
-| Execution Time | ~5 minutes | ~30 seconds |
-| API Calls | 13 (all files) | 0 (all cached) |
-| API Cost | $X | $0 |
-| Development Iterations | Expensive | Free |
+| Metric                 | Without Cache  | With Cache (2nd run) |
+| ---------------------- | -------------- | -------------------- |
+| Execution Time         | ~5 minutes     | ~30 seconds          |
+| API Calls              | 13 (all files) | 0 (all cached)       |
+| API Cost               | $X             | $0                   |
+| Development Iterations | Expensive      | Free                 |
 
----
+______________________________________________________________________
 
 ## Trade-offs & Design Decisions
 
@@ -817,6 +846,7 @@ rm zen_generated.code
 **Decision**: Cache `response.text` (raw JSON string), not `ExtractedRule` objects
 
 **Rationale**:
+
 - Parsing (`json.loads()` + Pydantic validation) is cheap (~1ms)
 - API call is expensive (~30s + $cost)
 - Caching raw JSON decouples cache from schema changes
@@ -827,6 +857,7 @@ rm zen_generated.code
 **Decision**: Cache key includes HTML content hash, not just filename
 
 **Rationale**:
+
 - Files can be edited/updated during development
 - Filename alone would serve stale cached data
 - Content hash auto-invalidates on any HTML change
@@ -837,13 +868,14 @@ rm zen_generated.code
 **Decision**: Use battle-tested `diskcache` library
 
 **Rationale**:
+
 - Thread-safe, handles file locking automatically
 - Persistent SQLite backend (survives crashes)
 - Eviction policies, TTL support (if needed later)
 - ~100 lines of code avoided vs custom implementation
 - Follows 80/20 principle: simple, reliable, minimal complexity
 
----
+______________________________________________________________________
 
 ## Optional Enhancements (Future Work)
 
@@ -885,51 +917,51 @@ uv run extract-rules cache-warm \
   --cache-dir .llm_cache/
 ```
 
----
+______________________________________________________________________
 
 ## Success Criteria
 
-✅ All 13 HTML files process successfully with caching enabled
-✅ Second run completes in <30 seconds (vs ~5 minutes)
-✅ Zero API calls on cached runs
-✅ Cache HIT/MISS logged clearly for debugging
-✅ HTML content changes trigger cache invalidation
-✅ Documentation updated with usage examples
-✅ No regression in extraction quality (same output as non-cached)
+✅ All 13 HTML files process successfully with caching enabled ✅ Second run completes in
+\<30 seconds (vs ~5 minutes) ✅ Zero API calls on cached runs ✅ Cache HIT/MISS logged
+clearly for debugging ✅ HTML content changes trigger cache invalidation ✅ Documentation
+updated with usage examples ✅ No regression in extraction quality (same output as
+non-cached)
 
----
+______________________________________________________________________
 
 ## Risk Mitigation
 
-| Risk | Mitigation |
-|------|-----------|
-| Cache corruption | `diskcache` uses SQLite transactions, ACID guarantees |
-| Stale cached data | Content-addressable keys auto-invalidate on changes |
-| Disk space exhaustion | Monitor cache size, add eviction policies if needed |
-| False cache hits | SHA256 collision probability negligible (2^-256) |
+| Risk                    | Mitigation                                            |
+| ----------------------- | ----------------------------------------------------- |
+| Cache corruption        | `diskcache` uses SQLite transactions, ACID guarantees |
+| Stale cached data       | Content-addressable keys auto-invalidate on changes   |
+| Disk space exhaustion   | Monitor cache size, add eviction policies if needed   |
+| False cache hits        | SHA256 collision probability negligible (2^-256)      |
 | Breaking schema changes | Cache stores raw JSON, decoupled from Pydantic models |
 
----
+______________________________________________________________________
 
 ## Estimated Timeline
 
-| Phase | Duration | Dependencies |
-|-------|----------|--------------|
-| Phase 1: Fix model bug | 5 min | None |
-| Phase 2: Implement caching | 30 min | Phase 1 complete |
-| Phase 3: Stepwise testing | 20 min | Phase 2 complete |
-| Phase 4: Documentation | 10 min | Phase 3 complete |
-| **Total** | **~75 min** | Sequential execution |
+| Phase                      | Duration    | Dependencies         |
+| -------------------------- | ----------- | -------------------- |
+| Phase 1: Fix model bug     | 5 min       | None                 |
+| Phase 2: Implement caching | 30 min      | Phase 1 complete     |
+| Phase 3: Stepwise testing  | 20 min      | Phase 2 complete     |
+| Phase 4: Documentation     | 10 min      | Phase 3 complete     |
+| **Total**                  | **~75 min** | Sequential execution |
 
----
+______________________________________________________________________
 
 ## Contact & Support
 
 For questions or issues:
+
 - GitHub Issues: https://github.com/anthropics/claude-code/issues
 - Documentation: `CLAUDE.md`, `USER_GUIDE.md`
 - Zen MCP: Use `chat with zen` for architectural guidance
 
----
+______________________________________________________________________
 
-**Next Steps**: Start with Phase 1 (fix model bug), then proceed sequentially through the phases. Use the testing checklist to track progress.
+**Next Steps**: Start with Phase 1 (fix model bug), then proceed sequentially through
+the phases. Use the testing checklist to track progress.

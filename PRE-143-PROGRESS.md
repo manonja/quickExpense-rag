@@ -1,22 +1,24 @@
 # PRE-143: HTML Extraction Validation - Progress Report
 
-**Date:** 2025-10-23
-**Branch:** `feature/PRE-143-extraction-validation`
-**Status:** Phase 1 Complete (33% overall progress)
+**Date:** 2025-10-23 **Branch:** `feature/PRE-143-extraction-validation` **Status:**
+Phase 1 Complete (33% overall progress)
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
-Successfully implemented LineageMetadata tracking infrastructure to support HTML extraction validation. Phase 1 (data models + tests) is complete and committed. Ready to proceed with Phase 2 (pipeline instrumentation).
+Successfully implemented LineageMetadata tracking infrastructure to support HTML
+extraction validation. Phase 1 (data models + tests) is complete and committed. Ready to
+proceed with Phase 2 (pipeline instrumentation).
 
----
+______________________________________________________________________
 
 ## Phase 1: COMPLETED ✓
 
 ### Accomplishments
 
-**Commit:** `8264f62` - "feat: add LineageMetadata model for extraction provenance tracking"
+**Commit:** `8264f62` - "feat: add LineageMetadata model for extraction provenance
+tracking"
 
 #### 1. LineageMetadata Pydantic Model (`src/qe_tax_rag/extraction/ca/schema.py`)
 
@@ -36,6 +38,7 @@ class LineageMetadata(BaseModel):
 ```
 
 **Features:**
+
 - Immutable design (`frozen=True, extra='forbid'`)
 - Human-readable lineage_chain computed field
 - Timestamp tracking for audit trail
@@ -44,10 +47,12 @@ class LineageMetadata(BaseModel):
 #### 2. Data Model Integration
 
 **ExtractedRule updates:**
+
 - Added `lineage_stages: list[dict[str, str]]` field for timestamp accumulation
 - Default factory ensures backward compatibility
 
 **ChunkMetadata updates:**
+
 - Added `lineage: Optional["LineageMetadata"]` field
 - Forward reference resolved via `ChunkMetadata.model_rebuild()`
 - Stored as JSON in SQLite metadata column (no schema changes)
@@ -57,10 +62,10 @@ class LineageMetadata(BaseModel):
 Added 5 comprehensive unit tests (`tests/unit/extraction/ca/test_schema.py`):
 
 1. `test_lineage_metadata_basic` - Basic model creation
-2. `test_lineage_chain_with_stages` - Computed field with pipeline stages
-3. `test_lineage_chain_empty_stages` - Fallback when no stages
-4. `test_lineage_metadata_immutable` - Frozen model enforcement
-5. `test_lineage_metadata_extra_fields_forbidden` - Strict validation
+1. `test_lineage_chain_with_stages` - Computed field with pipeline stages
+1. `test_lineage_chain_empty_stages` - Fallback when no stages
+1. `test_lineage_metadata_immutable` - Frozen model enforcement
+1. `test_lineage_metadata_extra_fields_forbidden` - Strict validation
 
 **Test Results:** 10/10 schema tests passing
 
@@ -72,13 +77,14 @@ Added 5 comprehensive unit tests (`tests/unit/extraction/ca/test_schema.py`):
 - ✓ Mypy type checking: PASSED (for modified files)
 - ✓ All pre-commit hooks: PASSED
 
----
+______________________________________________________________________
 
 ## Phase 2: Pipeline Instrumentation (NEXT)
 
 ### Overview
 
-Instrument extraction pipeline to record timestamps at each stage and propagate lineage information through the pipeline.
+Instrument extraction pipeline to record timestamps at each stage and propagate lineage
+information through the pipeline.
 
 ### Tasks (6 total)
 
@@ -87,6 +93,7 @@ Instrument extraction pipeline to record timestamps at each stage and propagate 
 **File:** `src/qe_tax_rag/extraction/ca/classic_parser.py`
 
 **Changes:**
+
 ```python
 from datetime import datetime, timezone
 
@@ -105,21 +112,24 @@ def parse(html_file_path: str) -> list[ExtractedRule]:
 ```
 
 **Implementation Notes:**
+
 - Use `datetime.now(timezone.utc).isoformat()` for consistent ISO 8601 timestamps
 - Record timestamp once per parse() call (not per rule)
 - All rules from same HTML file share same parser timestamp
 
 **Testing:**
+
 - Unit test: Verify lineage_stages populated after parse()
 - Check timestamp format matches ISO 8601
 
----
+______________________________________________________________________
 
 #### Task 2: Update llm_parser.parse()
 
 **File:** `src/qe_tax_rag/extraction/ca/llm_parser.py`
 
 **Changes:**
+
 ```python
 from datetime import datetime, timezone
 
@@ -138,21 +148,25 @@ def parse(html_file_path: str, cache_dir: Path | None = None) -> list[ExtractedR
 ```
 
 **Implementation Notes:**
+
 - Same pattern as classic_parser
-- Timestamp recorded before cache lookup or after LLM call? → **After successful parsing**
+- Timestamp recorded before cache lookup or after LLM call? → **After successful
+  parsing**
 - Handles rate limiting gracefully (timestamp reflects actual completion time)
 
 **Testing:**
+
 - Unit test: Verify lineage_stages populated
 - Integration test with cache to ensure timestamps update on cache miss
 
----
+______________________________________________________________________
 
 #### Task 3: Update adjudicator.adjudicate()
 
 **File:** `src/qe_tax_rag/extraction/ca/adjudicator.py`
 
 **Changes:**
+
 ```python
 from datetime import datetime, timezone
 
@@ -178,6 +192,7 @@ def adjudicate(
 ```
 
 **Implementation Notes:**
+
 - **Critical:** Propagate lineage_stages from input rules (classic or LLM)
   - If perfect match: copy from classic_rule
   - If auto-corrected: copy from source rule (classic or LLM based on choice)
@@ -186,17 +201,19 @@ def adjudicate(
 - Final expert_source already set by adjudicator logic
 
 **Testing:**
+
 - Unit test: Verify lineage propagation from classic rule
 - Unit test: Verify lineage propagation from LLM rule
 - Check lineage_stages includes all upstream stages + adjudicator
 
----
+______________________________________________________________________
 
 #### Task 4: Update RuleSet.to_database_chunks()
 
 **File:** `src/qe_tax_rag/extraction/ca/schema.py`
 
 **Changes:**
+
 ```python
 def to_database_chunks(
     self,
@@ -225,21 +242,24 @@ def to_database_chunks(
 ```
 
 **Implementation Notes:**
+
 - Use `self.extraction_timestamp` from RuleSet (set during YAML generation)
 - Pass `rule.lineage_stages` (accumulated from parsers + adjudicator)
 - LineageMetadata.lineage_chain computed automatically
 
 **Testing:**
+
 - Unit test: Verify DatabaseChunk.metadata.lineage populated
 - Check lineage_chain format matches expected pattern
 
----
+______________________________________________________________________
 
 #### Task 5: Integration Test - Extract t4002-5.html with Lineage
 
 **File:** `tests/integration/test_extraction_lineage.py` (NEW)
 
 **Test Plan:**
+
 ```python
 def test_extraction_with_lineage():
     """Integration test: Full extraction pipeline with lineage tracking."""
@@ -277,17 +297,19 @@ def test_extraction_with_lineage():
 ```
 
 **Validation Criteria:**
+
 - ✓ All rules have lineage_stages populated
 - ✓ Lineage includes parser(s) + adjudicator stages
 - ✓ Timestamps are valid ISO 8601 format
 - ✓ lineage_chain computed field is human-readable
 - ✓ No exceptions during conversion to DatabaseChunk
 
----
+______________________________________________________________________
 
 #### Task 6: Commit Phase 2
 
 **Commit Message:**
+
 ```
 feat: instrument extraction pipeline with lineage tracking
 
@@ -311,13 +333,14 @@ Rationale:
 Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
----
+______________________________________________________________________
 
 ## Phase 3: PDF Validation Tooling
 
 ### Overview
 
-Build semi-automated PDF comparison tool using Gemini Pro 2.5 to validate HTML extraction completeness against PDF ground truth.
+Build semi-automated PDF comparison tool using Gemini Pro 2.5 to validate HTML
+extraction completeness against PDF ground truth.
 
 ### Tasks (3 total)
 
@@ -326,6 +349,7 @@ Build semi-automated PDF comparison tool using Gemini Pro 2.5 to validate HTML e
 **File:** `pyproject.toml`
 
 **Changes:**
+
 ```toml
 [project]
 dependencies = [
@@ -336,13 +360,14 @@ dependencies = [
 
 **Command:** `uv add pdfplumber`
 
----
+______________________________________________________________________
 
 #### Task 2: Create PDF Validation Script
 
 **File:** `scripts/validate_pdf_coverage.py` (NEW)
 
 **Architecture:**
+
 ```python
 # Main components:
 1. PDF Text Extractor (pdfplumber)
@@ -588,15 +613,17 @@ if __name__ == "__main__":
 ```
 
 **Testing:**
+
 - Dry run with mock data
 - Verify Gemini rate limiting works
 - Check report JSON structure
 
----
+______________________________________________________________________
 
 #### Task 3: Commit Phase 3
 
 **Commit Message:**
+
 ```
 feat: add PDF coverage validation tool with Gemini-based comparison
 
@@ -627,7 +654,7 @@ Rationale:
 Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
----
+______________________________________________________________________
 
 ## Phase 4: Validation Execution & HITL
 
@@ -640,6 +667,7 @@ Execute validation workflow and perform human-in-the-loop quality gate review.
 #### Task 1: Run Extraction on t4002-5.html
 
 **Command:**
+
 ```bash
 uv run extract-rules \
     cra_documents/cra_t4002e_rev24_dump/t4002-5.html \
@@ -647,20 +675,23 @@ uv run extract-rules \
 ```
 
 **Expected Output:**
+
 - `output/t4002-5-rules.yml` with lineage_stages populated
 - Manual review YAML (if any conflicts)
 - Console output showing extraction statistics
 
 **Validation:**
+
 - Check YAML for lineage_stages in each rule
 - Verify rule count ≥ 50 chunks
 - Inspect sample rules for correct structure
 
----
+______________________________________________________________________
 
 #### Task 2: Run PDF Validation Tool
 
 **Command:**
+
 ```bash
 uv run python scripts/validate_pdf_coverage.py \
     --yaml-file output/t4002-5-rules.yml \
@@ -669,44 +700,50 @@ uv run python scripts/validate_pdf_coverage.py \
 ```
 
 **Expected Metrics:**
+
 - `total_chunks` ≥ 50
 - `citation_id_valid_percent` = 100%
 - `lineage_present_percent` = 100%
 - `pdf_coverage_percent` ≥ 95%
 
 **Troubleshooting:**
+
 - If chunks < 50: Try t4002-4.html or combine multiple files
 - If PDF coverage < 95%: Investigate missing sections (may indicate scraping gaps)
 - If lineage < 100%: Check pipeline instrumentation (Phase 2)
 
----
+______________________________________________________________________
 
 #### Task 3: Human-in-the-Loop Quality Gate
 
 **Process:**
 
 1. **Load validation report:**
+
    ```bash
    cat output/validation_report.json | jq '.sample_chunks | .[0:5]'
    ```
 
-2. **Manual review checklist (20 chunks):**
+1. **Manual review checklist (20 chunks):**
+
    - [ ] Citation ID format: LINE-{number}
    - [ ] Content accuracy: Matches HTML source
    - [ ] Lineage chain: Present and logical
    - [ ] Timestamps: Valid ISO 8601 format
 
-3. **PDF cross-reference (5 sections):**
+1. **PDF cross-reference (5 sections):**
+
    - [ ] Open PDF at random page
    - [ ] Search for content in YAML output
    - [ ] Confirm match (exact or semantic)
 
-4. **Decision criteria:**
+1. **Decision criteria:**
+
    - **GO:** ≥18/20 chunks valid + 5/5 PDF sections found
    - **NO-GO:** Document failures, iterate on extraction
 
-**Documentation:**
-Create `output/hitl_review.md`:
+**Documentation:** Create `output/hitl_review.md`:
+
 ```markdown
 # HITL Quality Gate Review - PRE-143
 
@@ -742,11 +779,12 @@ Rationale:
 - [If NO-GO: Specific fixes needed]
 ```
 
----
+______________________________________________________________________
 
 #### Task 4: Commit Phase 4 - Validation Report
 
 **Commit Message:**
+
 ```
 docs: PRE-143 HTML extraction validation report
 
@@ -773,74 +811,78 @@ Decision: [GO / NO-GO]
 Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
----
+______________________________________________________________________
 
 ## Success Criteria
 
 ### Automated (from validation_report.json)
+
 - [x] total_chunks ≥ 50
 - [x] citation_id_valid_percent = 100%
 - [x] lineage_present_percent = 100%
 - [x] pdf_coverage_percent ≥ 95%
 
 ### Manual (from HITL review)
+
 - [x] ≥18/20 sample chunks valid
 - [x] 5/5 PDF sections found in HTML extraction
 - [x] Lineage chains logical and complete
 
 ### Deliverables
+
 - [x] LineageMetadata model (Phase 1)
 - [ ] Instrumented extraction pipeline (Phase 2)
 - [ ] PDF validation tool (Phase 3)
 - [ ] Validation report with Go/No-Go decision (Phase 4)
 
----
+______________________________________________________________________
 
 ## Risk Register
 
-### Risk 1: t4002-5.html yields <50 chunks
-**Likelihood:** Medium
-**Impact:** Low
-**Mitigation:** Use t4002-4.html or combine multiple HTML files
+### Risk 1: t4002-5.html yields \<50 chunks
 
-### Risk 2: PDF coverage <95%
-**Likelihood:** Medium
-**Impact:** High (indicates HTML scraping gaps)
-**Mitigation:**
+**Likelihood:** Medium **Impact:** Low **Mitigation:** Use t4002-4.html or combine
+multiple HTML files
+
+### Risk 2: PDF coverage \<95%
+
+**Likelihood:** Medium **Impact:** High (indicates HTML scraping gaps) **Mitigation:**
+
 - Investigate missing sections
 - May require upstream HTML scraping fix
 - Document gaps in validation report
 
 ### Risk 3: Rate limit exhaustion (Gemini)
-**Likelihood:** Low
-**Impact:** Medium
-**Mitigation:**
+
+**Likelihood:** Low **Impact:** Medium **Mitigation:**
+
 - Smart rate limiting already implemented
 - Exponential backoff
 - Save progress to resume from checkpoint
 
 ### Risk 4: Lineage tracking breaks existing tests
-**Likelihood:** Low
-**Impact:** Low
-**Mitigation:** lineage_stages has default=[], backward compatible
 
----
+**Likelihood:** Low **Impact:** Low **Mitigation:** lineage_stages has default=[],
+backward compatible
+
+______________________________________________________________________
 
 ## Next Steps
 
 **Immediate:** Proceed with Phase 2 - Pipeline Instrumentation
 
 **Order of execution:**
+
 1. Update classic_parser.parse()
-2. Update llm_parser.parse()
-3. Update adjudicator.adjudicate()
-4. Update RuleSet.to_database_chunks()
-5. Create integration test
-6. Commit Phase 2
+1. Update llm_parser.parse()
+1. Update adjudicator.adjudicate()
+1. Update RuleSet.to_database_chunks()
+1. Create integration test
+1. Commit Phase 2
 
 **Estimated time:** 1-2 hours (assuming no major blockers)
 
----
+______________________________________________________________________
 
 ## Technical Notes
 
@@ -849,18 +891,22 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 Issue encountered: `LineageMetadata` not defined when `ChunkMetadata` loads.
 
 Solution:
+
 1. Use `Optional["LineageMetadata"]` string annotation in ChunkMetadata
-2. Call `ChunkMetadata.model_rebuild()` after LineageMetadata is fully defined
-3. Import placed at end of schema.py with `# noqa: E402`
+1. Call `ChunkMetadata.model_rebuild()` after LineageMetadata is fully defined
+1. Import placed at end of schema.py with `# noqa: E402`
 
 This pattern is necessary because:
-- ChunkMetadata (in data/models.py) references LineageMetadata (in extraction/ca/schema.py)
+
+- ChunkMetadata (in data/models.py) references LineageMetadata (in
+  extraction/ca/schema.py)
 - Circular import would occur if we import normally
 - Pydantic 2.x requires model_rebuild() for forward references
 
 ### ISO 8601 Timestamp Format
 
 Using `datetime.now(timezone.utc).isoformat()` produces:
+
 - Example: `"2025-10-23T14:30:00.123456+00:00"`
 - Advantages: Unambiguous, sortable, human-readable
 - Compatible with JSON serialization
@@ -868,11 +914,12 @@ Using `datetime.now(timezone.utc).isoformat()` produces:
 ### Database Schema Impact
 
 **Zero schema changes** - lineage stored in existing metadata_json column:
+
 - No migration required
 - Backward compatible
 - Forward compatible (older code ignores lineage field)
 
----
+______________________________________________________________________
 
 ## References
 

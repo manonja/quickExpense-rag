@@ -71,7 +71,9 @@ for result in results:
     print("---")
 ```
 
-**💡 Want to build a tax Q&A chatbot?** See the [RAG Integration Examples](#rag-integration-examples) section below for complete examples using OpenAI, Anthropic, or Gemini.
+**💡 Want to build a tax Q&A chatbot?** See the
+[RAG Integration Examples](#rag-integration-examples) section below for complete
+examples using OpenAI, Anthropic, or Gemini.
 
 ### Example Output
 
@@ -100,8 +102,12 @@ QE Tax RAG uses a multi-stage hybrid search approach:
 ### Data Distribution
 
 - **Code**: Distributed via PyPI (`pip install qe-tax-rag`)
-- **Database**: Downloaded from [GitHub Releases](https://github.com/manonja/qe-tax-rag/releases) on first `init()` call (~1.7 MB)
-- **Current Release**: [data-v2025.10.23](https://github.com/manonja/qe-tax-rag/releases/tag/data-v2025.10.23) - 63 chunks from CRA T4002 guide
+- **Database**: Downloaded from
+  [GitHub Releases](https://github.com/manonja/qe-tax-rag/releases) on first `init()`
+  call (~1.7 MB)
+- **Current Release**:
+  [data-v2025.10.23](https://github.com/manonja/qe-tax-rag/releases/tag/data-v2025.10.23)
+  \- 63 chunks from CRA T4002 guide
 - **Versioning**: Schema version + data version stored in database metadata
 - **Integrity**: SHA256 checksums verified automatically on download
 - **Updates**: Database versions released independently from code versions
@@ -243,25 +249,30 @@ See [CLAUDE.md](CLAUDE.md) for all configuration options.
 
 ## RAG Integration Examples
 
-Build tax Q&A chatbots using Retrieval-Augmented Generation (RAG) with QE Tax RAG as the knowledge base.
+Build tax Q&A chatbots using Retrieval-Augmented Generation (RAG) with QE Tax RAG as the
+knowledge base.
 
 ### What's Included
 
-The `examples/` directory contains complete, working examples demonstrating how to integrate QE Tax RAG with Large Language Models (LLMs):
+The `examples/` directory contains complete, working examples demonstrating how to
+integrate QE Tax RAG with Large Language Models (LLMs):
 
-- **[basic_rag.py](examples/basic_rag.py)** - Standalone Python script showing the complete RAG workflow
-- **[basic_rag.ipynb](examples/basic_rag.ipynb)** - Jupyter notebook for interactive exploration *(coming soon)*
-- **[examples/README.md](examples/README.md)** - Detailed setup instructions and troubleshooting
+- **[basic_rag.py](examples/basic_rag.py)** - Standalone Python script showing the
+  complete RAG workflow
+- **[basic_rag.ipynb](examples/basic_rag.ipynb)** - Jupyter notebook for interactive
+  exploration *(coming soon)*
+- **[examples/README.md](examples/README.md)** - Detailed setup instructions and
+  troubleshooting
 
 ### What You'll Learn
 
 The examples demonstrate:
 
 1. **Environment Setup** - Loading API keys and initializing the database
-2. **Basic Search** - Querying CRA rules without LLM integration
-3. **RAG Pipeline** - Building context and generating AI responses
-4. **Output Formatting** - Displaying answers with proper citations
-5. **Advanced Patterns** - Multi-turn conversations, caching, error handling
+1. **Basic Search** - Querying CRA rules without LLM integration
+1. **RAG Pipeline** - Building context and generating AI responses
+1. **Output Formatting** - Displaying answers with proper citations
+1. **Advanced Patterns** - Multi-turn conversations, caching, error handling
 
 ### Quick Example
 
@@ -318,7 +329,7 @@ You only need **one** API key to run the examples.
    pip install -r examples/requirements.txt
    ```
 
-2. Set up your API key in `.env`:
+1. Set up your API key in `.env`:
 
    ```bash
    cp .env.example .env
@@ -328,20 +339,25 @@ You only need **one** API key to run the examples.
    # or GEMINI_API_KEY=...
    ```
 
-3. Run the example:
+1. Run the example:
 
    ```bash
    python examples/basic_rag.py
    ```
 
-See [examples/README.md](examples/README.md) for detailed instructions, troubleshooting, and advanced patterns.
+See [examples/README.md](examples/README.md) for detailed instructions, troubleshooting,
+and advanced patterns.
 
 ### Important Notes
 
-- **Legal Disclaimers**: All examples include prominent disclaimers reminding users this is NOT professional tax advice
-- **Citation Tracking**: Examples demonstrate proper citation of CRA sources in LLM responses
-- **Error Handling**: Includes handling for missing API keys, rate limits, and network errors
-- **Privacy**: Search queries and CRA data never leave your machine (only LLM queries use external APIs)
+- **Legal Disclaimers**: All examples include prominent disclaimers reminding users this
+  is NOT professional tax advice
+- **Citation Tracking**: Examples demonstrate proper citation of CRA sources in LLM
+  responses
+- **Error Handling**: Includes handling for missing API keys, rate limits, and network
+  errors
+- **Privacy**: Search queries and CRA data never leave your machine (only LLM queries
+  use external APIs)
 
 ## Troubleshooting
 
@@ -353,7 +369,8 @@ See [examples/README.md](examples/README.md) for detailed instructions, troubles
 
 - Check internet connection and GitHub accessibility
 - Verify firewall isn't blocking `github.com`
-- Try manual download from [GitHub Releases](https://github.com/manonja/qe-tax-rag/releases)
+- Try manual download from
+  [GitHub Releases](https://github.com/manonja/qe-tax-rag/releases)
 - Place downloaded `cra_rules.db` in cache dir: `~/.cache/qe_tax_rag/`
 
 ### Version Mismatch

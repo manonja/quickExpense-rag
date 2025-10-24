@@ -1,33 +1,39 @@
 # Pipeline Testing & Validation Plan: HTML → YAML → SQLite
 
-**Date:** 2025-10-22
-**Status:** Ready for Implementation
-**Context:** Post-normalization testing plan (transformer layer eliminated)
+**Date:** 2025-10-22 **Status:** Ready for Implementation **Context:**
+Post-normalization testing plan (transformer layer eliminated)
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
-This plan breaks down the extraction pipeline testing into 5 progressive, MECE (Mutually Exclusive, Collectively Exhaustive) tickets. Each ticket builds confidence incrementally, from unit tests to full database provisioning.
+This plan breaks down the extraction pipeline testing into 5 progressive, MECE (Mutually
+Exclusive, Collectively Exhaustive) tickets. Each ticket builds confidence
+incrementally, from unit tests to full database provisioning.
 
-**Critical Focus: RAG Quality Validation**
-This plan validates both the **process** (pipeline runs correctly) AND the **product** (search retrieves relevant results). Quality checks are integrated throughout all tickets to catch issues early:
+**Critical Focus: RAG Quality Validation** This plan validates both the **process**
+(pipeline runs correctly) AND the **product** (search retrieves relevant results).
+Quality checks are integrated throughout all tickets to catch issues early:
+
 - **Tickets 1-3**: Validate content integrity and metadata accuracy
 - **Ticket 4**: Basic search quality (first real RAG testing)
-- **Ticket 5**: Comprehensive RAG validation (Recall@5 >90%, semantic similarity, RRF ranking, filtering)
+- **Ticket 5**: Comprehensive RAG validation (Recall@5 >90%, semantic similarity, RRF
+  ranking, filtering)
 
 **Pipeline Architecture (Post-Normalization):**
+
 ```
 HTML → Classic+LLM Parser → ExtractedRule (YAML) → DatabaseChunk → SQLite (FTS5 + Vector)
 ```
 
 **Key Principles:**
+
 - **80/20 Focus**: Test high-value paths first, avoid over-engineering
 - **YAGNI**: Only test what's needed now, not speculative features
 - **MECE**: No overlap between tickets, complete coverage
 - **Type Safety**: Use Hypothesis for property-based testing with Pydantic models
 
----
+______________________________________________________________________
 
 ## Dependency Graph
 
@@ -38,51 +44,61 @@ TICKET 3 (parallel) ─┐
                      └──────────────────────────────────────────┘
 ```
 
-**Critical Path:** T1 → T2 → T4 → T5 (16 hours)
-**Parallel Work:** T3 can be done anytime (3 hours)
-**Total Effort:** 24 hours (3 developer-days)
+**Critical Path:** T1 → T2 → T4 → T5 (16 hours) **Parallel Work:** T3 can be done
+anytime (3 hours) **Total Effort:** 24 hours (3 developer-days)
 
----
+______________________________________________________________________
 
 ## TICKET 1: Test Single HTML → YAML Extraction
 
 ### Goal
-Validate that the extraction pipeline (Classic Parser + LLM Parser + Adjudicator) produces correct, well-formed YAML output from HTML input.
+
+Validate that the extraction pipeline (Classic Parser + LLM Parser + Adjudicator)
+produces correct, well-formed YAML output from HTML input.
 
 ### Scope
+
 - **In Scope**: HTML parsing, rule extraction, adjudication logic, YAML serialization
 - **Out of Scope**: Database insertion, expense classification, embedding generation
 
 ### Acceptance Criteria
 
 #### AC1: Valid YAML Output
+
 - Given a fixture HTML file, the extraction process runs without unhandled exceptions
 - Output is a single YAML file that deserializes into a valid `RuleSet` Pydantic model
 - YAML structure matches schema version 1.0
 
 #### AC2: Citation ID Integrity
+
 - Every `ExtractedRule` has a non-empty `citation_id` field
 - Citation ID matches `LINE-{number}` format (e.g., `LINE-8523`)
 - No duplicate `citation_id` values within a single `RuleSet`
 
 #### AC3: Adjudicator Logic
+
 - Adjudicator correctly merges outputs from Classic and LLM parsers
 - Conflict resolution follows confidence score rules (highest confidence wins)
 - All adjudicated rules have `expert_source` field set to appropriate value
 
 #### AC4: Error Handling
+
 - Malformed HTML produces error log and empty `RuleSet` (not crash)
 - Empty HTML produces valid empty `RuleSet` with zero rules
 - Missing required HTML elements (e.g., no line numbers) logs warnings
 
 #### AC5: Property-Based Testing
+
 - Hypothesis strategies for `ExtractedRule` and `RuleSet` validate model constraints
 - YAML serialization/deserialization roundtrip preserves all fields
 - Generated test cases cover edge cases (special characters, Unicode, long text)
 
 #### AC6: Content Integrity (RAG Quality)
+
 - Extracted YAML preserves key phrases essential for retrieval
-- Given `simple_rule.html` fixture (about "Meals and entertainment"), the extracted `content` field must contain semantic keywords: `"deduct 50%"`, `"food, beverages, or entertainment"`
+- Given `simple_rule.html` fixture (about "Meals and entertainment"), the extracted
+  `content` field must contain semantic keywords: `"deduct 50%"`,
+  `"food, beverages, or entertainment"`
 - Test fails if core semantic meaning is lost during extraction or adjudication
 - Create "golden" YAML fixtures with known-good extractions for regression testing
 - This ensures downstream search can find documents based on realistic user queries
@@ -90,10 +106,12 @@ Validate that the extraction pipeline (Classic Parser + LLM Parser + Adjudicator
 ### Implementation Tasks
 
 1. **Add Hypothesis dependency**
+
    - Add `"hypothesis>=6.0"` to `pyproject.toml` dev dependencies
    - Configure Hypothesis profiles (default: 100 examples, CI: 500 examples)
 
-2. **Create test fixtures**
+1. **Create test fixtures**
+
    - Add 3-5 curated HTML files to `tests/fixtures/extraction/ca/`:
      - `simple_rule.html` - Single rule, minimal structure
      - `complex_rule.html` - Multiple rules, nested sections
@@ -101,32 +119,38 @@ Validate that the extraction pipeline (Classic Parser + LLM Parser + Adjudicator
      - `malformed.html` - Invalid HTML structure
      - `empty.html` - Empty document
 
-3. **Create Hypothesis strategies**
+1. **Create Hypothesis strategies**
+
    - File: `tests/unit/extraction/ca/test_hypothesis_strategies.py`
    - Strategy for `ExtractedRule` (valid rule_number, non-empty content)
    - Strategy for `RuleSet` (valid schema_version, list of rules)
 
-4. **Mock Gemini API client**
+1. **Mock Gemini API client**
+
    - File: `tests/conftest.py`
    - Fixture: `mock_gemini_client` returns canned responses
    - Include success, failure, and malformed response cases
 
-5. **Unit tests**
+1. **Unit tests**
+
    - File: `tests/unit/extraction/ca/test_extraction_e2e.py`
    - Test classic parser isolation
    - Test LLM parser with mocked API
    - Test adjudicator with controlled inputs
    - Test YAML roundtrip with Hypothesis
 
-6. **Create curated YAML fixtures**
+1. **Create curated YAML fixtures**
+
    - Save 3-5 representative YAML outputs to `tests/fixtures/extraction/ca/`
    - Use for regression testing in downstream tickets
 
-7. **Add content integrity tests (AC6)**
+1. **Add content integrity tests (AC6)**
+
    - File: `tests/unit/extraction/ca/test_content_integrity.py`
    - Test that `simple_rule.html` extraction contains expected keywords
    - Assert: `assert "deduct 50%" in extracted_rule.content`
-   - Assert: `assert "food, beverages, or entertainment" in extracted_rule.content.lower()`
+   - Assert:
+     `assert "food, beverages, or entertainment" in extracted_rule.content.lower()`
    - Create golden YAML fixtures with documented expected content
 
 ### Manual Testing Instructions
@@ -178,43 +202,54 @@ uv run pytest tests/unit/extraction/ca/test_extraction_e2e.py -v
 ```
 
 ### Test Strategy
+
 - **Type**: Unit tests (`@pytest.mark.unit`)
 - **Fixtures**: 5 HTML files (common + edge cases)
 - **Mocks**: Gemini API client
 - **Hypothesis**: Model validation and roundtrip testing
 
 ### Estimated Effort
+
 **6 hours**
 
----
+______________________________________________________________________
 
 ## TICKET 2: Test YAML → SQLite Conversion
 
 ### Goal
-Validate that `RuleSet.to_database_chunks()` correctly transforms YAML rules into database-ready chunks and inserts them into SQLite.
+
+Validate that `RuleSet.to_database_chunks()` correctly transforms YAML rules into
+database-ready chunks and inserts them into SQLite.
 
 ### Scope
-- **In Scope**: YAML deserialization, `DatabaseChunk` transformation, SQLite insertion, metadata preservation
-- **Out of Scope**: HTML parsing, expense classification logic (mocked), embedding generation (mocked)
+
+- **In Scope**: YAML deserialization, `DatabaseChunk` transformation, SQLite insertion,
+  metadata preservation
+- **Out of Scope**: HTML parsing, expense classification logic (mocked), embedding
+  generation (mocked)
 
 ### Acceptance Criteria
 
 #### AC1: YAML Deserialization
+
 - `RuleSet.from_yaml()` successfully loads curated YAML fixtures
 - All `ExtractedRule` objects pass Pydantic validation
 - Schema version mismatch raises clear error
 
 #### AC2: DatabaseChunk Transformation
+
 - `to_database_chunks()` generates valid `DatabaseChunk` objects
 - All chunks pass Pydantic validation (strict mode)
 - Citation ID format preserved: `LINE-{number}`
 
 #### AC3: Database Insertion
+
 - Each `DatabaseChunk` successfully inserts into clean in-memory SQLite database
 - No `UNIQUE` constraint violations on `citation_id`
 - All required columns populated (no NULL in NOT NULL fields)
 
 #### AC4: Metadata Preservation
+
 - `income_type` preserved from `applies_to` field
 - `extraction_source` preserved from `expert_source`
 - `extraction_confidence` preserved from `confidence_score`
@@ -222,19 +257,25 @@ Validate that `RuleSet.to_database_chunks()` correctly transforms YAML rules int
 - `section_title` mapped from `chapter` field
 
 #### AC5: Expense Type Inference
+
 - `expense_types` field populated via `ExpenseTypeClassifier`
 - Classifier output correctly stored as list of strings
 - Empty classifier result stores `["general"]` as default
 
 #### AC6: Property-Based Testing
+
 - Hypothesis generates wide variety of `RuleSet` structures
 - `to_database_chunks()` handles all generated inputs without errors
 - Database constraints enforced (e.g., citation_id uniqueness)
 
 #### AC7: Chunk Content Fidelity (RAG Quality)
-- Transformation from `ExtractedRule` → `DatabaseChunk` must be deterministic and complete
-- `DatabaseChunk.content` field must be predictable combination of `ExtractedRule.title` and `ExtractedRule.content`
-- Unit test verifies no silent data loss (e.g., critical title dropped before embedding/FTS indexing)
+
+- Transformation from `ExtractedRule` → `DatabaseChunk` must be deterministic and
+  complete
+- `DatabaseChunk.content` field must be predictable combination of `ExtractedRule.title`
+  and `ExtractedRule.content`
+- Unit test verifies no silent data loss (e.g., critical title dropped before
+  embedding/FTS indexing)
 - Test expense_type classification accuracy on known cases:
   - "restaurant meal expenses" → `["meals"]`
   - "vehicle fuel and maintenance" → `["vehicle", "maintenance"]`
@@ -243,35 +284,42 @@ Validate that `RuleSet.to_database_chunks()` correctly transforms YAML rules int
 ### Implementation Tasks
 
 1. **Create in-memory database fixture**
+
    - File: `tests/conftest.py`
    - Fixture: `in_memory_db` yields fresh SQLite connection per test
    - Initialize schema using `src/qe_tax_rag/data/schema.py`
 
-2. **Create SourceFile fixtures**
+1. **Create SourceFile fixtures**
+
    - Fixture: `source_files_mapping` returns dict of filename → SourceFile
    - Include common filenames from test data
 
-3. **Integration tests**
+1. **Integration tests**
+
    - File: `tests/integration/test_yaml_to_db.py`
    - Test YAML → RuleSet deserialization
    - Test RuleSet → DatabaseChunk transformation
    - Test DatabaseChunk → SQLite insertion
    - Verify data integrity with SQL queries
 
-4. **Hypothesis tests**
+1. **Hypothesis tests**
+
    - Use `RuleSet` strategy from Ticket 1
    - Generate random RuleSets and test transformation
    - Verify no crashes, all constraints satisfied
 
-5. **SQL integrity checks**
+1. **SQL integrity checks**
+
    - Query database after insertion
    - Verify row counts match expected
    - Check metadata JSON fields are valid
    - Confirm no NULL citation_ids
 
-6. **Add chunk content fidelity tests (AC7)**
+1. **Add chunk content fidelity tests (AC7)**
+
    - File: `tests/unit/test_database_chunk.py`
-   - Test: verify `DatabaseChunk.content = f"{title}\n\n{content}"` or similar deterministic format
+   - Test: verify `DatabaseChunk.content = f"{title}\n\n{content}"` or similar
+     deterministic format
    - Create ground truth fixture: `tests/fixtures/expense_type_ground_truth.yml`
    - Structure: `{rule_content: str, expected_types: list[str]}`
    - Test 5-10 known cases for expense_type classification accuracy
@@ -353,28 +401,34 @@ uv run pytest tests/integration/test_yaml_to_db.py::test_hypothesis_yaml_to_db -
 ```
 
 ### Test Strategy
+
 - **Type**: Integration tests (`@pytest.mark.integration`)
 - **Fixtures**: Curated YAML files from Ticket 1, in-memory SQLite, SourceFile mapping
 - **Hypothesis**: RuleSet strategy for transformation robustness
 - **Focus**: Transformation logic and database schema correctness
 
 ### Estimated Effort
+
 **5 hours**
 
----
+______________________________________________________________________
 
 ## TICKET 3: Test ExpenseTypeClassifier with Hypothesis
 
 ### Goal
-Validate keyword-based expense type inference using property-based testing to ensure robustness across diverse inputs.
+
+Validate keyword-based expense type inference using property-based testing to ensure
+robustness across diverse inputs.
 
 ### Scope
+
 - **In Scope**: Keyword matching, expense type mapping, edge case handling
 - **Out of Scope**: ML-based classification, semantic analysis, database integration
 
 ### Acceptance Criteria
 
 #### AC1: Known Keyword Mapping
+
 - Classifier returns correct expense type for unambiguous keywords
 - Top 15 expense types correctly mapped:
   - "meals" (meal, food, restaurant, entertainment)
@@ -394,59 +448,70 @@ Validate keyword-based expense type inference using property-based testing to en
   - "bad_debts" (bad debts, uncollectible)
 
 #### AC2: Default Fallback
+
 - Text with no relevant keywords returns `["general"]`
 - Empty string returns `["general"]`
 - Whitespace-only string returns `["general"]`
 
 #### AC3: Multiple Keywords
+
 - Text with multiple keywords returns all matching expense types
 - Results are deterministic (same input → same output)
 - No duplicate expense types in output list
 
 #### AC4: Edge Case Robustness
+
 - Handles special characters (Unicode, punctuation)
 - Case-insensitive matching (MEAL, Meal, meal all match)
 - Word boundary matching (`"meal"` matches, `"oatmeal"` does not)
 - Very long text (10,000+ characters) processes without error
 
 #### AC5: Property-Based Testing
+
 - Hypothesis generates diverse text inputs
 - No crashes or unhandled exceptions
 - Output always returns non-empty list
 - All returned values are valid expense type strings
 
 #### AC6: Classification Accuracy Metrics (RAG Quality)
+
 - Calculate precision/recall on curated test set (reuse ground truth from Ticket 2)
 - Track classification accuracy: should be >85% for top 15 expense keywords
-- Report confusion matrix for misclassifications (which keywords are often missed or wrongly matched)
+- Report confusion matrix for misclassifications (which keywords are often missed or
+  wrongly matched)
 - This ensures expense_type metadata is accurate for downstream filtering in search
 
 ### Implementation Tasks
 
 1. **Unit tests with known keywords**
+
    - File: `tests/unit/extraction/ca/test_expense_classifier.py`
    - Test each of the 15 expense types with canonical keywords
    - Test case sensitivity
    - Test word boundaries
 
-2. **Edge case tests**
+1. **Edge case tests**
+
    - Test empty string → `["general"]`
    - Test whitespace → `["general"]`
    - Test special characters (Unicode em-dash, etc.)
    - Test very long text (performance check)
 
-3. **Multiple keyword tests**
+1. **Multiple keyword tests**
+
    - Test "vehicle fuel maintenance" → `["vehicle", "maintenance"]`
    - Test determinism (same input, multiple runs)
    - Test no duplicates
 
-4. **Hypothesis tests**
+1. **Hypothesis tests**
+
    - Strategy: `strategies.text()` for random text
    - Strategy: `strategies.sampled_from()` for known keywords
    - Property: Output is always non-empty list
    - Property: All items in output are valid expense type strings
 
-5. **Add accuracy metrics tests (AC6)**
+1. **Add accuracy metrics tests (AC6)**
+
    - File: `tests/unit/extraction/ca/test_classifier_accuracy.py`
    - Load ground truth from `tests/fixtures/expense_type_ground_truth.yml`
    - Calculate precision, recall, accuracy for each expense type
@@ -547,120 +612,151 @@ uv run pytest tests/unit/extraction/ca/test_expense_classifier.py::test_hypothes
 ```
 
 ### Test Strategy
+
 - **Type**: Unit tests (`@pytest.mark.unit`)
 - **Fixtures**: None (classifier is stateless)
 - **Hypothesis**: Text generation + keyword sampling
 - **Focus**: Top 15 expense keywords, edge cases
 
 ### Estimated Effort
+
 **3 hours**
 
----
+______________________________________________________________________
 
 ## TICKET 4: Test Single HTML → Complete Database Pipeline
 
 ### Goal
-End-to-end integration test validating the full pipeline from HTML input to searchable SQLite database.
+
+End-to-end integration test validating the full pipeline from HTML input to searchable
+SQLite database.
 
 ### Scope
-- **In Scope**: Full pipeline orchestration, FTS5 indexing, vector embeddings (mocked), search functionality
-- **Out of Scope**: Production embedding generation (use mocked), full dataset processing
+
+- **In Scope**: Full pipeline orchestration, FTS5 indexing, vector embeddings (mocked),
+  search functionality
+- **Out of Scope**: Production embedding generation (use mocked), full dataset
+  processing
 
 ### Acceptance Criteria
 
 #### AC1: E2E Pipeline Success
+
 - `pipeline-extraction` command runs successfully for single HTML file
 - No unhandled exceptions during extraction, transformation, or indexing
 - Command completes within 30 seconds for single file
 
 #### AC2: Database Creation
+
 - SQLite database created at specified path
 - Database file size > 0 bytes
 - Database contains expected row count (matches input chunks)
 
 #### AC3: FTS5 Search Functionality
+
 - FTS5 virtual table (`rules_fts`) exists and is populated
 - Keyword search returns correct records
 - Example: searching "meals" returns rule about meal expenses
 - Search result has correct `citation_id` and `content`
 
 #### AC4: Vector Embeddings
+
 - Vector table (`rules_vec`) exists and is populated
 - Embedding dimension is 384 (BGE-small-en-v1.5)
 - No NULL embeddings in database
 - Mocked embeddings acceptable (fixed array for testing)
 
 #### AC5: Data Integrity
+
 - All `citation_id` values follow `LINE-{number}` format
 - No NULL or empty `citation_id` values
 - Metadata JSON is valid and parseable
 - `expense_types` column populated for all rows
 
 #### AC6: Component Integration
+
 - Classic parser → LLM parser → Adjudicator chain works
 - YAML serialization → DatabaseChunk transformation works
 - DatabaseChunk → SQLite insertion works
 - All components from Tickets 1-3 integrate correctly
 
 #### AC7: Basic Search Quality Validation (First Real RAG Testing)
+
 - 3-5 search queries against single-file database with expected results
-- Example: If HTML is about meals, query "restaurant expense" should return the meals document
+- Example: If HTML is about meals, query "restaurant expense" should return the meals
+  document
 - Verify top result is semantically relevant (not just that results exist)
 - Top result's `citation_id` should match expected document
 - Example test cases:
   - Query: "food expenses" → Expected: meals document as top result
-  - Query: "deductible percentage for client dinners" → Expected: meals document in top 3
+  - Query: "deductible percentage for client dinners" → Expected: meals document in top
+    3
 
 #### AC8: Negative Search Test (Precision Validation)
-- Query for completely irrelevant term (e.g., "capital gains on stocks" when DB only has expense rules)
-- Assert: either zero results returned OR top result has very low confidence score (<0.3)
+
+- Query for completely irrelevant term (e.g., "capital gains on stocks" when DB only has
+  expense rules)
+- Assert: either zero results returned OR top result has very low confidence score
+  (\<0.3)
 - This guards against system confidently returning irrelevant documents
 - Ensures search has reasonable precision, not just recall
 
 ### Implementation Tasks
 
 1. **Create E2E test file**
+
    - File: `tests/integration/test_html_to_db_e2e.py`
    - Use single canonical HTML fixture
    - Mock Gemini API client
    - Mock embedding service
 
-2. **Mock embedding service (refined for AC7)**
+1. **Mock embedding service (refined for AC7)**
+
    - File: `tests/conftest.py`
    - Fixture: `mock_embedding_service`
    - Instead of single fixed vector, return different vectors based on content:
-     - If input contains "meals" or "food" or "restaurant": return `VECTOR_A = [0.1, 0.1, 0.1, ...]` (384-dim)
-     - If input contains "vehicle" or "mileage": return `VECTOR_B = [0.9, 0.9, 0.9, ...]` (384-dim)
+     - If input contains "meals" or "food" or "restaurant": return
+       `VECTOR_A = [0.1, 0.1, 0.1, ...]` (384-dim)
+     - If input contains "vehicle" or "mileage": return
+       `VECTOR_B = [0.9, 0.9, 0.9, ...]` (384-dim)
      - Otherwise: return `VECTOR_DEFAULT = [0.5, 0.5, 0.5, ...]` (384-dim)
    - This validates that vector similarity search actually works (not just that it runs)
    - Fast (no actual model loading)
 
-3. **Test database creation**
+1. **Test database creation**
+
    - Run `pipeline-extraction` via subprocess or direct function call
    - Verify database file exists
    - Check file size is reasonable
 
-4. **Test FTS5 search**
+1. **Test FTS5 search**
+
    - Connect to generated database
    - Execute FTS5 query: `SELECT * FROM rules_fts WHERE rules_fts MATCH 'meals'`
    - Verify results are correct
 
-5. **Test vector table**
+1. **Test vector table**
+
    - Query `rules_vec` table
    - Verify row count matches `rules` table
    - Check embedding dimensions
 
-6. **Integration verification**
+1. **Integration verification**
+
    - Run all integrity checks from Tickets 1-3
    - Verify end-to-end data consistency
 
-7. **Add search quality tests (AC7)**
-   - File: `tests/integration/test_search_quality_e2e.py`
-   - Define 3-5 test cases: `{query: str, expected_citation_id: str, expected_rank: int}`
-   - Test: run `qe.search(query, top_k=5)` and assert expected doc is at expected rank
-   - Example: `{"query": "food expenses", "expected_citation_id": "LINE-8523", "expected_rank": 1}`
+1. **Add search quality tests (AC7)**
 
-8. **Add negative search test (AC8)**
+   - File: `tests/integration/test_search_quality_e2e.py`
+   - Define 3-5 test cases:
+     `{query: str, expected_citation_id: str, expected_rank: int}`
+   - Test: run `qe.search(query, top_k=5)` and assert expected doc is at expected rank
+   - Example:
+     `{"query": "food expenses", "expected_citation_id": "LINE-8523", "expected_rank": 1}`
+
+1. **Add negative search test (AC8)**
+
    - Add to `tests/integration/test_search_quality_e2e.py`
    - Test: query for out-of-domain term
    - Assert: `len(results) == 0` OR `results[0].score < 0.3`
@@ -758,47 +854,59 @@ rm -rf output/test_e2e
 ```
 
 ### Test Strategy
+
 - **Type**: E2E integration test (`@pytest.mark.integration`, `@pytest.mark.slow`)
-- **Fixtures**: One canonical HTML file, mocked Gemini API, mocked embeddings, in-memory SQLite
+- **Fixtures**: One canonical HTML file, mocked Gemini API, mocked embeddings, in-memory
+  SQLite
 - **Focus**: Component wiring, FTS5 + vector integration, data integrity
 
 ### Estimated Effort
+
 **6 hours**
 
----
+______________________________________________________________________
 
 ## TICKET 5: Run Full Database Provisioning Script
 
 ### Goal
+
 Process the entire T4002 document set (247 rules) and validate the production database.
 
 ### Scope
-- **In Scope**: Full dataset processing, performance benchmarking, production database validation
-- **Out of Scope**: Unit testing (already covered), code changes (this is validation only)
+
+- **In Scope**: Full dataset processing, performance benchmarking, production database
+  validation
+- **Out of Scope**: Unit testing (already covered), code changes (this is validation
+  only)
 
 ### Acceptance Criteria
 
 #### AC1: Pipeline Completion
+
 - `pipeline-extraction` processes all 247 HTML documents without unhandled exceptions
-- Pipeline completes within performance budget (<15 minutes)
+- Pipeline completes within performance budget (\<15 minutes)
 - All stages (extraction, build, validation) succeed
 
 #### AC2: Database Creation
+
 - SQLite database created at `data/cra_rules.db`
 - Database file size is reasonable (expected: 15-25 MB)
 - Database integrity verified with `PRAGMA integrity_check`
 
 #### AC3: Row Count Validation
+
 - `SELECT COUNT(*) FROM rules` returns plausible count (200-300 rows)
 - `SELECT COUNT(*) FROM rules_fts` matches `rules` count
 - `SELECT COUNT(*) FROM rules_vec` matches `rules` count
 
 #### AC4: Citation ID Integrity
+
 - `SELECT COUNT(*) FROM rules WHERE citation_id IS NULL OR citation_id = ''` returns 0
 - All citation_ids follow `LINE-{number}` format
 - No duplicate citation_ids
 
 #### AC5: FTS5 Functionality
+
 - FTS5 virtual table exists and is queryable
 - Sample searches return expected results:
   - "meals" → meal expense rules
@@ -806,21 +914,25 @@ Process the entire T4002 document set (247 rules) and validate the production da
   - "Line 8523" → exact rule for line 8523
 
 #### AC6: Vector Embeddings
+
 - All rows have non-NULL embeddings
 - Embedding dimensions are 384 for all rows
 - Vector search returns results (even with mocked embeddings)
 
 #### AC7: Metadata Integrity
+
 - All `metadata_json` fields are valid JSON
 - Income types, expense types, sources are populated
 - No missing required metadata fields
 
 #### AC8: Resource Cleanup
+
 - Intermediate YAML files are deleted after successful run
 - No orphaned temp directories
 - Only final database and manifest remain
 
 #### AC9: Ground Truth Evaluation (Comprehensive RAG Quality)
+
 - Create curated evaluation set: `tests/evaluation/ground_truth.yml`
 - Contains 15-20 representative queries with expected `citation_id`s
 - Query types include:
@@ -828,15 +940,18 @@ Process the entire T4002 document set (247 rules) and validate the production da
   - **Semantic/Natural Language**: "how much can I claim for feeding clients?"
   - **Jargon-based**: "CCA for Class 10 vehicles"
   - **Ambiguous**: "travel expenses" (could match multiple rules)
-  - **Out-of-domain (negative)**: "capital gains on stocks" (should return zero or low confidence)
+  - **Out-of-domain (negative)**: "capital gains on stocks" (should return zero or low
+    confidence)
 
 #### AC10: Search Relevance Testing (Recall@5)
+
 - Automated test runs every query from ground truth set
 - For each query, assert at least one `expected_id` appears in top 5 results
 - Track overall success rate: must exceed 90%
 - This validates the RAG system retrieves relevant documents for real user queries
 
 #### AC11: Semantic Similarity Validation
+
 - For 3-5 key concepts (meals, vehicle, home office), create 2-3 paraphrased queries
 - Assert that each paraphrase retrieves the same top `citation_id`
 - Example paraphrases for meals:
@@ -846,57 +961,70 @@ Process the entire T4002 document set (247 rules) and validate the production da
 - All should return same top document (e.g., `LINE-8523`)
 
 #### AC12: RRF Ranking Effectiveness
+
 - Create 2-3 test cases where keyword or vector search alone is insufficient
-- Test Case 1 (Vector-dominant): "what can I claim for assets that lose value?" should rank CCA rule higher with hybrid than FTS5 alone
-- Test Case 2 (FTS-dominant): Query with specific jargon like `"T2200"` should find exact document via FTS5, and hybrid should preserve this top ranking
+- Test Case 1 (Vector-dominant): "what can I claim for assets that lose value?" should
+  rank CCA rule higher with hybrid than FTS5 alone
+- Test Case 2 (FTS-dominant): Query with specific jargon like `"T2200"` should find
+  exact document via FTS5, and hybrid should preserve this top ranking
 - Compare FTS-only vs vector-only vs hybrid search results
 - Assert hybrid search improves or maintains ranking quality
 
 #### AC13: Metadata Filtering Accuracy
+
 - Using a query that returns multiple results (e.g., "business expenses"), apply filters
-- Test Case 1: Filter by `expense_types=["vehicle"]` → all results contain "vehicle" in their `expense_types`
+- Test Case 1: Filter by `expense_types=["vehicle"]` → all results contain "vehicle" in
+  their `expense_types`
 - Test Case 2: Filter by `income_type="business"` → all results apply to businesses
-- Test Case 3: Filter combination: `expense_types=["vehicle"]` AND `income_type="business"` → all results satisfy BOTH conditions
+- Test Case 3: Filter combination: `expense_types=["vehicle"]` AND
+  `income_type="business"` → all results satisfy BOTH conditions
 - Test Case 4: Filter that should return no results still returns zero results
 
 ### Implementation Tasks
 
 1. **Create validation script**
+
    - File: `scripts/validate_database.py`
    - Standalone script (not pytest)
    - Runs all integrity checks from ACs
    - Returns exit code 0 on success, 1 on failure
 
-2. **Performance benchmarking**
+1. **Performance benchmarking**
+
    - Time each pipeline stage
    - Measure database size
    - Log row counts and stats
    - Save benchmark results to `output/benchmark_results.json`
 
-3. **Manual validation checklist**
+1. **Manual validation checklist**
+
    - Document in `docs/howto/validating-database.md`
    - Step-by-step CLI commands
    - Expected outputs for each check
 
-4. **Production database**
+1. **Production database**
+
    - Run full pipeline on T4002 dataset
    - Save to `data/cra_rules.db`
    - Commit benchmark results to git
 
-5. **Create ground truth evaluation set (AC9)**
+1. **Create ground truth evaluation set (AC9)**
+
    - File: `tests/evaluation/ground_truth.yml`
    - Manually research and populate 15-20 queries with expected citation_ids
    - Include diverse query types (keyword, semantic, jargon, ambiguous, negative)
    - Document rationale for each query/expected result pair
 
-6. **Create RAG quality test suite (AC10-13)**
+1. **Create RAG quality test suite (AC10-13)**
+
    - File: `tests/quality/test_rag_relevance.py`
    - Mark with custom marker: `@pytest.mark.rag_quality`
    - Requires production database from this ticket as fixture
    - Test recall@5 (AC10): iterate ground truth, assert expected doc in top 5
    - Test semantic similarity (AC11): paraphrased queries return same top result
    - Test RRF ranking (AC12): compare FTS-only, vector-only, hybrid rankings
-   - Test metadata filtering (AC13): validate single filters, combinations, negative cases
+   - Test metadata filtering (AC13): validate single filters, combinations, negative
+     cases
 
 ### Manual Testing Instructions
 
@@ -1263,15 +1391,17 @@ if __name__ == "__main__":
 ```
 
 ### Test Strategy
+
 - **Type**: System/Manual Test (not pytest)
 - **Execution**: Full `pipeline-extraction` on production dataset
 - **Validation**: Standalone integrity check script
 - **Services**: Real or mocked (mocked recommended for speed)
 
 ### Estimated Effort
+
 **4 hours** (includes run time + validation script creation)
 
----
+______________________________________________________________________
 
 ## Appendix A: Hypothesis Configuration
 
@@ -1308,61 +1438,77 @@ max_examples = 10
 derandomize = true
 ```
 
----
+______________________________________________________________________
 
 ## Appendix B: Common Issues & Troubleshooting
 
 ### Issue: "No module named 'hypothesis'"
+
 **Solution**: Run `uv sync` to install dev dependencies
 
 ### Issue: "UNIQUE constraint failed: rules.citation_id"
-**Solution**: Check for duplicate `rule_number` in extraction output. Verify adjudicator is deduplicating correctly.
+
+**Solution**: Check for duplicate `rule_number` in extraction output. Verify adjudicator
+is deduplicating correctly.
 
 ### Issue: "FTS5 search returns 0 results"
-**Solution**: Verify FTS5 table is populated: `SELECT COUNT(*) FROM rules_fts`. Check if triggers are firing.
+
+**Solution**: Verify FTS5 table is populated: `SELECT COUNT(*) FROM rules_fts`. Check if
+triggers are firing.
 
 ### Issue: "Embedding dimension is 0"
-**Solution**: Check that embedding service is properly mocked/initialized. Verify blob serialization.
+
+**Solution**: Check that embedding service is properly mocked/initialized. Verify blob
+serialization.
 
 ### Issue: "Pipeline takes > 15 minutes"
-**Solution**: Profile with `time` command. Check if LLM API is being called (should be mocked for tests). Verify embedding generation is efficient.
 
----
+**Solution**: Profile with `time` command. Check if LLM API is being called (should be
+mocked for tests). Verify embedding generation is efficient.
+
+______________________________________________________________________
 
 ## Appendix C: Success Metrics
 
 After completing all 5 tickets, you should have:
 
 ### Pipeline Quality Metrics
+
 1. **95%+ test coverage** on extraction pipeline code
-2. **Zero failing tests** in CI/CD
-3. **Production database** (`data/cra_rules.db`) validated and ready
-4. **Performance benchmarks** documented
-5. **Reusable validation script** for future releases
+1. **Zero failing tests** in CI/CD
+1. **Production database** (`data/cra_rules.db`) validated and ready
+1. **Performance benchmarks** documented
+1. **Reusable validation script** for future releases
 
 ### RAG Quality Metrics (NEW)
-6. **Content integrity validated** - Extracted rules preserve semantic keywords (Ticket 1 AC6)
-7. **Metadata accuracy >85%** - Expense type classification accuracy on curated test set (Ticket 3 AC6)
-8. **Search relevance >90%** - Recall@5 on ground truth evaluation set (Ticket 5 AC10)
-9. **Semantic consistency** - Paraphrased queries return same top result (Ticket 5 AC11)
-10. **Hybrid search effectiveness** - RRF ranking validated against FTS-only and vector-only (Ticket 5 AC12)
-11. **Filtering accuracy 100%** - Metadata filters return only matching documents (Ticket 5 AC13)
+
+6. **Content integrity validated** - Extracted rules preserve semantic keywords (Ticket
+   1 AC6)
+1. **Metadata accuracy >85%** - Expense type classification accuracy on curated test set
+   (Ticket 3 AC6)
+1. **Search relevance >90%** - Recall@5 on ground truth evaluation set (Ticket 5 AC10)
+1. **Semantic consistency** - Paraphrased queries return same top result (Ticket 5 AC11)
+1. **Hybrid search effectiveness** - RRF ranking validated against FTS-only and
+   vector-only (Ticket 5 AC12)
+1. **Filtering accuracy 100%** - Metadata filters return only matching documents (Ticket
+   5 AC13)
 
 ### Overall Confidence
-12. **Confidence** that the RAG system works end-to-end AND retrieves relevant results for real user queries
 
----
+12. **Confidence** that the RAG system works end-to-end AND retrieves relevant results
+    for real user queries
+
+______________________________________________________________________
 
 ## Next Steps After Ticket 5
 
 1. Commit production database to git (or upload to GitHub Releases)
-2. Update `USER_GUIDE.md` with new testing instructions
-3. Create release notes documenting pipeline improvements
-4. Set up CI/CD to run all tests on every commit
-5. Monitor production usage and iterate based on feedback
+1. Update `USER_GUIDE.md` with new testing instructions
+1. Create release notes documenting pipeline improvements
+1. Set up CI/CD to run all tests on every commit
+1. Monitor production usage and iterate based on feedback
 
----
+______________________________________________________________________
 
-**Document Version:** 1.0
-**Last Updated:** 2025-10-22
-**Authors:** QE Tax RAG Team + Zen MCP Consultation
+**Document Version:** 1.0 **Last Updated:** 2025-10-22 **Authors:** QE Tax RAG Team +
+Zen MCP Consultation

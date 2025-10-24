@@ -107,12 +107,12 @@ class TestAdjudicatorFallback:
         )
 
         # Assert - Should fall back to classic, not manual review
-        assert len(resolved_rules) == 1, (
-            "Should have 1 resolved rule (classic fallback)"
-        )
-        assert len(manual_items) == 0, (
-            "Should NOT create manual review item on quota error"
-        )
+        assert (
+            len(resolved_rules) == 1
+        ), "Should have 1 resolved rule (classic fallback)"
+        assert (
+            len(manual_items) == 0
+        ), "Should NOT create manual review item on quota error"
 
         # Verify the returned rule is the classic one
         assert resolved_rules[0].rule_number == 8523
@@ -156,9 +156,9 @@ class TestAdjudicatorFallback:
 
         # Assert - Should trust classic orphan on timeout
         assert len(resolved_rules) == 1, "Should trust classic orphan on timeout"
-        assert len(manual_items) == 0, (
-            "Should NOT create manual review for classic orphan"
-        )
+        assert (
+            len(manual_items) == 0
+        ), "Should NOT create manual review for classic orphan"
 
         assert resolved_rules[0].rule_number == 8523
         assert resolved_rules[0].expert_source == ExpertSource.CLASSIC
@@ -190,9 +190,9 @@ class TestAdjudicatorFallback:
         )
 
         # Assert - LLM orphan should go to manual review (can't trust)
-        assert len(resolved_rules) == 0, (
-            "Should NOT auto-accept LLM orphan on API failure"
-        )
+        assert (
+            len(resolved_rules) == 0
+        ), "Should NOT auto-accept LLM orphan on API failure"
         assert len(manual_items) == 1, "Should create manual review for LLM orphan"
 
         assert manual_items[0].rule_number == 8523
@@ -310,9 +310,9 @@ class TestAdjudicatorFallback:
         )
 
         # Assert - All conflicts should resolve to classic versions
-        assert len(resolved_rules) == 3, (
-            "Should have 3 resolved rules (all classic fallbacks)"
-        )
+        assert (
+            len(resolved_rules) == 3
+        ), "Should have 3 resolved rules (all classic fallbacks)"
         assert len(manual_items) == 0, "Should have NO manual review items"
 
         # Verify all are classic versions

@@ -47,9 +47,9 @@ class TestLLMParserRetryLogic:
 
         # Expected delays: ~1s (attempt 0) + ~5s (attempt 1) + jitter ≈ 6-8s
         # Current implementation: 1s + 2s = 3s (will fail this test)
-        assert elapsed >= 6, (
-            f"Retry too fast: {elapsed}s (expected ≥6s with new backoff)"
-        )
+        assert (
+            elapsed >= 6
+        ), f"Retry too fast: {elapsed}s (expected ≥6s with new backoff)"
         assert elapsed <= 8, f"Retry too slow: {elapsed}s (expected ≤8s)"
 
         # Should have made 3 attempts total

@@ -7,7 +7,7 @@ Follow these steps to create the GitHub Release for the CRA rules database:
 ### Step 1: Navigate to Releases Page
 
 1. Go to: https://github.com/manonja/quickExpense-rag/releases
-2. Click: **"Draft a new release"**
+1. Click: **"Draft a new release"**
 
 ### Step 2: Tag Information
 
@@ -44,23 +44,27 @@ Production SQLite database with CRA business expense rules.
 
 **SHA256 Checksum:**
 ```
+
 c8f7a98c418b9c82d22653c6f74ac3a9677c3679ee7dd80e924270fe84bdfef5
-```
+
+````
 
 **Verify download:**
 ```bash
 shasum -a 256 cra_rules.db
 # Should match: c8f7a98c418b9c82d22653c6f74ac3a9677c3679ee7dd80e924270fe84bdfef5
-```
+````
 
 ## Usage
 
 Install the library:
+
 ```bash
 pip install qe-tax-rag
 ```
 
 The database will be downloaded automatically on first use:
+
 ```python
 import qe_tax_rag as qe
 
@@ -84,7 +88,9 @@ This database has been validated through comprehensive testing:
 - **Integrity Checks:** All database constraints verified
 - **Embedding Quality:** All 63 chunks have valid 384-dim vectors
 
-See [PR #44](https://github.com/manonja/quickExpense-rag/pull/44) and [PR #45](https://github.com/manonja/quickExpense-rag/pull/45) for full validation reports.
+See [PR #44](https://github.com/manonja/quickExpense-rag/pull/44) and
+[PR #45](https://github.com/manonja/quickExpense-rag/pull/45) for full validation
+reports.
 
 ## Distribution Model
 
@@ -106,7 +112,8 @@ before making financial decisions.
 - Documentation: https://github.com/manonja/quickExpense-rag
 - Issues: https://github.com/manonja/quickExpense-rag/issues
 - Examples: See `examples/` directory in repository
-```
+
+````
 
 ### Step 5: Upload Database File
 
@@ -135,15 +142,15 @@ After publishing:
    curl -L -O https://github.com/manonja/qe-tax-rag/releases/download/data-v2025.10.23/cra_rules.db
    shasum -a 256 cra_rules.db
    # Should output: c8f7a98c418b9c82d22653c6f74ac3a9677c3679ee7dd80e924270fe84bdfef5
-   ```
+````
 
 ### Step 8: Update Library (if needed)
 
 If the download URL in `src/qe_tax_rag/settings.py` was a placeholder:
 
 1. Verify the actual URL works
-2. Update `settings.py` with the correct URL if different
-3. Commit the change
+1. Update `settings.py` with the correct URL if different
+1. Commit the change
 
 ## Troubleshooting
 
@@ -157,17 +164,17 @@ If the download URL in `src/qe_tax_rag/settings.py` was a placeholder:
 ### Wrong File Uploaded
 
 1. Delete the release (not just draft)
-2. Start over from Step 1
-3. **Important**: GitHub caches release assets, so the tag must be deleted and recreated
+1. Start over from Step 1
+1. **Important**: GitHub caches release assets, so the tag must be deleted and recreated
 
 ### SHA256 Doesn't Match
 
 This is a critical error - DO NOT publish the release:
 
 1. Recalculate SHA256: `shasum -a 256 data/cra_rules.db`
-2. Update `src/qe_tax_rag/settings.py` with correct checksum
-3. Verify database file integrity
-4. Check if file was corrupted during copy
+1. Update `src/qe_tax_rag/settings.py` with correct checksum
+1. Verify database file integrity
+1. Check if file was corrupted during copy
 
 ## After Release
 
@@ -178,11 +185,12 @@ This is a critical error - DO NOT publish the release:
    python -c "import qe_tax_rag as qe; qe.init()"
    ```
 
-2. Verify examples work:
+1. Verify examples work:
 
    ```bash
    python examples/basic_rag.py
    ```
 
-3. Update Linear ticket PRE-148 with release URL
-4. Celebrate! 🎉
+1. Update Linear ticket PRE-148 with release URL
+
+1. Celebrate! 🎉

@@ -1,4 +1,5 @@
-"""Integration tests for full YAML → SQLite conversion pipeline.
+"""
+Integration tests for full YAML → SQLite conversion pipeline.
 
 Tests validate end-to-end conversion from YAML ExtractedRule objects
 through DatabaseChunk transformation to actual SQLite database insertion.
