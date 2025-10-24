@@ -1,21 +1,24 @@
-"""Property-based tests for YAML serialization roundtrips using Hypothesis.
+"""
+Property-based tests for YAML serialization roundtrips using Hypothesis.
 
 These tests ensure that RuleSet objects can be serialized to YAML and
 deserialized back without data loss, validating the intermediate format
 used in the extraction pipeline.
 """
 
-import yaml
 import pytest
+import yaml
 from hypothesis import given
-from qe_tax_rag.extraction.ca.schema import RuleSet, ExtractedRule
-from tests.strategies import ruleset_strategy, extracted_rule_strategy
+from qe_tax_rag.extraction.ca.schema import ExtractedRule, RuleSet
+
+from tests.strategies import extracted_rule_strategy, ruleset_strategy
 
 
 @pytest.mark.unit
 @given(ruleset_strategy())
 def test_yaml_roundtrip_preserves_ruleset(ruleset: RuleSet) -> None:
-    """Property: RuleSet → YAML → RuleSet is an identity function.
+    """
+    Property: RuleSet → YAML → RuleSet is an identity function.
 
     Comprehensive test that serialization to YAML and back preserves all data
     exactly, including:
@@ -31,6 +34,7 @@ def test_yaml_roundtrip_preserves_ruleset(ruleset: RuleSet) -> None:
 
     Args:
         ruleset: Generated RuleSet instance
+
     """
     # Serialize to YAML
     yaml_data = ruleset.model_dump(mode="json")
@@ -49,12 +53,14 @@ def test_yaml_roundtrip_preserves_ruleset(ruleset: RuleSet) -> None:
 @pytest.mark.unit
 @given(extracted_rule_strategy())
 def test_yaml_roundtrip_preserves_extracted_rule(rule: ExtractedRule) -> None:
-    """Property: ExtractedRule → YAML → ExtractedRule is an identity function.
+    """
+    Property: ExtractedRule → YAML → ExtractedRule is an identity function.
 
     Individual rules should survive YAML serialization/deserialization.
 
     Args:
         rule: Generated ExtractedRule instance
+
     """
     # Serialize to YAML
     yaml_data = rule.model_dump(mode="json")
@@ -74,13 +80,15 @@ def test_yaml_roundtrip_preserves_extracted_rule(rule: ExtractedRule) -> None:
 @pytest.mark.unit
 @given(ruleset_strategy())
 def test_pydantic_validation_survives_yaml(ruleset: RuleSet) -> None:
-    """Property: Pydantic validation constraints are enforced after YAML roundtrip.
+    """
+    Property: Pydantic validation constraints are enforced after YAML roundtrip.
 
     All Pydantic model constraints (frozen=True, extra='forbid') should
     remain enforced after deserialization from YAML.
 
     Args:
         ruleset: Generated RuleSet instance
+
     """
     # Serialize and deserialize
     yaml_data = ruleset.model_dump(mode="json")
@@ -104,12 +112,14 @@ def test_pydantic_validation_survives_yaml(ruleset: RuleSet) -> None:
 @pytest.mark.unit
 @given(ruleset_strategy())
 def test_yaml_output_is_valid_utf8(ruleset: RuleSet) -> None:
-    """Property: YAML output is valid UTF-8 text.
+    """
+    Property: YAML output is valid UTF-8 text.
 
     All generated YAML should be valid UTF-8 and contain no encoding errors.
 
     Args:
         ruleset: Generated RuleSet instance
+
     """
     # Serialize to YAML
     yaml_data = ruleset.model_dump(mode="json")

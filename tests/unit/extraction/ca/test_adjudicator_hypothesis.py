@@ -1,16 +1,19 @@
-"""Property-based tests for Adjudicator using Hypothesis.
+"""
+Property-based tests for Adjudicator using Hypothesis.
 
 These tests ensure the adjudicator correctly merges Classic and LLM parser
 outputs while maintaining citation_id uniqueness and data integrity.
 """
 
 import pytest
-from hypothesis import given, strategies as st
+from hypothesis import given
+from hypothesis import strategies as st
 from qe_tax_rag.extraction.ca.adjudicator import (
-    _triage_rules,
     _normalize_rule_for_comparison,
+    _triage_rules,
 )
 from qe_tax_rag.extraction.ca.schema import ExtractedRule
+
 from tests.strategies import extracted_rule_strategy
 
 
@@ -23,7 +26,8 @@ def test_triage_produces_no_duplicate_rule_numbers(
     classic_rules: list[ExtractedRule],
     llm_rules: list[ExtractedRule],
 ) -> None:
-    """Property: Triage categorization produces no duplicate rule_numbers.
+    """
+    Property: Triage categorization produces no duplicate rule_numbers.
 
     After triaging rules into perfect_matches, conflicts, and orphans,
     each rule_number should appear exactly once across all categories.
@@ -31,6 +35,7 @@ def test_triage_produces_no_duplicate_rule_numbers(
     Args:
         classic_rules: List of rules from classic parser
         llm_rules: List of rules from LLM parser
+
     """
     # Run triage
     triage_result = _triage_rules(classic_rules, llm_rules)
@@ -65,13 +70,15 @@ def test_triage_produces_no_duplicate_rule_numbers(
 def test_triage_handles_empty_llm_rules(
     classic_rules: list[ExtractedRule],
 ) -> None:
-    """Property: Triage handles empty LLM rules list gracefully.
+    """
+    Property: Triage handles empty LLM rules list gracefully.
 
     When LLM parser produces no output, all classic rules should be
     categorized as orphans.
 
     Args:
         classic_rules: List of unique rules from classic parser
+
     """
     # Run triage with empty LLM list
     triage_result = _triage_rules(classic_rules, [])
@@ -99,13 +106,15 @@ def test_triage_handles_empty_llm_rules(
 def test_triage_handles_empty_classic_rules(
     llm_rules: list[ExtractedRule],
 ) -> None:
-    """Property: Triage handles empty Classic rules list gracefully.
+    """
+    Property: Triage handles empty Classic rules list gracefully.
 
     When Classic parser produces no output, all LLM rules should be
     categorized as orphans.
 
     Args:
         llm_rules: List of unique rules from LLM parser
+
     """
     # Run triage with empty Classic list
     triage_result = _triage_rules([], llm_rules)
@@ -133,13 +142,15 @@ def test_triage_handles_empty_classic_rules(
 def test_triage_perfect_matches_when_both_parsers_agree(
     rules: list[ExtractedRule],
 ) -> None:
-    """Property: When both parsers produce identical rules, they are perfect matches.
+    """
+    Property: When both parsers produce identical rules, they are perfect matches.
 
     If Classic and LLM return the same normalized rules, triage should
     categorize them as perfect matches, not conflicts.
 
     Args:
         rules: List of unique rules to duplicate across both parsers
+
     """
     # Use same rules for both parsers
     classic_rules = list(rules)
@@ -157,12 +168,14 @@ def test_triage_perfect_matches_when_both_parsers_agree(
 @pytest.mark.unit
 @given(extracted_rule_strategy())
 def test_normalize_rule_is_deterministic(rule: ExtractedRule) -> None:
-    """Property: Rule normalization is deterministic.
+    """
+    Property: Rule normalization is deterministic.
 
     Normalizing the same rule multiple times should produce identical results.
 
     Args:
         rule: An ExtractedRule to normalize
+
     """
     # Normalize twice
     normalized_1 = _normalize_rule_for_comparison(rule)
@@ -175,12 +188,14 @@ def test_normalize_rule_is_deterministic(rule: ExtractedRule) -> None:
 @pytest.mark.unit
 @given(extracted_rule_strategy())
 def test_normalize_rule_collapses_whitespace(rule: ExtractedRule) -> None:
-    """Property: Normalization collapses consecutive whitespace.
+    """
+    Property: Normalization collapses consecutive whitespace.
 
     Multiple spaces, tabs, and newlines should be collapsed to single spaces.
 
     Args:
         rule: An ExtractedRule to normalize
+
     """
     normalized = _normalize_rule_for_comparison(rule)
 
@@ -194,12 +209,14 @@ def test_normalize_rule_collapses_whitespace(rule: ExtractedRule) -> None:
 @pytest.mark.unit
 @given(extracted_rule_strategy())
 def test_normalize_rule_sorts_applies_to(rule: ExtractedRule) -> None:
-    """Property: Normalization sorts applies_to list.
+    """
+    Property: Normalization sorts applies_to list.
 
     Different orderings of applies_to should normalize to the same result.
 
     Args:
         rule: An ExtractedRule to normalize
+
     """
     normalized = _normalize_rule_for_comparison(rule)
 
@@ -220,12 +237,14 @@ def test_normalize_rule_sorts_applies_to(rule: ExtractedRule) -> None:
 def test_triage_no_null_rule_numbers_in_output(
     rules: list[ExtractedRule],
 ) -> None:
-    """Property: Triage never produces None or 0 rule_numbers.
+    """
+    Property: Triage never produces None or 0 rule_numbers.
 
     All rules in triage output should have valid, positive rule_numbers.
 
     Args:
         rules: List of unique rules (by rule_number)
+
     """
     # Duplicate rules for both parsers
     classic_rules = list(rules)
@@ -262,13 +281,15 @@ def test_triage_no_null_rule_numbers_in_output(
 def test_triage_total_count_matches_input(
     classic_rules: list[ExtractedRule],
 ) -> None:
-    """Property: Total triage output count matches unique input rule_numbers.
+    """
+    Property: Total triage output count matches unique input rule_numbers.
 
     The sum of perfect_matches + conflicts + orphans should equal the
     number of unique rule_numbers across both parser outputs.
 
     Args:
         classic_rules: List of unique classic rules
+
     """
     # Create some overlapping, some unique rules
     # Take first half of classic_rules as LLM rules
@@ -302,7 +323,8 @@ def test_triage_never_crashes(
     classic_rules: list[ExtractedRule],
     llm_rules: list[ExtractedRule],
 ) -> None:
-    """Property: Triage handles all valid rule lists without crashing.
+    """
+    Property: Triage handles all valid rule lists without crashing.
 
     Any combination of valid ExtractedRule lists should be triageable
     without raising exceptions.
@@ -310,6 +332,7 @@ def test_triage_never_crashes(
     Args:
         classic_rules: Arbitrary list of classic rules
         llm_rules: Arbitrary list of LLM rules
+
     """
     # Should not crash regardless of input
     triage_result = _triage_rules(classic_rules, llm_rules)

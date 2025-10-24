@@ -25,7 +25,8 @@ my_vcr = vcr.VCR(
     reason="CRA HTML dump not found",
 )
 def test_parse_real_html_file():
-    """Test LLM parser against real CRA HTML (uses VCR for API response replay).
+    """
+    Test LLM parser against real CRA HTML (uses VCR for API response replay).
 
     First run: Makes real Gemini API call and records response to cassette.
     Subsequent runs: Replays response from cassette (no API call, instant).

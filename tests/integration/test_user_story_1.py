@@ -86,29 +86,29 @@ class TestUserStory1:
         first_result = results[0]
 
         # Check disclaimer (computed field, always present)
-        assert first_result.disclaimer.startswith("⚠️"), (
-            "Disclaimer must start with warning emoji"
-        )
-        assert "NOT TAX ADVICE" in first_result.disclaimer, (
-            "Disclaimer must contain 'NOT TAX ADVICE'"
-        )
+        assert first_result.disclaimer.startswith(
+            "⚠️"
+        ), "Disclaimer must start with warning emoji"
+        assert (
+            "NOT TAX ADVICE" in first_result.disclaimer
+        ), "Disclaimer must contain 'NOT TAX ADVICE'"
 
         # Check citation_id (unique CRA reference)
         assert first_result.citation_id is not None, "citation_id must not be None"
         assert len(first_result.citation_id) > 0, "citation_id must not be empty"
 
         # Check source_url (must be https://canada.ca)
-        assert str(first_result.source_url).startswith("https://"), (
-            "source_url must use HTTPS"
-        )
-        assert "canada.ca" in str(first_result.source_url), (
-            "source_url must be from canada.ca domain"
-        )
+        assert str(first_result.source_url).startswith(
+            "https://"
+        ), "source_url must use HTTPS"
+        assert "canada.ca" in str(
+            first_result.source_url
+        ), "source_url must be from canada.ca domain"
 
         # Check expense_types (many-to-many, list format)
-        assert isinstance(first_result.expense_types, list), (
-            "expense_types must be a list"
-        )
+        assert isinstance(
+            first_result.expense_types, list
+        ), "expense_types must be a list"
         assert len(first_result.expense_types) > 0, "expense_types must not be empty"
 
         # Verify all results have required structure

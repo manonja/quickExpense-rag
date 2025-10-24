@@ -42,6 +42,7 @@ class RateLimiter:
         state_file (Path): File to store the rate limiter's state.
         lock_file (Path): File to use for process synchronization.
         timezone (ZoneInfo): The timezone for daily limit resets.
+
     """
 
     def __init__(
@@ -106,6 +107,7 @@ class RateLimiter:
 
         Raises:
             RateLimitError: If the daily request quota has been exhausted.
+
         """
         if self.rpm_limit <= 0 and self.rpd_limit <= 0:
             return  # Both limits are disabled, do nothing.

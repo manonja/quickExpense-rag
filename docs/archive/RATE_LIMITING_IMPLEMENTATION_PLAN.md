@@ -1,58 +1,61 @@
 # Rate Limiting & API Key Security Implementation Plan
 
-**Date**: 2025-10-18
-**Scope**: Fix API key security + implement bulletproof rate limiting
-**Test Corpus**: `t4002-{2,5,6}.html` (3 files only)
-**Estimated Time**: 45 minutes
-**API Quota Cost**: ~8 requests maximum
+**Date**: 2025-10-18 **Scope**: Fix API key security + implement bulletproof rate
+limiting **Test Corpus**: `t4002-{2,5,6}.html` (3 files only) **Estimated Time**: 45
+minutes **API Quota Cost**: ~8 requests maximum
 
----
+______________________________________________________________________
 
 ## Context
 
 ### Current State
 
 **Problem 1: API Key Security**
+
 - The `.env` file contains real API keys and is being used as the active configuration
 - This file should be `.env.example` (template) with placeholder values
 - Actual keys should be in `.env.local` (already gitignored)
 
 **Problem 2: No Rate Limiting**
+
 - Pipeline processes files sequentially without throttling
 - Gemini API free tier limits: **5 RPM, 25 RPD**
 - Risk of hitting 429 errors when processing multiple files
 - Current retry logic (exponential backoff) is reactive, not proactive
 
 **Problem 3: Cache Behavior Unverified**
+
 - Smart caching implemented but cache HIT behavior not tested on full pipeline
 - Need to verify cached responses bypass rate limiting entirely
 
 ### Architecture
 
 **Extraction Pipeline Flow**:
+
 ```
 HTML File → LLM Parser (cache check) → Cache MISS → Rate Limiter → Gemini API
                                     → Cache HIT  → Return cached result (no rate limit check)
 ```
 
 **Key Design Decisions** (from Zen consultation):
-1. **Stateful Rate Limiter**: Persist state to disk to track quotas across script runs
-2. **Process-Safe**: Use file locking to prevent race conditions
-3. **Timezone-Aware**: Midnight Pacific Time (PT/PDT) reset for daily quota
-4. **Cache Bypass**: Cached responses never trigger rate limit checks
-5. **Always-On**: Rate limiting always enabled (configurable limits via `.env.local`)
 
----
+1. **Stateful Rate Limiter**: Persist state to disk to track quotas across script runs
+1. **Process-Safe**: Use file locking to prevent race conditions
+1. **Timezone-Aware**: Midnight Pacific Time (PT/PDT) reset for daily quota
+1. **Cache Bypass**: Cached responses never trigger rate limit checks
+1. **Always-On**: Rate limiting always enabled (configurable limits via `.env.local`)
+
+______________________________________________________________________
 
 ## Phase 1: API Key Security Fix
 
 ### Objective
+
 Separate template configuration from secrets using industry-standard `.env` pattern.
 
 ### 1.1 Create `.env.example` Template
 
-**File**: `.env.example`
-**Action**: Copy current `.env` and remove all secret values
+**File**: `.env.example` **Action**: Copy current `.env` and remove all secret values
 
 ```bash
 # Create template from current .env
@@ -60,6 +63,7 @@ cp .env .env.example
 ```
 
 **Edit `.env.example`** - Replace all API keys with placeholders:
+
 ```bash
 # Line 51-57: Remove actual keys, add placeholders
 QE_TAX_RAG_GEMINI_API_KEY=""
@@ -68,6 +72,7 @@ GEMINI_API_KEY=""
 ```
 
 **Commit**:
+
 ```bash
 git add .env.example
 git commit -m "chore: add .env.example template for environment configuration
@@ -97,12 +102,14 @@ mv .env .env.local
 ```
 
 **Verify gitignore protection**:
+
 ```bash
 # Should output nothing (file is ignored)
 git status .env.local
 ```
 
 **Commit**:
+
 ```bash
 git add -A
 git commit -m "chore: rename .env to .env.local for API key security
@@ -127,10 +134,12 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 **File**: `src/qe_tax_rag/extraction/ca/settings.py`
 
 **Changes**:
+
 1. Load both `.env` and `.env.local` (`.env.local` takes precedence)
-2. Add rate limiting configuration fields
+1. Add rate limiting configuration fields
 
 **Edit**:
+
 ```python
 # Line 10-14: Update env_file to support .env.local
 model_config = SettingsConfigDict(
@@ -151,6 +160,7 @@ gemini_rpd_limit: int = Field(
 ```
 
 **Commit**:
+
 ```bash
 git add src/qe_tax_rag/extraction/ca/settings.py
 git commit -m "feat(settings): add .env.local support and rate limiting config
@@ -170,11 +180,12 @@ Rationale:
 Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
 
----
+______________________________________________________________________
 
 ## Phase 2: Rate Limiting Implementation
 
 ### Objective
+
 Implement stateful, process-safe rate limiter to prevent 429 errors.
 
 ### 2.1 Add `filelock` Dependency
@@ -189,6 +200,7 @@ uv add filelock
 ```
 
 **Commit**:
+
 ```bash
 git add pyproject.toml uv.lock
 git commit -m "build: add filelock dependency for rate limiter
@@ -210,19 +222,22 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 
 ### 2.2 Create `rate_limiter.py` Module
 
-**File**: `src/qe_tax_rag/extraction/ca/rate_limiter.py`
-**Source**: Use Zen's generated code from `zen_generated.code` (lines 8-174)
+**File**: `src/qe_tax_rag/extraction/ca/rate_limiter.py` **Source**: Use Zen's generated
+code from `zen_generated.code` (lines 8-174)
 
 **Action**: Create new file with complete RateLimiter implementation
 
 **Key Features**:
+
 - **State Persistence**: JSON file stores `timestamps`, `daily_count`, `day_str`
 - **File Locking**: 10-second timeout, graceful degradation on lock failure
 - **Timezone Handling**: Uses `zoneinfo` for Pacific Time (handles PST/PDT)
 - **RPM Enforcement**: Prunes timestamps older than 60 seconds, waits if limit exceeded
-- **RPD Enforcement**: Resets counter at midnight PT, raises `RateLimitError` if exhausted
+- **RPD Enforcement**: Resets counter at midnight PT, raises `RateLimitError` if
+  exhausted
 
 **State File Format** (`.llm_cache/rate_limiter_state.json`):
+
 ```json
 {
   "timestamps": [1729287421.5, 1729287434.2, 1729287447.8],
@@ -232,6 +247,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
 
 **Create the file**:
+
 ```bash
 # Copy from zen_generated.code lines 8-174
 cat > src/qe_tax_rag/extraction/ca/rate_limiter.py <<'EOF'
@@ -240,6 +256,7 @@ EOF
 ```
 
 **Commit**:
+
 ```bash
 git add src/qe_tax_rag/extraction/ca/rate_limiter.py
 git commit -m "feat(rate-limiter): add stateful rate limiter for Gemini API
@@ -276,11 +293,13 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 **Changes**:
 
 1. **Import rate limiter** (after line 12):
+
 ```python
 from qe_tax_rag.extraction.ca.rate_limiter import RateLimiter
 ```
 
 2. **Initialize module-level singleton** (after line 42, before `def parse`):
+
 ```python
 # Initialize rate limiter once at the module level
 # It's stateful, so we want a single instance for the application's lifetime.
@@ -295,6 +314,7 @@ if settings.cache_dir:
 ```
 
 3. **Call rate limiter on cache MISS** (after line 105, before configuring Gemini):
+
 ```python
     # Respect rate limits before making an API call
     if _rate_limiter:
@@ -305,11 +325,13 @@ if settings.cache_dir:
 ```
 
 **Integration Points**:
+
 - **Cache HIT** (line 102-103): Skips rate limiter entirely (no API call)
 - **Cache MISS** (line 105): Calls `wait_if_needed()` before API request
 - **Rate Limiter State**: Stored in `.llm_cache/rate_limiter_state.json`
 
 **Commit**:
+
 ```bash
 git add src/qe_tax_rag/extraction/ca/llm_parser.py
 git commit -m "feat(llm-parser): integrate rate limiter for API quota management
@@ -334,11 +356,12 @@ Rationale:
 Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
 
----
+______________________________________________________________________
 
 ## Phase 3: Testing Strategy (3-File Scope)
 
 ### Objective
+
 Verify rate limiting and caching work correctly with minimal API quota consumption.
 
 ### 3.1 Test Single File: Cache MISS → Cache HIT
@@ -346,6 +369,7 @@ Verify rate limiting and caching work correctly with minimal API quota consumpti
 **Goal**: Verify caching works and cache HITs bypass rate limiting
 
 **Test**:
+
 ```bash
 # First run: Cache MISS, API call
 uv run extract-rules extract \
@@ -356,12 +380,14 @@ uv run extract-rules extract \
 ```
 
 **Expected Behavior**:
+
 - Log: `Cache MISS for t4002-5.html. Calling Gemini API.`
 - Log: `Cache SET for key: e5b553cbb8...`
 - Rules extracted: 56
 - State file created: `.llm_cache/rate_limiter_state.json`
 
 **Second Run** (verify cache HIT):
+
 ```bash
 # Second run: Cache HIT, no API call, instant execution
 uv run extract-rules extract \
@@ -372,12 +398,14 @@ uv run extract-rules extract \
 ```
 
 **Expected Behavior**:
+
 - Log: `Cache HIT for t4002-5.html. Skipping API call.`
 - No "Calling Gemini API" message
 - **No rate limiter wait** (bypasses API call entirely)
-- Execution time: <5 seconds (vs ~30s for cache MISS)
+- Execution time: \<5 seconds (vs ~30s for cache MISS)
 
 **Success Criteria**:
+
 - ✅ Cache MISS on first run
 - ✅ Cache HIT on second run (instant execution)
 - ✅ State file created with 1 timestamp, daily_count=1
@@ -389,6 +417,7 @@ uv run extract-rules extract \
 **Goal**: Verify rate limiter enforces 12-second delays between requests
 
 **Test**:
+
 ```bash
 # Clear cache to force all MISS
 rm -rf .llm_cache/
@@ -406,23 +435,27 @@ uv run extract-rules extract \
 **Expected Behavior**:
 
 **File 1 (t4002-2.html)**:
+
 - Log: `Cache MISS for t4002-2.html. Calling Gemini API.`
 - No rate limit wait (first request of the day)
 - Extraction: ~30 seconds
 
 **File 2 (t4002-5.html)**:
+
 - Log: `RPM limit reached. Waiting 12.00s.` (5 RPM = 1 req per 12s)
 - Log: `Cache MISS for t4002-5.html. Calling Gemini API.`
 - Extraction: ~30 seconds
 - **Total elapsed since start**: ~42 seconds
 
 **File 3 (t4002-6.html)**:
+
 - Log: `RPM limit reached. Waiting 12.00s.`
 - Log: `Cache MISS for t4002-6.html. Calling Gemini API.`
 - Extraction: ~30 seconds
 - **Total elapsed since start**: ~84 seconds
 
 **State File** (`.llm_cache/rate_limiter_state.json`):
+
 ```json
 {
   "timestamps": [T1, T2, T3],  // 3 timestamps ~12 seconds apart
@@ -432,6 +465,7 @@ uv run extract-rules extract \
 ```
 
 **Success Criteria**:
+
 - ✅ First file: no wait (0s delay)
 - ✅ Second file: ~12s wait before API call
 - ✅ Third file: ~12s wait before API call
@@ -445,6 +479,7 @@ uv run extract-rules extract \
 **Goal**: Verify all 3 files use cached results with no rate limiting
 
 **Test**:
+
 ```bash
 # Second run: All cache HITs, no API calls
 uv run extract-rules extract \
@@ -457,15 +492,17 @@ uv run extract-rules extract \
 ```
 
 **Expected Behavior**:
+
 - **All files**: `Cache HIT for t4002-X.html. Skipping API call.`
 - **No rate limiter waits** (no API calls = no rate limiting)
-- Total execution time: <10 seconds
+- Total execution time: \<10 seconds
 - State file unchanged (daily_count still 3)
 
 **Success Criteria**:
+
 - ✅ All 3 files show cache HIT
 - ✅ Zero rate limiter wait messages
-- ✅ Execution time: <10 seconds (vs ~84s for cache MISS)
+- ✅ Execution time: \<10 seconds (vs ~84s for cache MISS)
 - ✅ State file unchanged
 
 **API Quota Used**: 0 requests
@@ -475,12 +512,14 @@ uv run extract-rules extract \
 **Goal**: Verify state file persists daily_count across script restarts
 
 **Test**:
+
 ```bash
 # Check state file after test 3.3
 cat .llm_cache/rate_limiter_state.json
 ```
 
 **Expected Output**:
+
 ```json
 {
   "timestamps": [...],  // May be empty or old (pruned after 60s)
@@ -490,6 +529,7 @@ cat .llm_cache/rate_limiter_state.json
 ```
 
 **Run a 4th new file** (force cache MISS):
+
 ```bash
 uv run extract-rules extract \
   cra_documents/cra_t4002e_rev24_dump/t4002-3.html \
@@ -499,17 +539,20 @@ uv run extract-rules extract \
 ```
 
 **Expected Behavior**:
+
 - State loads with `daily_count=3`
 - After extraction: `daily_count=4`
 - No rate limiter wait (RPM window has passed since test 3.2)
 
 **Verify state**:
+
 ```bash
 cat .llm_cache/rate_limiter_state.json
 # Should show daily_count=4
 ```
 
 **Success Criteria**:
+
 - ✅ State persists across script runs
 - ✅ Daily counter increments correctly (3 → 4)
 - ✅ Day string remains "2025-10-18"
@@ -521,6 +564,7 @@ cat .llm_cache/rate_limiter_state.json
 **Goal**: Verify RateLimitError raised when RPD limit hit
 
 **Manual Test** (modify state file):
+
 ```bash
 # Edit state file to simulate 25 requests today
 cat > .llm_cache/rate_limiter_state.json <<'EOF'
@@ -540,11 +584,13 @@ uv run extract-rules extract \
 ```
 
 **Expected Behavior**:
+
 - Log: `Daily rate limit of 25 requests exhausted.`
 - Error: `ParserError: Daily rate limit of 25 requests exhausted.`
 - Pipeline stops immediately (no API call)
 
 **Restore state**:
+
 ```bash
 # Reset to actual count
 cat > .llm_cache/rate_limiter_state.json <<'EOF'
@@ -557,6 +603,7 @@ EOF
 ```
 
 **Success Criteria**:
+
 - ✅ RateLimitError raised when daily_count >= 25
 - ✅ No API call attempted
 - ✅ Clear error message in logs
@@ -565,19 +612,19 @@ EOF
 
 ### Testing Summary
 
-| Test | Files | Cache | Rate Limit | API Calls | Time | Quota Used |
-|------|-------|-------|------------|-----------|------|------------|
-| 3.1a | 1 | MISS | No wait (first req) | 1 | ~30s | 1 |
-| 3.1b | 1 | HIT | Bypass | 0 | <5s | 0 |
-| 3.2 | 3 | MISS | 2×12s waits | 3 | ~84s | 3 |
-| 3.3 | 3 | HIT | Bypass | 0 | <10s | 0 |
-| 3.4 | 1 | MISS | No wait (RPM window passed) | 1 | ~30s | 1 |
-| 3.5 | 1 | N/A | Error (daily limit) | 0 | <1s | 0 |
-| **Total** | | | | **5** | | **5/25 (20%)** |
+| Test      | Files | Cache | Rate Limit                  | API Calls | Time  | Quota Used     |
+| --------- | ----- | ----- | --------------------------- | --------- | ----- | -------------- |
+| 3.1a      | 1     | MISS  | No wait (first req)         | 1         | ~30s  | 1              |
+| 3.1b      | 1     | HIT   | Bypass                      | 0         | \<5s  | 0              |
+| 3.2       | 3     | MISS  | 2×12s waits                 | 3         | ~84s  | 3              |
+| 3.3       | 3     | HIT   | Bypass                      | 0         | \<10s | 0              |
+| 3.4       | 1     | MISS  | No wait (RPM window passed) | 1         | ~30s  | 1              |
+| 3.5       | 1     | N/A   | Error (daily limit)         | 0         | \<1s  | 0              |
+| **Total** |       |       |                             | **5**     |       | **5/25 (20%)** |
 
 **Final Quota Status**: 5 requests used, 20 remaining for the day
 
----
+______________________________________________________________________
 
 ## Phase 4: Documentation & Cleanup
 
@@ -587,7 +634,7 @@ EOF
 
 **Add Section** (after "Quick Start"):
 
-```markdown
+````markdown
 ## Environment Setup
 
 ### API Key Configuration
@@ -595,15 +642,17 @@ EOF
 1. **Copy the template**:
    ```bash
    cp .env.example .env.local
-   ```
+````
 
 2. **Add your Gemini API key** (get one at https://ai.google.dev/):
+
    ```bash
    # Edit .env.local
    QE_TAX_RAG_EXTRACTION_GEMINI_API_KEY="your-actual-key-here"
    ```
 
-3. **Verify configuration**:
+1. **Verify configuration**:
+
    ```bash
    # Should show: GEMINI_API_KEY status: SET
    echo "GEMINI_API_KEY status: ${QE_TAX_RAG_EXTRACTION_GEMINI_API_KEY:+SET}"
@@ -612,10 +661,12 @@ EOF
 ### Rate Limiting (Optional)
 
 By default, the pipeline enforces Gemini API free tier limits:
+
 - **5 requests per minute (RPM)**
 - **25 requests per day (RPD)**
 
 If you upgrade to a paid plan, override these in `.env.local`:
+
 ```bash
 # Example: Paid Tier 1 limits
 QE_TAX_RAG_EXTRACTION_GEMINI_RPM_LIMIT=60
@@ -623,6 +674,7 @@ QE_TAX_RAG_EXTRACTION_GEMINI_RPD_LIMIT=1500
 ```
 
 To disable rate limiting (not recommended):
+
 ```bash
 QE_TAX_RAG_EXTRACTION_GEMINI_RPM_LIMIT=0
 QE_TAX_RAG_EXTRACTION_GEMINI_RPD_LIMIT=0
@@ -631,6 +683,7 @@ QE_TAX_RAG_EXTRACTION_GEMINI_RPD_LIMIT=0
 ### Cache Directory
 
 The rate limiter state is stored in the cache directory:
+
 ```bash
 .llm_cache/
 ├── cache.db                    # LLM response cache (diskcache)
@@ -639,10 +692,12 @@ The rate limiter state is stored in the cache directory:
 ```
 
 To reset rate limiter state:
+
 ```bash
 rm .llm_cache/rate_limiter_state.json
 ```
-```
+
+````
 
 **Commit**:
 ```bash
@@ -663,7 +718,7 @@ Rationale:
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
-```
+````
 
 ### 4.2 Update `CACHING_IMPLEMENTATION_SUMMARY.md`
 
@@ -671,7 +726,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 
 **Add Section** (after "How It Works"):
 
-```markdown
+````markdown
 ## Rate Limiting Integration
 
 The caching layer works seamlessly with the rate limiter to minimize API quota consumption:
@@ -697,9 +752,10 @@ The caching layer works seamlessly with the rate limiter to minimize API quota c
   "daily_count": 8,                            // Total requests today
   "day_str": "2025-10-18"                     // Current day (Pacific Time)
 }
-```
+````
 
 **State Management**:
+
 - **Persistence**: Survives script restarts (JSON file)
 - **Process-safe**: File locking prevents race conditions
 - **Daily reset**: Midnight Pacific Time (handles PST/PDT)
@@ -707,11 +763,11 @@ The caching layer works seamlessly with the rate limiter to minimize API quota c
 
 ### Performance with Rate Limiting
 
-| Scenario | Files | Cache | Rate Limit Waits | API Calls | Time |
-|----------|-------|-------|------------------|-----------|------|
-| First run (no cache) | 13 | All MISS | 12× 12s delays | 13 | ~390s (~6.5 min) |
-| Second run (cached) | 13 | All HIT | None | 0 | ~30s |
-| **Savings** | | | **100%** | **100%** | **92%** |
+| Scenario             | Files | Cache    | Rate Limit Waits | API Calls | Time             |
+| -------------------- | ----- | -------- | ---------------- | --------- | ---------------- |
+| First run (no cache) | 13    | All MISS | 12× 12s delays   | 13        | ~390s (~6.5 min) |
+| Second run (cached)  | 13    | All HIT  | None             | 0         | ~30s             |
+| **Savings**          |       |          | **100%**         | **100%**  | **92%**          |
 
 ### Configuration
 
@@ -726,7 +782,8 @@ QE_TAX_RAG_EXTRACTION_GEMINI_RPD_LIMIT=25
 QE_TAX_RAG_EXTRACTION_GEMINI_RPM_LIMIT=60
 QE_TAX_RAG_EXTRACTION_GEMINI_RPD_LIMIT=1500
 ```
-```
+
+````
 
 **Commit**:
 ```bash
@@ -747,7 +804,7 @@ Rationale:
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
-```
+````
 
 ### 4.3 Create `RATE_LIMITING_IMPLEMENTATION_SUMMARY.md`
 
@@ -825,12 +882,12 @@ A **stateful, process-safe rate limiter** for the Gemini API to prevent quota ex
 
 **Rate Limiter Logs**:
 ```
-INFO - Cache MISS for t4002-2.html. Calling Gemini API.
-INFO - Cache MISS for t4002-5.html. Calling Gemini API.
-INFO - RPM limit reached. Waiting 12.00s.
-INFO - Cache MISS for t4002-6.html. Calling Gemini API.
-INFO - RPM limit reached. Waiting 12.00s.
-```
+
+INFO - Cache MISS for t4002-2.html. Calling Gemini API. INFO - Cache MISS for
+t4002-5.html. Calling Gemini API. INFO - RPM limit reached. Waiting 12.00s. INFO - Cache
+MISS for t4002-6.html. Calling Gemini API. INFO - RPM limit reached. Waiting 12.00s.
+
+````
 
 ### Test 3.3: Three Files All Cached ✅
 
@@ -873,7 +930,7 @@ def wait_if_needed():
        → Sleep if limit would be exceeded
     6. Record new request (timestamp + increment daily_count)
     7. Save state to JSON file
-```
+````
 
 ### Integration with LLM Parser
 
@@ -899,7 +956,7 @@ else:
 }
 ```
 
----
+______________________________________________________________________
 
 ## Configuration
 
@@ -926,27 +983,27 @@ QE_TAX_RAG_EXTRACTION_GEMINI_RPM_LIMIT=0
 QE_TAX_RAG_EXTRACTION_GEMINI_RPD_LIMIT=0
 ```
 
----
+______________________________________________________________________
 
 ## Performance Impact
 
 ### Execution Time Comparison
 
-| Scenario | Files | Cache | Rate Limit Waits | Time |
-|----------|-------|-------|------------------|------|
-| First run (no cache) | 3 | MISS | 2× 12s | ~84s |
-| Second run (cached) | 3 | HIT | None | <10s |
-| **Savings** | | | **92%** | **88%** |
+| Scenario             | Files | Cache | Rate Limit Waits | Time    |
+| -------------------- | ----- | ----- | ---------------- | ------- |
+| First run (no cache) | 3     | MISS  | 2× 12s           | ~84s    |
+| Second run (cached)  | 3     | HIT   | None             | \<10s   |
+| **Savings**          |       |       | **92%**          | **88%** |
 
 ### Quota Consumption
 
-| Scenario | Files | API Calls | Quota Used |
-|----------|-------|-----------|------------|
-| First run | 3 | 3 | 12% (3/25) |
-| Second run | 3 | 0 | 0% |
-| Ten iterations | 3 | 3 | 12% (vs 120% without cache) |
+| Scenario       | Files | API Calls | Quota Used                  |
+| -------------- | ----- | --------- | --------------------------- |
+| First run      | 3     | 3         | 12% (3/25)                  |
+| Second run     | 3     | 0         | 0%                          |
+| Ten iterations | 3     | 3         | 12% (vs 120% without cache) |
 
----
+______________________________________________________________________
 
 ## Troubleshooting
 
@@ -957,11 +1014,13 @@ QE_TAX_RAG_EXTRACTION_GEMINI_RPD_LIMIT=0
 **Cause**: Reached 25 requests today (free tier limit)
 
 **Solutions**:
+
 1. Wait until midnight Pacific Time for reset
-2. Upgrade to paid tier and update `.env.local`
-3. Use cached results (no quota impact)
+1. Upgrade to paid tier and update `.env.local`
+1. Use cached results (no quota impact)
 
 **Check state**:
+
 ```bash
 cat .llm_cache/rate_limiter_state.json
 # If daily_count >= 25, wait for reset
@@ -974,9 +1033,10 @@ cat .llm_cache/rate_limiter_state.json
 **Cause**: Normal behavior for 5 RPM limit
 
 **Solutions**:
+
 1. Enable caching (cached responses bypass rate limiting)
-2. Upgrade to paid tier for higher RPM (60+)
-3. Process fewer files per run
+1. Upgrade to paid tier for higher RPM (60+)
+1. Process fewer files per run
 
 ### Issue: State file corruption
 
@@ -985,6 +1045,7 @@ cat .llm_cache/rate_limiter_state.json
 **Cause**: Corrupted JSON or interrupted write
 
 **Solution**:
+
 ```bash
 # Delete state file (will be recreated)
 rm .llm_cache/rate_limiter_state.json
@@ -997,11 +1058,12 @@ rm .llm_cache/rate_limiter_state.json
 **Cause**: Another process holds the lock for >10 seconds
 
 **Solution**:
+
 - Rate limiter skips check (graceful degradation)
 - May exceed quota temporarily
 - Delete `.llm_cache/rate_limiter_state.json.lock` if stale
 
----
+______________________________________________________________________
 
 ## Success Criteria ✅
 
@@ -1016,13 +1078,14 @@ All criteria met:
 - ✅ Clear error messages on quota exhaustion
 - ✅ All tests pass (5 API calls, 20% quota used)
 
----
+______________________________________________________________________
 
 ## Next Steps
 
 ### For Production (Full 13-File Corpus)
 
 1. **Enable caching**:
+
    ```bash
    uv run extract-rules extract \
      cra_documents/cra_t4002e_rev24_dump/ \
@@ -1030,12 +1093,14 @@ All criteria met:
      --cache-dir .llm_cache/
    ```
 
-2. **Expected behavior**:
+1. **Expected behavior**:
+
    - First run: 13 files, ~2.5 minutes (12 waits × 12s + 13 API calls)
    - Second run: 13 files, ~30 seconds (all cache HITs)
    - Quota used: 13 requests (52% of daily limit)
 
-3. **Monitor state**:
+1. **Monitor state**:
+
    ```bash
    # Check daily quota usage
    cat .llm_cache/rate_limiter_state.json | jq '.daily_count'
@@ -1044,14 +1109,16 @@ All criteria met:
 ### Future Enhancements
 
 1. **Adjudicator Rate Limiting**: Extend to adjudicator API calls
-2. **Retry-After Header**: Use Gemini's retry-after value if provided
-3. **Metrics Dashboard**: Track quota usage over time
-4. **Multi-Tier Detection**: Auto-detect tier from 429 error responses
+1. **Retry-After Header**: Use Gemini's retry-after value if provided
+1. **Metrics Dashboard**: Track quota usage over time
+1. **Multi-Tier Detection**: Auto-detect tier from 429 error responses
 
----
+______________________________________________________________________
 
-**For Questions**: See `RATE_LIMITING_IMPLEMENTATION_PLAN.md` for detailed design rationale and testing strategy.
-```
+**For Questions**: See `RATE_LIMITING_IMPLEMENTATION_PLAN.md` for detailed design
+rationale and testing strategy.
+
+````
 
 **Commit**:
 ```bash
@@ -1074,7 +1141,7 @@ Rationale:
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
-```
+````
 
 ### 4.4 Delete `zen_generated.code`
 
@@ -1099,7 +1166,7 @@ Rationale:
 Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
 
----
+______________________________________________________________________
 
 ## Final Commit: Implementation Summary
 
@@ -1159,13 +1226,14 @@ Rationale:
 Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
 
----
+______________________________________________________________________
 
 ## Summary
 
 ### Implementation Checklist
 
 **Phase 1: API Key Security** ✅
+
 - [x] Create `.env.example` template
 - [x] Rename `.env` → `.env.local`
 - [x] Update `settings.py` for `.env.local` support
@@ -1173,12 +1241,14 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - [x] Commit after each step
 
 **Phase 2: Rate Limiting** ✅
+
 - [x] Add `filelock` dependency
 - [x] Create `rate_limiter.py` module
 - [x] Integrate into `llm_parser.py`
 - [x] Commit after each step
 
 **Phase 3: Testing (3-File Scope)** ✅
+
 - [x] Test 3.1: Single file cache MISS → HIT
 - [x] Test 3.2: Three files with rate limiting
 - [x] Test 3.3: Three files all cached
@@ -1186,6 +1256,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - [x] Test 3.5: Daily limit exhaustion (simulated)
 
 **Phase 4: Documentation** ✅
+
 - [x] Update `USER_GUIDE.md`
 - [x] Update `CACHING_IMPLEMENTATION_SUMMARY.md`
 - [x] Create `RATE_LIMITING_IMPLEMENTATION_SUMMARY.md`
@@ -1194,14 +1265,14 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 
 ### Final State
 
-**Git Status**: Clean working tree, 9 commits
-**API Quota**: 5/25 requests used (20%)
-**Cache**: 3 files cached (t4002-2, t4002-5, t4002-6)
-**State File**: `.llm_cache/rate_limiter_state.json` (daily_count=5)
+**Git Status**: Clean working tree, 9 commits **API Quota**: 5/25 requests used (20%)
+**Cache**: 3 files cached (t4002-2, t4002-5, t4002-6) **State File**:
+`.llm_cache/rate_limiter_state.json` (daily_count=5)
 
 ### Next Steps
 
 To test the full 13-file corpus:
+
 ```bash
 uv run extract-rules extract \
   cra_documents/cra_t4002e_rev24_dump/ \
@@ -1210,5 +1281,6 @@ uv run extract-rules extract \
 ```
 
 **Expected**:
+
 - First run: ~390s (~6.5 min), 13 API calls, 52% quota
 - Second run: ~30s, 0 API calls, 0% quota

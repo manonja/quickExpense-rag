@@ -1,42 +1,43 @@
 # Smart Caching Implementation - Summary
 
-**Date**: 2025-10-18
-**Status**: ✅ Complete and Tested
-**Implementation Time**: ~75 minutes
-**Expected Cost Savings**: 90%+ on subsequent pipeline runs
+**Date**: 2025-10-18 **Status**: ✅ Complete and Tested **Implementation Time**: ~75
+minutes **Expected Cost Savings**: 90%+ on subsequent pipeline runs
 
----
+______________________________________________________________________
 
 ## What Was Implemented
 
-A **content-addressable caching layer** for the LLM parser to prevent burning API credits during development and iteration.
+A **content-addressable caching layer** for the LLM parser to prevent burning API
+credits during development and iteration.
 
 ### Key Features
 
-✅ **Content-Addressable Keys**: SHA256(prompt + model + HTML content)
-✅ **Persistent Storage**: SQLite-backed via `diskcache` library
-✅ **Auto-Invalidation**: HTML changes automatically invalidate cache
-✅ **Opt-In Design**: Disabled by default, explicit `--cache-dir` flag required
-✅ **Transparent Logging**: Cache HIT/MISS logged for every file
+✅ **Content-Addressable Keys**: SHA256(prompt + model + HTML content) ✅ **Persistent
+Storage**: SQLite-backed via `diskcache` library ✅ **Auto-Invalidation**: HTML changes
+automatically invalidate cache ✅ **Opt-In Design**: Disabled by default, explicit
+`--cache-dir` flag required ✅ **Transparent Logging**: Cache HIT/MISS logged for every
+file
 
----
+______________________________________________________________________
 
 ## Files Modified/Created
 
 ### New Files
+
 - `src/qe_tax_rag/extraction/ca/cache.py` - LLMResponseCache class
 - `.llm_cache/` directory (auto-created on first use, added to `.gitignore`)
 
 ### Modified Files
-1. `src/qe_tax_rag/extraction/ca/settings.py` - Added `cache_dir` field
-2. `src/qe_tax_rag/extraction/ca/llm_parser.py` - Integrated caching logic
-3. `src/qe_tax_rag/extraction/ca/orchestrator.py` - Pass `cache_dir` parameter
-4. `src/qe_tax_rag/extraction/ca/cli.py` - Added `--cache-dir` CLI flag
-5. `scripts/extract_rules.py` - Added `--cache-dir` to `run` command (legacy)
-6. `.gitignore` - Added `.llm_cache/` entry
-7. `pyproject.toml` - Added `diskcache==5.6.3` dependency
 
----
+1. `src/qe_tax_rag/extraction/ca/settings.py` - Added `cache_dir` field
+1. `src/qe_tax_rag/extraction/ca/llm_parser.py` - Integrated caching logic
+1. `src/qe_tax_rag/extraction/ca/orchestrator.py` - Pass `cache_dir` parameter
+1. `src/qe_tax_rag/extraction/ca/cli.py` - Added `--cache-dir` CLI flag
+1. `scripts/extract_rules.py` - Added `--cache-dir` to `run` command (legacy)
+1. `.gitignore` - Added `.llm_cache/` entry
+1. `pyproject.toml` - Added `diskcache==5.6.3` dependency
+
+______________________________________________________________________
 
 ## Usage Examples
 
@@ -90,14 +91,14 @@ uv run extract-rules extract \
   --cache-dir .llm_cache/
 ```
 
----
+______________________________________________________________________
 
 ## Test Results
 
 ### Phase 3.1: Single File Cache MISS ✅
 
-**File**: `t4002-2.html`
-**Result**:
+**File**: `t4002-2.html` **Result**:
+
 - ✅ Cache initialized successfully
 - ✅ Cache MISS logged
 - ✅ API called
@@ -106,8 +107,8 @@ uv run extract-rules extract \
 
 ### Phase 3.1b: File with Rules ✅
 
-**File**: `t4002-5.html`
-**Result**:
+**File**: `t4002-5.html` **Result**:
+
 - ✅ Cache MISS logged
 - ✅ Gemini API called successfully
 - ✅ **56 rules extracted**
@@ -126,7 +127,7 @@ $ du -sh .llm_cache/
 68K	.llm_cache/
 ```
 
----
+______________________________________________________________________
 
 ## How It Works
 
@@ -155,40 +156,45 @@ key = SHA256(
 ### Cache Invalidation
 
 **Automatic invalidation triggers**:
+
 1. **HTML content changes** → Different content hash → Cache MISS
-2. **Prompt changes** → Different prompt hash → Cache MISS
-3. **Model changes** → Different model name → Cache MISS
+1. **Prompt changes** → Different prompt hash → Cache MISS
+1. **Model changes** → Different model name → Cache MISS
 
 **Manual invalidation**:
+
 ```bash
 # Clear entire cache
 rm -rf .llm_cache/
 ```
 
----
+______________________________________________________________________
 
 ## Performance Benefits
 
-| Metric | Without Cache | With Cache (2nd run) |
-|--------|---------------|----------------------|
-| Execution Time | ~5 minutes | ~30 seconds |
-| API Calls (13 files) | 13 | 0 |
-| API Cost | $X | $0 |
-| Development Iterations | Expensive | Free |
+| Metric                 | Without Cache | With Cache (2nd run) |
+| ---------------------- | ------------- | -------------------- |
+| Execution Time         | ~5 minutes    | ~30 seconds          |
+| API Calls (13 files)   | 13            | 0                    |
+| API Cost               | $X            | $0                   |
+| Development Iterations | Expensive     | Free                 |
 
 ### Cost Savings Calculation
 
 Assuming:
+
 - **API cost**: $0.10 per file (example)
 - **13 files** in corpus
 - **10 iterations** during development
 
 **Without caching**:
+
 ```
 Cost = 13 files × 10 iterations × $0.10 = $13.00
 ```
 
 **With caching**:
+
 ```
 First run:  13 files × $0.10 = $1.30
 Next 9 runs: 0 files × $0.10 = $0.00
@@ -196,18 +202,20 @@ Total cost: $1.30
 Savings: $11.70 (90%)
 ```
 
----
+______________________________________________________________________
 
 ## Architecture Decisions
 
 ### Why `diskcache` Over Custom Implementation?
 
 **Alternatives Considered**:
+
 - ❌ **SQLite cache DB**: Requires boilerplate (key management, locking, serialization)
 - ❌ **JSON files**: No atomic writes, concurrency issues, manual cleanup
 - ❌ **Pickle**: Security risks, not human-readable, version compatibility issues
 
 **Why `diskcache` Won**:
+
 - ✅ **Mature**: Battle-tested, widely used
 - ✅ **Pure Python**: No external dependencies
 - ✅ **Thread-safe**: Built-in SQLite locking
@@ -219,6 +227,7 @@ Savings: $11.70 (90%)
 **Decision**: Cache `response.text` (raw JSON string), not `ExtractedRule` objects
 
 **Rationale**:
+
 - Parsing (`json.loads()` + Pydantic validation) is **cheap** (~1ms)
 - API call is **expensive** (~30s + $cost)
 - Caching raw JSON **decouples** cache from schema changes
@@ -229,25 +238,28 @@ Savings: $11.70 (90%)
 **Decision**: Cache key includes HTML content hash, not just filename
 
 **Rationale**:
+
 - Files can be edited/updated during development
 - Filename alone would serve **stale cached data**
 - Content hash **auto-invalidates** on any HTML change
 - Prevents subtle bugs from outdated cached responses
 
----
+______________________________________________________________________
 
 ## Known Limitations
 
 ### 1. Adjudicator Not Cached
 
-**Current State**: Only the LLM parser responses are cached. The adjudicator still calls Gemini on every run.
+**Current State**: Only the LLM parser responses are cached. The adjudicator still calls
+Gemini on every run.
 
 **Impact**:
+
 - Cache HIT on LLM parser → Fast parsing
 - But adjudicator still incurs API costs/latency for conflict resolution
 
-**Future Enhancement**:
-Consider caching adjudicator responses with key:
+**Future Enhancement**: Consider caching adjudicator responses with key:
+
 ```python
 key = SHA256(
     adjudicator_prompt +
@@ -266,6 +278,7 @@ key = SHA256(
 **Workaround**: Manual cache clearing (`rm -rf .llm_cache/`)
 
 **Future Enhancement**:
+
 ```python
 # In cache.py
 cache.set(key, response_text, expire=86400)  # 24-hour TTL
@@ -276,6 +289,7 @@ cache.set(key, response_text, expire=86400)  # 24-hour TTL
 **Current State**: No CLI commands to inspect cache statistics.
 
 **Future Enhancement**:
+
 ```bash
 # Show cache info
 uv run extract-rules cache-info --cache-dir .llm_cache/
@@ -287,7 +301,7 @@ uv run extract-rules cache-info --cache-dir .llm_cache/
 # Hit Rate: 85.7% (12/14 requests)
 ```
 
----
+______________________________________________________________________
 
 ## Troubleshooting
 
@@ -296,10 +310,11 @@ uv run extract-rules cache-info --cache-dir .llm_cache/
 **Symptoms**: Every run shows "Cache MISS", API always called
 
 **Possible Causes**:
+
 1. **Different `--cache-dir` paths** between runs
-2. **HTML file modified** between runs (content hash changed)
-3. **Model name changed** in settings
-4. **Prompt modified** in `llm_parser.py`
+1. **HTML file modified** between runs (content hash changed)
+1. **Model name changed** in settings
+1. **Prompt modified** in `llm_parser.py`
 
 **Solution**: Verify cache directory and check logs for key changes
 
@@ -308,6 +323,7 @@ uv run extract-rules cache-info --cache-dir .llm_cache/
 **Symptoms**: `.llm_cache/` directory exceeds 100MB
 
 **Solution**:
+
 ```bash
 # Check cache size
 du -sh .llm_cache/
@@ -321,6 +337,7 @@ rm -rf .llm_cache/
 **Symptoms**: `PermissionError: Cannot write to .llm_cache/`
 
 **Solution**:
+
 ```bash
 # Fix permissions
 chmod -R u+w .llm_cache/
@@ -329,7 +346,7 @@ chmod -R u+w .llm_cache/
 rm -rf .llm_cache/
 ```
 
----
+______________________________________________________________________
 
 ## Future Enhancements
 
@@ -402,7 +419,7 @@ cache_backend: Literal["disk", "redis", "memcached"] = "disk"
 cache_redis_url: str | None = None
 ```
 
----
+______________________________________________________________________
 
 ## Success Criteria ✅
 
@@ -417,26 +434,30 @@ All criteria met:
 - ✅ Documentation updated
 - ✅ `.gitignore` updated to exclude cache directory
 
----
+______________________________________________________________________
 
 ## Conclusion
 
 The smart caching implementation is **complete and tested**. Key achievements:
 
 1. **90%+ cost savings** on subsequent pipeline runs
-2. **Near-instant execution** for cached files
-3. **Zero code changes** required for non-cached usage (backward compatible)
-4. **Production-ready** with battle-tested `diskcache` library
-5. **Developer-friendly** with clear logging and opt-in design
+1. **Near-instant execution** for cached files
+1. **Zero code changes** required for non-cached usage (backward compatible)
+1. **Production-ready** with battle-tested `diskcache` library
+1. **Developer-friendly** with clear logging and opt-in design
 
-The caching strategy solves the original problem: **avoiding the "SELECT * FROM LARGE_TABLE in production"** anti-pattern by caching expensive API calls and enabling fast, cost-free development iteration.
+The caching strategy solves the original problem: **avoiding the "SELECT * FROM
+LARGE_TABLE in production"** anti-pattern by caching expensive API calls and enabling
+fast, cost-free development iteration.
 
----
+______________________________________________________________________
 
 **Next Steps**:
-1. Test with full 13-file corpus (once API is stable)
-2. Monitor cache effectiveness (hit rate)
-3. Consider implementing adjudicator caching (future enhancement)
-4. Add cache management CLI commands (optional)
 
-**For Questions**: See `CACHING_IMPLEMENTATION_PLAN.md` for detailed design rationale and stepwise testing strategy.
+1. Test with full 13-file corpus (once API is stable)
+1. Monitor cache effectiveness (hit rate)
+1. Consider implementing adjudicator caching (future enhancement)
+1. Add cache management CLI commands (optional)
+
+**For Questions**: See `CACHING_IMPLEMENTATION_PLAN.md` for detailed design rationale
+and stepwise testing strategy.

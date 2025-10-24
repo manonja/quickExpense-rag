@@ -1,4 +1,5 @@
-"""Unit tests for ExtractedRule → DatabaseChunk transformation.
+"""
+Unit tests for ExtractedRule → DatabaseChunk transformation.
 
 Tests validate that RuleSet.to_database_chunks() correctly transforms
 YAML-deserialized ExtractedRule objects into DatabaseChunk objects with
@@ -60,7 +61,8 @@ def complex_ruleset(complex_rule_yaml):
 
 
 def test_yaml_deserializes_to_valid_ruleset(simple_rule_yaml, complex_rule_yaml):
-    """YAML fixtures deserialize into valid RuleSet objects.
+    """
+    YAML fixtures deserialize into valid RuleSet objects.
 
     Validates Pydantic parsing of real YAML output from extraction
     pipeline. Ensures all required fields present and types correct.
@@ -105,7 +107,8 @@ def test_citation_id_format_complex_rules(complex_ruleset, source_files_mapping)
 
 
 def test_citation_id_never_none(simple_ruleset, source_files_mapping):
-    """Citation ID is never None (database constraint enforcement).
+    """
+    Citation ID is never None (database constraint enforcement).
 
     CRITICAL: Missing citation_id violates database UNIQUE NOT NULL
     constraint. Transformation MUST raise ValueError, never produce None.
@@ -168,7 +171,8 @@ def test_metadata_all_fields_present(complex_ruleset, source_files_mapping):
 
 
 def test_content_includes_title(simple_ruleset, source_files_mapping):
-    """Content field includes rule title for RAG quality.
+    """
+    Content field includes rule title for RAG quality.
 
     After Phase 0 architectural fix, DatabaseChunk.content should be
     formatted as: "{title}\n\n{content}" for optimal retrieval.

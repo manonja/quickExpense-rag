@@ -119,12 +119,34 @@ def get_version() -> dict[str, str]:
 
     Returns:
         Dictionary with library_version, data_version, schema_version.
+        If database not initialized, version fields return "not_initialized".
 
     """
     from qe_tax_rag import __version__
 
-    return {
-        "library_version": __version__,
-        "data_version": "not_initialized",
-        "schema_version": "not_initialized",
-    }
+    # If database not initialized, return stubs
+    if _db_path is None:
+        return {
+            "library_version": __version__,
+            "data_version": "not_initialized",
+            "schema_version": "not_initialized",
+        }
+
+    # Query database metadata table
+    import sqlite3
+
+    conn = sqlite3.connect(_db_path)
+    try:
+        cursor = conn.execute(
+            "SELECT key, value FROM metadata "
+            "WHERE key IN ('schema_version', 'data_version')"
+        )
+        metadata = dict(cursor.fetchall())
+
+        return {
+            "library_version": __version__,
+            "data_version": metadata.get("data_version", "unknown"),
+            "schema_version": metadata.get("schema_version", "unknown"),
+        }
+    finally:
+        conn.close()

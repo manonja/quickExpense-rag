@@ -1902,12 +1902,16 @@ ______________________________________________________________________
 **Days 6-7: Integration & Release**
 
 1. TICKET 6: Complete data manager (download/cache logic)
-1. TICKET 10: E2E testing with real database
-1. TICKET 11: PyPI packaging
-1. TICKET 12: Release automation
-1. Deploy to TestPyPI for validation
-1. Launch v0.1.0 to PyPI
 
+1. TICKET 10: E2E testing with real database
+
+1. TICKET 11: PyPI packaging
+
+1. TICKET 12: Release automation
+
+1. Deploy to TestPyPI for validation
+
+1. Launch v0.1.0 to PyPI
 
 1. rename git-repo, package and directory in 'src' to quickexpense_tax_rag
 

@@ -69,9 +69,9 @@ class TestSearchPerformance:
 
         # Performance assertion: average search should be < 250ms
         # This is a reasonable target for hybrid search with a small fixture DB
-        assert avg_time < 0.25, (
-            f"Average search time {avg_time * 1000:.2f}ms exceeds 250ms target"
-        )
+        assert (
+            avg_time < 0.25
+        ), f"Average search time {avg_time * 1000:.2f}ms exceeds 250ms target"
 
     @pytest.mark.integration
     @pytest.mark.slow
@@ -112,9 +112,9 @@ class TestSearchPerformance:
         print(f"Max: {max(latencies) * 1000:.2f}ms")
 
         # p99 should be < 300ms for small fixture DB
-        assert p99_latency < 0.3, (
-            f"p99 latency {p99_latency * 1000:.2f}ms exceeds 300ms target"
-        )
+        assert (
+            p99_latency < 0.3
+        ), f"p99 latency {p99_latency * 1000:.2f}ms exceeds 300ms target"
 
     @pytest.mark.integration
     def test_search_with_filters_performance(
@@ -141,6 +141,6 @@ class TestSearchPerformance:
         print(f"Results returned: {len(results)}")
 
         # Filtered search should be very fast (< 100ms)
-        assert search_time < 0.1, (
-            f"Filtered search time {search_time * 1000:.2f}ms exceeds 100ms target"
-        )
+        assert (
+            search_time < 0.1
+        ), f"Filtered search time {search_time * 1000:.2f}ms exceeds 100ms target"

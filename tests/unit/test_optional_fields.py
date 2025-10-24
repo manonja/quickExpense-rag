@@ -1,4 +1,5 @@
-"""Unit tests for optional field handling in ExtractedRule → DatabaseChunk.
+"""
+Unit tests for optional field handling in ExtractedRule → DatabaseChunk.
 
 Tests validate that transformation correctly handles optional fields
 (section, anchor_id) when they are None, ensuring robustness against

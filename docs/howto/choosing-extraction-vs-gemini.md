@@ -2,13 +2,13 @@
 
 ## Quick Decision Matrix
 
-| Use Case                             | Recommended Pipeline | Why                                         |
-| ------------------------------------ | -------------------- | ------------------------------------------- |
-| Line-item queries ("Line 8523 meals")| **Extraction**       | Higher precision, structured metadata       |
-| Conceptual queries ("What can I deduct?") | **Gemini**      | More context, explanatory content           |
-| No Gemini API key available          | **Extraction**       | No runtime API dependency                   |
-| Need `income_type` metadata          | **Extraction**       | Structured metadata included                |
-| Want maximum recall                  | **Gemini**           | ~1000 chunks vs ~247 (T4002)                |
+| Use Case                                  | Recommended Pipeline | Why                                   |
+| ----------------------------------------- | -------------------- | ------------------------------------- |
+| Line-item queries ("Line 8523 meals")     | **Extraction**       | Higher precision, structured metadata |
+| Conceptual queries ("What can I deduct?") | **Gemini**           | More context, explanatory content     |
+| No Gemini API key available               | **Extraction**       | No runtime API dependency             |
+| Need `income_type` metadata               | **Extraction**       | Structured metadata included          |
+| Want maximum recall                       | **Gemini**           | ~1000 chunks vs ~247 (T4002)          |
 
 ## Pipeline Comparison
 
@@ -40,7 +40,7 @@
 - Systems needing audit trails (extraction source tracking)
 - Environments without Gemini API access
 
----
+______________________________________________________________________
 
 ### Gemini Pipeline (⚠️ Legacy Alternative)
 
@@ -69,7 +69,7 @@
 - Legacy systems already using Gemini pipeline
 - Specific use cases requiring maximum narrative context
 
----
+______________________________________________________________________
 
 ## Usage Commands
 
@@ -99,13 +99,13 @@ uv run python scripts/cli.py build \
 uv run python scripts/cli.py validate --db-path data/extraction_rules.db
 ```
 
----
+______________________________________________________________________
 
 ### Gemini Pipeline
 
 See existing CLAUDE.md section for Gemini usage (requires `GEMINI_API_KEY`).
 
----
+______________________________________________________________________
 
 ## Migration Guide
 
@@ -123,7 +123,7 @@ See existing CLAUDE.md section for Gemini usage (requires `GEMINI_API_KEY`).
 1. Test conceptual queries on both databases
 1. Transition based on query type requirements
 
----
+______________________________________________________________________
 
 ## Performance Characteristics
 
@@ -141,7 +141,7 @@ See existing CLAUDE.md section for Gemini usage (requires `GEMINI_API_KEY`).
 - **Search Latency**: \<100ms (typical)
 - **Memory Usage**: ~200-500MB (during build)
 
----
+______________________________________________________________________
 
 ## Recommendation
 
@@ -161,7 +161,7 @@ See existing CLAUDE.md section for Gemini usage (requires `GEMINI_API_KEY`).
 
 **Default Choice**: When in doubt, use `pipeline-extraction`.
 
----
+______________________________________________________________________
 
 ## Questions?
 

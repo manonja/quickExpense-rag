@@ -1,11 +1,13 @@
-"""Property-based tests for ExpenseTypeClassifier using Hypothesis.
+"""
+Property-based tests for ExpenseTypeClassifier using Hypothesis.
 
 These tests ensure the keyword-based classifier is robust across diverse inputs,
 including edge cases with Unicode, special characters, and various text formats.
 """
 
 import pytest
-from hypothesis import given, strategies as st
+from hypothesis import given
+from hypothesis import strategies as st
 from qe_tax_rag.extraction.ca.schema import (
     ApplicabilityType,
     ExpenseTypeClassifier,
@@ -27,7 +29,8 @@ from qe_tax_rag.extraction.ca.schema import (
     )
 )
 def test_classifier_is_robust_to_all_text_inputs(content: str) -> None:
-    """Property: Classifier handles ANY text input without crashing.
+    """
+    Property: Classifier handles ANY text input without crashing.
 
     This comprehensive test ensures the classifier is robust to all possible
     string inputs: empty strings, Unicode (including non-Latin scripts like 中文),
@@ -38,6 +41,7 @@ def test_classifier_is_robust_to_all_text_inputs(content: str) -> None:
 
     Args:
         content: Arbitrary text (0-5000 chars, full Unicode range)
+
     """
     classifier = ExpenseTypeClassifier()
 
@@ -70,12 +74,14 @@ def test_classifier_is_robust_to_all_text_inputs(content: str) -> None:
     st.sampled_from(["meal", "MEAL", "Meal", "MeAl", "mEaL"]),
 )
 def test_classifier_case_insensitive(keyword: str) -> None:
-    """Property: Classifier is case-insensitive for keyword matching.
+    """
+    Property: Classifier is case-insensitive for keyword matching.
 
     "MEAL", "Meal", and "meal" should all match the "meals" expense type.
 
     Args:
         keyword: Mixed-case variation of "meal"
+
     """
     classifier = ExpenseTypeClassifier()
 
@@ -99,7 +105,8 @@ def test_classifier_case_insensitive(keyword: str) -> None:
 
 @pytest.mark.unit
 def test_classifier_word_boundaries() -> None:
-    """Property: Classifier respects word boundaries.
+    """
+    Property: Classifier respects word boundaries.
 
     "meal" should match, but "oatmeal" or "mealy" should not trigger
     the "meals" expense type.
@@ -150,12 +157,14 @@ def test_classifier_word_boundaries() -> None:
     )
 )
 def test_classifier_returns_multiple_types(keywords: list[str]) -> None:
-    """Property: Classifier returns all matching expense types.
+    """
+    Property: Classifier returns all matching expense types.
 
     When content contains multiple keywords, all should be returned.
 
     Args:
         keywords: List of 1-4 unique keywords
+
     """
     classifier = ExpenseTypeClassifier()
 

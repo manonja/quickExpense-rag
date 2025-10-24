@@ -1,45 +1,52 @@
 # Ticket 1 Implementation Plan: HTML → YAML Extraction Testing
 
-**Date**: 2025-10-22
-**Status**: Ready for Implementation
-**Goal**: Validate extraction pipeline (Classic Parser + LLM Parser + Adjudicator) produces correct YAML output
+**Date**: 2025-10-22 **Status**: Ready for Implementation **Goal**: Validate extraction
+pipeline (Classic Parser + LLM Parser + Adjudicator) produces correct YAML output
 
 ## Strategy
 
-- **Approach**: 80/20 focused - prioritize high-value example-based tests + targeted property-based testing
+- **Approach**: 80/20 focused - prioritize high-value example-based tests + targeted
+  property-based testing
 - **Commit Strategy**: 4 small, atomic commits that each pass all pre-commit hooks
-- **Hypothesis (AC5)**: Implemented with targeted approach (3 high-value areas) after Zen MCP consultation
-- **Focus**: End-to-end pipeline validation with golden file regression testing + property-based edge case testing
+- **Hypothesis (AC5)**: Implemented with targeted approach (3 high-value areas) after
+  Zen MCP consultation
+- **Focus**: End-to-end pipeline validation with golden file regression testing +
+  property-based edge case testing
 
 ## Acceptance Criteria Coverage
 
-| AC | Description | Status |
-|----|-------------|--------|
-| AC1 | Valid YAML Output | ✅ Covered in Commit 4 |
-| AC2 | Citation ID Integrity | ✅ Covered in Commit 4 |
-| AC3 | Adjudicator Logic | ✅ Covered in Commit 4 |
-| AC4 | Error Handling | ✅ Covered in Commit 4 |
+| AC  | Description                         | Status                             |
+| --- | ----------------------------------- | ---------------------------------- |
+| AC1 | Valid YAML Output                   | ✅ Covered in Commit 4             |
+| AC2 | Citation ID Integrity               | ✅ Covered in Commit 4             |
+| AC3 | Adjudicator Logic                   | ✅ Covered in Commit 4             |
+| AC4 | Error Handling                      | ✅ Covered in Commit 4             |
 | AC5 | Property-Based Testing (Hypothesis) | ✅ Implemented (Targeted Approach) |
-| AC6 | Content Integrity (RAG Quality) | ✅ Covered in Commit 4 |
+| AC6 | Content Integrity (RAG Quality)     | ✅ Covered in Commit 4             |
 
----
+______________________________________________________________________
 
 ## Commit 1: Add pytest-mock dependency
 
 ### Why
-Need to mock the Gemini API client for deterministic, fast testing without network calls.
+
+Need to mock the Gemini API client for deterministic, fast testing without network
+calls.
 
 ### Changes
+
 ```toml
 # pyproject.toml - add to [project.optional-dependencies.dev]
 "pytest-mock>=3.12",
 ```
 
 ### Actions
+
 1. Edit `pyproject.toml`
-2. Run `uv sync` to install dependencies
+1. Run `uv sync` to install dependencies
 
 ### Commit Message
+
 ```
 build: add pytest-mock for test mocking
 
@@ -59,21 +66,26 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
 ### Deliverable
+
 ✅ Foundation for mocking external services in tests
 
----
+______________________________________________________________________
 
 ## Commit 2: Create test fixtures (HTML + Golden YAML)
 
 ### Why
-Establish ground truth for validating extraction pipeline outputs through golden file regression testing.
+
+Establish ground truth for validating extraction pipeline outputs through golden file
+regression testing.
 
 ### New Files
 
 #### 1. `tests/fixtures/extraction/ca/simple_rule.html`
+
 **Purpose**: Happy path - single rule with business icon
 
 **Content Structure**:
+
 ```html
 <!DOCTYPE html>
 <html lang="en">
@@ -91,14 +103,17 @@ Establish ground truth for validating extraction pipeline outputs through golden
 ```
 
 **Key Features**:
+
 - Single rule (Line 8523: Meals and entertainment)
 - Contains AC6 keywords: "deduct 50%", "food, beverages, or entertainment"
 - Business icon for `applies_to` extraction
 
 #### 2. `tests/fixtures/extraction/ca/complex_rule.html`
+
 **Purpose**: Test adjudicator logic with multiple rules
 
 **Content Structure**:
+
 ```html
 <!DOCTYPE html>
 <html lang="en">
@@ -125,14 +140,17 @@ Establish ground truth for validating extraction pipeline outputs through golden
 ```
 
 **Key Features**:
+
 - 3 rules with different icon combinations
 - Tests adjudicator's ability to merge Classic + LLM outputs
 - Tests `applies_to` field with multiple applicability types
 
 #### 3. `tests/fixtures/extraction/ca/malformed.html`
+
 **Purpose**: Test error handling (AC4)
 
 **Content Structure**:
+
 ```html
 <!DOCTYPE html>
 <html lang="en">
@@ -155,11 +173,13 @@ Establish ground truth for validating extraction pipeline outputs through golden
 ```
 
 **Key Features**:
+
 - Broken HTML tags
 - Missing required elements
 - Tests graceful error handling (should log errors, return empty RuleSet)
 
 #### 4. `tests/fixtures/extraction/ca/simple_rule.golden.yml`
+
 **Purpose**: Expected output for simple_rule.html
 
 ```yaml
@@ -181,6 +201,7 @@ extraction_timestamp: "2024-12-15T10:00:00Z"
 ```
 
 #### 5. `tests/fixtures/extraction/ca/complex_rule.golden.yml`
+
 **Purpose**: Expected output for complex_rule.html
 
 ```yaml
@@ -230,6 +251,7 @@ extraction_timestamp: "2024-12-15T10:00:00Z"
 ```
 
 #### 6. `tests/fixtures/extraction/ca/malformed.golden.yml`
+
 **Purpose**: Expected output for malformed.html (empty RuleSet)
 
 ```yaml
@@ -239,6 +261,7 @@ extraction_timestamp: "2024-12-15T10:00:00Z"
 ```
 
 ### Commit Message
+
 ```
 test: add html and golden yaml fixtures for extraction pipeline
 
@@ -272,13 +295,15 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
 ### Deliverable
+
 ✅ Ground truth test data for all pipeline validation scenarios
 
----
+______________________________________________________________________
 
 ## Commit 3: Create mock Gemini client fixture
 
 ### Why
+
 Isolate tests from network dependencies and ensure deterministic, fast results.
 
 ### Changes
@@ -390,6 +415,7 @@ def mock_gemini_client(mocker):
 ```
 
 ### Commit Message
+
 ```
 feat(testing): add mock gemini client fixture
 
@@ -420,14 +446,17 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
 ### Deliverable
+
 ✅ Deterministic, fast pipeline tests without external API dependencies
 
----
+______________________________________________________________________
 
 ## Commit 4: Implement extraction pipeline tests
 
 ### Why
-Core validation of the HTML→YAML extraction pipeline covering all essential acceptance criteria.
+
+Core validation of the HTML→YAML extraction pipeline covering all essential acceptance
+criteria.
 
 ### New File
 
@@ -692,6 +721,7 @@ def test_citation_id_format_and_uniqueness(
 ```
 
 ### Commit Message
+
 ```
 test: validate html→yaml extraction pipeline against golden files
 
@@ -729,11 +759,11 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
 ### Deliverable
-✅ Comprehensive pipeline validation covering all essential ACs
-✅ Fast, deterministic tests without network dependencies
-✅ Regression baseline for future changes
 
----
+✅ Comprehensive pipeline validation covering all essential ACs ✅ Fast, deterministic
+tests without network dependencies ✅ Regression baseline for future changes
+
+______________________________________________________________________
 
 ## Success Metrics
 
@@ -747,56 +777,74 @@ After implementing all 4 commits:
 - ✅ **AC6**: Content Integrity - keyword preservation validated
 
 **Test Performance**:
-- All tests complete in <1 second (no network calls)
+
+- All tests complete in \<1 second (no network calls)
 - All tests pass pre-commit hooks (ruff, mypy, pyright strict mode)
 - Tests are deterministic and CI-friendly
 
 **Code Quality**:
+
 - 4 small, atomic commits
 - Each commit passes all pre-commit hooks independently
 - Each commit provides incremental value
 - Clear, detailed commit messages following conventional commits format
 
----
+______________________________________________________________________
 
 ## AC5: Hypothesis Property-Based Testing (Targeted Implementation)
 
 **Status**: ✅ **Implemented** (Reconsidered after Zen MCP consultation)
 
 **Why Reconsidered**:
+
 - Initial deferral was pragmatic (got baseline golden file tests working quickly)
-- However: strict data integrity requirements (citation_id UNIQUE NOT NULL) + RAG quality needs warranted targeted edge case testing
+- However: strict data integrity requirements (citation_id UNIQUE NOT NULL) + RAG
+  quality needs warranted targeted edge case testing
 - 6-hour investment prevents potential days debugging data corruption
-- Balanced approach: 80/20 principle applied to high-risk edge cases, not comprehensive coverage
+- Balanced approach: 80/20 principle applied to high-risk edge cases, not comprehensive
+  coverage
 
 **What Was Implemented** (3 Priority Areas):
 
 1. **ExpenseTypeClassifier Robustness** (Priority 1 - 2 hours)
+
    - File: `tests/unit/extraction/ca/test_expense_classifier_hypothesis.py`
-   - Tests: Unicode handling, case sensitivity, word boundaries, long text, never crashes
+   - Tests: Unicode handling, case sensitivity, word boundaries, long text, never
+     crashes
    - Why: Keyword matching is brittle; directly affects metadata filtering accuracy
 
-2. **YAML Serialization Roundtrips** (Priority 2 - 2 hours)
-   - File: `tests/unit/extraction/ca/test_yaml_roundtrip_hypothesis.py`
-   - Tests: RuleSet → YAML → RuleSet identity, enum preservation, float precision, UTF-8 validity
-   - Why: Catches subtle bugs in intermediate format (timestamps, enums, optional fields)
+1. **YAML Serialization Roundtrips** (Priority 2 - 2 hours)
 
-3. **Adjudicator Deduplication Logic** (Priority 3 - 2 hours)
+   - File: `tests/unit/extraction/ca/test_yaml_roundtrip_hypothesis.py`
+   - Tests: RuleSet → YAML → RuleSet identity, enum preservation, float precision, UTF-8
+     validity
+   - Why: Catches subtle bugs in intermediate format (timestamps, enums, optional
+     fields)
+
+1. **Adjudicator Deduplication Logic** (Priority 3 - 2 hours)
+
    - File: `tests/unit/extraction/ca/test_adjudicator_hypothesis.py`
-   - Tests: No duplicate citation_ids, no null rule_numbers, triage correctness, normalization determinism
+   - Tests: No duplicate citation_ids, no null rule_numbers, triage correctness,
+     normalization determinism
    - Why: Prevents database UNIQUE constraint violations (critical failure mode)
 
 **What Was NOT Implemented** (and Why):
-- ❌ Comprehensive Hypothesis for HTML parsing - Golden files already cover known structures
+
+- ❌ Comprehensive Hypothesis for HTML parsing - Golden files already cover known
+  structures
 - ❌ Property-based E2E pipeline tests - Integration tests with fixtures sufficient
 - ❌ Database schema property testing - Schema is fixed, not infinite input space
 
 **Supporting Files**:
-- `tests/strategies.py` - Reusable Hypothesis strategies for `ExtractedRule` and `RuleSet`
-- `.hypothesis/profiles.ini` - Hypothesis configuration (100 examples default, 500 in CI)
+
+- `tests/strategies.py` - Reusable Hypothesis strategies for `ExtractedRule` and
+  `RuleSet`
+- `.hypothesis/profiles.ini` - Hypothesis configuration (100 examples default, 500 in
+  CI)
 - `pyproject.toml` - Added `hypothesis>=6.0` to dev dependencies
 
 **Success Metrics**:
+
 - ✅ 100+ edge cases tested per component (Hypothesis examples)
 - ✅ Zero crashes on Unicode/special characters
 - ✅ YAML roundtrip confidence for all valid RuleSets
@@ -805,9 +853,13 @@ After implementing all 4 commits:
 **Total Time Invested**: 6 hours (as estimated)
 
 **Consensus Decision** (with Zen MCP gemini-2.5-pro):
-> "This balanced approach shores up the most critical risks in your pipeline without derailing progress or over-engineering the test suite. It respects the project's velocity while ensuring the data foundation is robust enough for a high-quality RAG system."
 
----
+> "This balanced approach shores up the most critical risks in your pipeline without
+> derailing progress or over-engineering the test suite. It respects the project's
+> velocity while ensuring the data foundation is robust enough for a high-quality RAG
+> system."
+
+______________________________________________________________________
 
 ## Estimated Time
 
@@ -818,17 +870,18 @@ After implementing all 4 commits:
 
 **Total**: ~2.5 hours
 
----
+______________________________________________________________________
 
 ## Next Steps After Completion
 
-1. Run full test suite: `uv run pytest tests/unit/extraction/ca/test_extraction_pipeline.py -v`
-2. Verify all tests pass
-3. Verify coverage: `uv run pytest --cov=src/qe_tax_rag/extraction tests/unit/extraction/ca/test_extraction_pipeline.py`
-4. Create PR or move to Ticket 2 (YAML → SQLite Conversion)
+1. Run full test suite:
+   `uv run pytest tests/unit/extraction/ca/test_extraction_pipeline.py -v`
+1. Verify all tests pass
+1. Verify coverage:
+   `uv run pytest --cov=src/qe_tax_rag/extraction tests/unit/extraction/ca/test_extraction_pipeline.py`
+1. Create PR or move to Ticket 2 (YAML → SQLite Conversion)
 
----
+______________________________________________________________________
 
-**Document Version**: 1.0
-**Last Updated**: 2025-10-22
-**Consultation**: Zen MCP (gemini-2.5-pro)
+**Document Version**: 1.0 **Last Updated**: 2025-10-22 **Consultation**: Zen MCP
+(gemini-2.5-pro)

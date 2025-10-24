@@ -196,9 +196,9 @@ def test_returns_empty_list_for_malformed_json(mock_genai, tmp_path, caplog):
     assert (
         "malformed" in caplog.text.lower() or "failed to parse" in caplog.text.lower()
     )
-    assert "fallback" in caplog.text.lower(), (
-        "Should mention fallback to Classic Parser"
-    )
+    assert (
+        "fallback" in caplog.text.lower()
+    ), "Should mention fallback to Classic Parser"
 
 
 def test_raises_parser_error_on_invalid_file_path():

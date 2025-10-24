@@ -194,27 +194,28 @@ class TestMVPSearchValidation:
         # For each result, verify lineage chain is complete
         for result in results:
             assert result.lineage is not None, f"Missing lineage: {result.citation_id}"
-            assert result.lineage.source_document, (
-                f"Missing source_document: {result.citation_id}"
-            )
-            assert result.lineage.expert_source in ["classic", "adjudicated"], (
-                f"Invalid expert_source: {result.lineage.expert_source}"
-            )
-            assert result.lineage.extraction_timestamp, (
-                f"Missing extraction_timestamp: {result.citation_id}"
-            )
-            assert len(result.lineage.pipeline_stages) > 0, (
-                f"Empty pipeline_stages: {result.citation_id}"
-            )
+            assert (
+                result.lineage.source_document
+            ), f"Missing source_document: {result.citation_id}"
+            assert result.lineage.expert_source in [
+                "classic",
+                "adjudicated",
+            ], f"Invalid expert_source: {result.lineage.expert_source}"
+            assert (
+                result.lineage.extraction_timestamp
+            ), f"Missing extraction_timestamp: {result.citation_id}"
+            assert (
+                len(result.lineage.pipeline_stages) > 0
+            ), f"Empty pipeline_stages: {result.citation_id}"
 
             # Verify lineage_chain format: "source | stage[timestamp]"
             chain_parts = result.lineage.lineage_chain.split(" | ")
-            assert len(chain_parts) >= 2, (
-                f"Invalid lineage_chain format: {result.lineage.lineage_chain}"
-            )
-            assert result.lineage.source_document in chain_parts[0], (
-                f"source_document not in lineage_chain: {result.lineage.lineage_chain}"
-            )
+            assert (
+                len(chain_parts) >= 2
+            ), f"Invalid lineage_chain format: {result.lineage.lineage_chain}"
+            assert (
+                result.lineage.source_document in chain_parts[0]
+            ), f"source_document not in lineage_chain: {result.lineage.lineage_chain}"
 
     @pytest.mark.integration
     def test_search_with_lineage_display(

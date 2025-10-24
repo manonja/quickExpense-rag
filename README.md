@@ -71,6 +71,10 @@ for result in results:
     print("---")
 ```
 
+**💡 Want to build a tax Q&A chatbot?** See the
+[RAG Integration Examples](#rag-integration-examples) section below for complete
+examples using OpenAI, Anthropic, or Gemini.
+
 ### Example Output
 
 ```python
@@ -98,9 +102,15 @@ QE Tax RAG uses a multi-stage hybrid search approach:
 ### Data Distribution
 
 - **Code**: Distributed via PyPI (`pip install qe-tax-rag`)
-- **Database**: Downloaded from GitHub Releases on first `init()` call (~10-50MB)
+- **Database**: Downloaded from
+  [GitHub Releases](https://github.com/manonja/quickExpense-rag/releases) on first `init()`
+  call (~1.7 MB)
+- **Current Release**:
+  [data-v2025.10.23](https://github.com/manonja/quickExpense-rag/releases/tag/data-v2025.10.23)
+  \- 63 chunks from CRA T4002 guide
 - **Versioning**: Schema version + data version stored in database metadata
 - **Integrity**: SHA256 checksums verified automatically on download
+- **Updates**: Database versions released independently from code versions
 
 ### Architecture
 
@@ -236,6 +246,176 @@ export QE_TAX_RAG_DEFAULT_TOP_K=10
 ```
 
 See [CLAUDE.md](CLAUDE.md) for all configuration options.
+
+## RAG Integration Examples
+
+Build tax Q&A chatbots using Retrieval-Augmented Generation (RAG) with QE Tax RAG as the
+knowledge base.
+
+### What's Included
+
+The `examples/` directory contains complete, working examples demonstrating how to
+integrate QE Tax RAG with Large Language Models (LLMs):
+
+- **[basic_rag.py](examples/basic_rag.py)** - Standalone Python script showing the
+  complete RAG workflow
+- **[basic_rag.ipynb](examples/basic_rag.ipynb)** - Jupyter notebook for interactive
+  exploration *(coming soon)*
+- **[examples/README.md](examples/README.md)** - Detailed setup instructions and
+  troubleshooting
+
+### What You'll Learn
+
+The examples demonstrate:
+
+1. **Environment Setup** - Loading API keys and initializing the database
+1. **Basic Search** - Querying CRA rules without LLM integration
+1. **RAG Pipeline** - Building context and generating AI responses
+1. **Output Formatting** - Displaying answers with proper citations
+1. **Advanced Patterns** - Multi-turn conversations, caching, error handling
+
+### Quick Example
+
+```python
+import qe_tax_rag as qe
+import os
+from openai import OpenAI  # or anthropic, google-generativeai
+
+# Initialize database
+qe.init()
+
+# Search CRA rules
+results = qe.search(
+    query="Can I deduct restaurant meals for client meetings?",
+    province="BC",
+    expense_types=["meals"],
+    top_k=5
+)
+
+# Build context from search results
+context = "\n\n".join([
+    f"[{i}] {r.content} (Citation: {r.citation_id})"
+    for i, r in enumerate(results, 1)
+])
+
+# Call LLM with context
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+response = client.chat.completions.create(
+    model="gpt-4",
+    messages=[
+        {"role": "system", "content": "You are a tax information assistant. Use ONLY the provided CRA excerpts. Include citations. Remind users to consult a tax professional."},
+        {"role": "user", "content": f"Question: {query}\n\nCRA Excerpts:\n{context}"}
+    ]
+)
+
+print(response.choices[0].message.content)
+```
+
+### Supported LLM Providers
+
+The examples include code for:
+
+- **OpenAI** (GPT-4, GPT-3.5-turbo)
+- **Anthropic** (Claude 3.5 Sonnet, Claude 3 Opus)
+- **Google** (Gemini 2.0 Flash, Gemini Pro)
+
+You only need **one** API key to run the examples.
+
+### Getting Started
+
+1. Install optional dependencies:
+
+   ```bash
+   pip install -r examples/requirements.txt
+   ```
+
+1. Set up your API key in `.env`:
+
+   ```bash
+   cp .env.example .env
+   # Edit .env and add your API key:
+   # OPENAI_API_KEY=sk-...
+   # or ANTHROPIC_API_KEY=sk-ant-...
+   # or GEMINI_API_KEY=...
+   ```
+
+1. Run the example:
+
+   ```bash
+   python examples/basic_rag.py
+   ```
+
+See [examples/README.md](examples/README.md) for detailed instructions, troubleshooting,
+and advanced patterns.
+
+### Important Notes
+
+- **Legal Disclaimers**: All examples include prominent disclaimers reminding users this
+  is NOT professional tax advice
+- **Citation Tracking**: Examples demonstrate proper citation of CRA sources in LLM
+  responses
+- **Error Handling**: Includes handling for missing API keys, rate limits, and network
+  errors
+- **Privacy**: Search queries and CRA data never leave your machine (only LLM queries
+  use external APIs)
+
+## Troubleshooting
+
+### Database Download Issues
+
+**Problem**: "Failed to download database from GitHub Releases"
+
+**Solutions**:
+
+- Check internet connection and GitHub accessibility
+- Verify firewall isn't blocking `github.com`
+- Try manual download from
+  [GitHub Releases](https://github.com/manonja/quickExpense-rag/releases)
+- Place downloaded `cra_rules.db` in cache dir: `~/.cache/qe_tax_rag/`
+
+### Version Mismatch
+
+**Problem**: "DataVersionMismatchError: Database version incompatible"
+
+**Solutions**:
+
+- Update library: `pip install --upgrade qe-tax-rag`
+- Force database refresh: `qe.init(force_update=True)`
+- Check release notes for breaking changes
+
+### SHA256 Verification Failure
+
+**Problem**: "Database SHA256 checksum mismatch"
+
+**Solutions**:
+
+- Delete corrupted cache: `rm -rf ~/.cache/qe_tax_rag/`
+- Re-run `qe.init()` to download fresh database
+- Report issue if problem persists (possible release corruption)
+
+### Empty Search Results
+
+**Problem**: Query returns no results
+
+**Solutions**:
+
+- Try broader search terms: "meals" instead of "restaurant client dinners"
+- Remove filters: Don't specify `province` or `expense_types` if unsure
+- Check query spelling and use CRA terminology
+- Use semantic search by avoiding overly specific keywords
+
+### LLM API Errors
+
+**Problem**: "Rate limit exceeded" or "Invalid API key" when running RAG examples
+
+**Solutions**:
+
+- **Rate limits**: Wait and retry, or add exponential backoff (see examples)
+- **Invalid key**: Verify API key is correct and active
+- **Billing**: Ensure API account has credits and billing enabled
+- **Try alternative**: Examples support OpenAI, Anthropic, and Gemini
+
+For more troubleshooting, see [examples/README.md](examples/README.md).
 
 ## Development
 

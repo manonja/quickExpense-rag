@@ -1,33 +1,42 @@
 # Critical Issues Implementation Plan
 
-**Branch**: feat/test-strategy-html-to-yaml
-**Created**: 2025-10-21
-**Scope**: Address critical test coverage gaps and high-priority code duplication identified in PR #38 code review
+**Branch**: feat/test-strategy-html-to-yaml **Created**: 2025-10-21 **Scope**: Address
+critical test coverage gaps and high-priority code duplication identified in PR #38 code
+review
 
 ## Context
 
-This plan addresses critical issues found during code review of the data model normalization work documented in `DATA_MODEL_NORMALIZATION_PLAN.md`. While the implementation is complete (transformer elimination, DatabaseChunk unification, YAML loading), the **test coverage is missing** for the new code paths.
+This plan addresses critical issues found during code review of the data model
+normalization work documented in `DATA_MODEL_NORMALIZATION_PLAN.md`. While the
+implementation is complete (transformer elimination, DatabaseChunk unification, YAML
+loading), the **test coverage is missing** for the new code paths.
 
 ## Commit Strategy
 
-**Commit after EACH completed subtask** - Do not batch multiple subtasks into one commit. Each commit should:
+**Commit after EACH completed subtask** - Do not batch multiple subtasks into one
+commit. Each commit should:
+
 - Pass all pre-commit hooks (ruff, ruff-format, mypy, pyright)
 - Include clear commit message following conventional commits format
-- Reference the subtask number (e.g., "test: add YAML format auto-detection tests (Subtask 1.1)")
+- Reference the subtask number (e.g., "test: add YAML format auto-detection tests
+  (Subtask 1.1)")
 
 ## PHASE 1: CRITICAL - Add YAML Loading Tests (BLOCKER)
 
-**Scope Reference**: These tests validate the implementation completed in DATA_MODEL_NORMALIZATION_PLAN.md:
+**Scope Reference**: These tests validate the implementation completed in
+DATA_MODEL_NORMALIZATION_PLAN.md:
+
 - Task 3: RuleSet.to_database_chunks() (IMPLEMENTED, UNTESTED)
 - Task 4: IndexBuilder YAML support (IMPLEMENTED, UNTESTED)
 - Task 5: DatabaseChunk unified model (IMPLEMENTED, PARTIALLY TESTED)
 
 ### Subtask 1.1: Test YAML File Format Auto-Detection
 
-**File**: `tests/unit/test_builder.py`
-**Location**: Add to existing TestIndexBuilder class (~line 50)
+**File**: `tests/unit/test_builder.py` **Location**: Add to existing TestIndexBuilder
+class (~line 50)
 
 **Test Cases**:
+
 ```python
 @pytest.mark.unit
 def test_build_from_file_detects_yaml_format(self, tmp_path: Path) -> None:
@@ -60,19 +69,21 @@ def test_build_from_file_raises_on_unknown_format(self, tmp_path: Path) -> None:
 ```
 
 **Acceptance Criteria**:
+
 - [x] 3 new tests added to test_builder.py
 - [x] Tests verify format detection logic in build_from_file()
 - [x] All tests pass
 - [x] Commit: "test: add YAML format auto-detection tests (Subtask 1.1)"
 
----
+______________________________________________________________________
 
 ### Subtask 1.2: Test RuleSet.to_database_chunks() Conversion
 
-**File**: `tests/unit/extraction/ca/test_schema.py` (NEW FILE)
-**Rationale**: Separation of concerns - extraction schema tests separate from builder tests
+**File**: `tests/unit/extraction/ca/test_schema.py` (NEW FILE) **Rationale**: Separation
+of concerns - extraction schema tests separate from builder tests
 
 **Test Cases**:
+
 ```python
 """Unit tests for extraction pipeline schema models."""
 
@@ -205,19 +216,21 @@ def test_ruleset_to_database_chunks_expense_classification(
 ```
 
 **Acceptance Criteria**:
+
 - [x] New test file created: tests/unit/extraction/ca/test_schema.py
-- [x] 5 test cases covering conversion, metadata preservation, error handling, expense classification
+- [x] 5 test cases covering conversion, metadata preservation, error handling, expense
+  classification
 - [x] All tests pass
 - [x] Commit: "test: add RuleSet.to_database_chunks() conversion tests (Subtask 1.2)"
 
----
+______________________________________________________________________
 
-### Subtask 1.3: Test IndexBuilder._load_from_yaml() Method
+### Subtask 1.3: Test IndexBuilder.\_load_from_yaml() Method
 
-**File**: `tests/unit/test_builder.py`
-**Location**: Add to TestIndexBuilder class
+**File**: `tests/unit/test_builder.py` **Location**: Add to TestIndexBuilder class
 
 **Test Cases**:
+
 ```python
 @pytest.mark.unit
 def test_load_from_yaml_valid_file(self, tmp_path: Path) -> None:
@@ -271,19 +284,21 @@ def test_load_from_yaml_invalid_schema(self, tmp_path: Path) -> None:
 ```
 
 **Acceptance Criteria**:
+
 - [x] 3 new tests added to test_builder.py
 - [x] Tests cover valid YAML, empty rules, invalid schema
 - [x] All tests pass
-- [x] Commit: "test: add IndexBuilder._load_from_yaml() tests (Subtask 1.3)"
+- [x] Commit: "test: add IndexBuilder.\_load_from_yaml() tests (Subtask 1.3)"
 
----
+______________________________________________________________________
 
 ### Subtask 1.4: Integration Test - YAML to Database
 
-**File**: `tests/unit/test_builder.py`
-**Location**: Add new test class TestBuildFromFileYAML
+**File**: `tests/unit/test_builder.py` **Location**: Add new test class
+TestBuildFromFileYAML
 
 **Test Cases**:
+
 ```python
 @pytest.mark.unit
 class TestBuildFromFileYAML:
@@ -410,20 +425,21 @@ rules:
 ```
 
 **Acceptance Criteria**:
+
 - [x] New test class TestBuildFromFileYAML added
 - [x] 2 integration tests covering end-to-end YAML → database + metadata preservation
 - [x] Tests verify table creation, row counts, citation_id format, metadata fields
 - [x] All tests pass
 - [x] Commit: "test: add YAML to database integration tests (Subtask 1.4)"
 
----
+______________________________________________________________________
 
 ### Subtask 1.5: Update Existing Tests to Use DatabaseChunk
 
-**File**: `tests/unit/test_builder.py`
-**Location**: Lines ~932-1176 (existing tests)
+**File**: `tests/unit/test_builder.py` **Location**: Lines ~932-1176 (existing tests)
 
 **Changes Needed**:
+
 ```python
 # OLD (line 932)
 def test_build_from_jsonl_creates_database(self, tmp_path: Path) -> None:
@@ -448,29 +464,34 @@ def test_build_from_file_jsonl_creates_database(self, tmp_path: Path) -> None:
 ```
 
 **Test Cases to Update**:
-1. `test_build_from_jsonl_creates_database` → `test_build_from_file_jsonl_creates_database`
-2. `test_build_from_jsonl_populates_tables` → `test_build_from_file_jsonl_populates_tables`
-3. Any other tests using old method name or dict-based chunks
+
+1. `test_build_from_jsonl_creates_database` →
+   `test_build_from_file_jsonl_creates_database`
+1. `test_build_from_jsonl_populates_tables` →
+   `test_build_from_file_jsonl_populates_tables`
+1. Any other tests using old method name or dict-based chunks
 
 **Acceptance Criteria**:
+
 - [x] All references to `build_from_jsonl()` in tests updated to `build_from_file()`
 - [x] All tests using `dict[str, object]` updated to use `DatabaseChunk` objects
 - [x] Test names updated to reflect new API
 - [x] All tests pass
 - [x] Commit: "test: update existing builder tests to use DatabaseChunk (Subtask 1.5)"
 
----
+______________________________________________________________________
 
 ## PHASE 2: HIGH - Refactor CLI Code Duplication
 
 **Scope**: Eliminate ~200 LOC duplication in scripts/cli.py (lines 508-647)
 
-### Subtask 2.1: Extract _run_preprocess_logic() Helper
+### Subtask 2.1: Extract \_run_preprocess_logic() Helper
 
-**File**: `scripts/cli.py`
-**Location**: Add new helper function before pipeline() command (~line 400)
+**File**: `scripts/cli.py` **Location**: Add new helper function before pipeline()
+command (~line 400)
 
 **Implementation**:
+
 ```python
 def _run_preprocess_logic(
     input_dir: Path,
@@ -490,20 +511,22 @@ def _run_preprocess_logic(
 ```
 
 **Acceptance Criteria**:
+
 - [x] New helper function added with clear docstring
 - [x] Function signature matches usage in both preprocess and pipeline commands
 - [x] No logic changes - pure extraction
 - [x] All CLI commands still pass manual smoke tests
-- [x] Commit: "refactor: extract _run_preprocess_logic() helper (Subtask 2.1)"
+- [x] Commit: "refactor: extract \_run_preprocess_logic() helper (Subtask 2.1)"
 
----
+______________________________________________________________________
 
-### Subtask 2.2: Extract _run_build_logic() Helper
+### Subtask 2.2: Extract \_run_build_logic() Helper
 
-**File**: `scripts/cli.py`
-**Location**: Add new helper function after _run_preprocess_logic()
+**File**: `scripts/cli.py` **Location**: Add new helper function after
+\_run_preprocess_logic()
 
 **Implementation**:
+
 ```python
 def _run_build_logic(
     input_file: Path,
@@ -520,20 +543,21 @@ def _run_build_logic(
 ```
 
 **Acceptance Criteria**:
+
 - [x] New helper function added with clear docstring
 - [x] Function signature matches usage in both build and pipeline commands
 - [x] No logic changes - pure extraction
 - [x] All CLI commands still pass manual smoke tests
-- [x] Commit: "refactor: extract _run_build_logic() helper (Subtask 2.2)"
+- [x] Commit: "refactor: extract \_run_build_logic() helper (Subtask 2.2)"
 
----
+______________________________________________________________________
 
 ### Subtask 2.3: Update Pipeline Command to Use Helpers
 
-**File**: `scripts/cli.py`
-**Location**: Lines 508-647 (pipeline command)
+**File**: `scripts/cli.py` **Location**: Lines 508-647 (pipeline command)
 
 **Changes**:
+
 ```python
 # BEFORE (lines 528-647 - ~120 LOC)
 @app.command()
@@ -563,24 +587,27 @@ def pipeline(...):
 ```
 
 **Acceptance Criteria**:
+
 - [x] Pipeline command refactored to use helper functions
 - [x] Net LOC reduction: ~90 lines removed
 - [x] Behavior unchanged - output matches previous implementation
 - [x] Manual smoke test: `uv run python scripts/cli.py pipeline-extraction` succeeds
-- [x] Commit: "refactor: use helpers in pipeline command to eliminate duplication (Subtask 2.3)"
+- [x] Commit: "refactor: use helpers in pipeline command to eliminate duplication
+  (Subtask 2.3)"
 
----
+______________________________________________________________________
 
 ## PHASE 3: OPTIONAL - Polish & Safety Improvements
 
-**Note**: These are low-priority improvements. Only implement if time permits after PHASE 1 and PHASE 2.
+**Note**: These are low-priority improvements. Only implement if time permits after
+PHASE 1 and PHASE 2.
 
 ### Subtask 3.1: Use zip(..., strict=True)
 
-**File**: `src/qe_tax_rag/data/builder.py`
-**Location**: Line 389
+**File**: `src/qe_tax_rag/data/builder.py` **Location**: Line 389
 
 **Change**:
+
 ```python
 # Before
 for chunk_data, embedding in zip(chunks, embeddings):
@@ -590,52 +617,60 @@ for chunk_data, embedding in zip(chunks, embeddings, strict=True):
 ```
 
 **Acceptance Criteria**:
+
 - [x] Change applied at line 389
 - [x] Tests still pass
 - [x] Commit: "fix: add strict=True to zip() for safety (Subtask 3.1)"
 
----
+______________________________________________________________________
 
 ### Subtask 3.2: Make data_version Configurable
 
-**File**: `src/qe_tax_rag/data/builder.py`
-**Location**: Lines 115-120 (hardcoded "2024.12")
+**File**: `src/qe_tax_rag/data/builder.py` **Location**: Lines 115-120 (hardcoded
+"2024.12")
 
 **Change**: Add `data_version` parameter to build_from_file() method
 
 **Acceptance Criteria**:
+
 - [x] Parameter added with default value "2024.12"
 - [x] Tests updated to use parameter
 - [x] Commit: "feat: make data_version configurable in IndexBuilder (Subtask 3.2)"
 
----
+______________________________________________________________________
 
 ## Testing Strategy
 
 After each subtask:
+
 1. Run unit tests: `uv run pytest tests/unit -v -m unit`
-2. Verify pre-commit hooks pass: `uv run pre-commit run --all-files`
-3. For integration changes (Subtask 1.4), run integration tests: `uv run pytest tests/integration -v -m integration`
+1. Verify pre-commit hooks pass: `uv run pre-commit run --all-files`
+1. For integration changes (Subtask 1.4), run integration tests:
+   `uv run pytest tests/integration -v -m integration`
 
 Before marking PR as ready for review:
+
 1. Run full test suite: `uv run pytest tests/ -v`
-2. Manual smoke test: `uv run python scripts/cli.py pipeline-extraction --help`
-3. Verify coverage: `uv run pytest tests/ --cov=src/qe_tax_rag --cov-report=html`
+1. Manual smoke test: `uv run python scripts/cli.py pipeline-extraction --help`
+1. Verify coverage: `uv run pytest tests/ --cov=src/qe_tax_rag --cov-report=html`
 
 ## Success Criteria
 
 **PHASE 1 (CRITICAL)** - PR cannot merge without this:
+
 - [x] All 15+ new tests pass
 - [x] YAML loading path has >90% code coverage
 - [x] RuleSet.to_database_chunks() has >95% code coverage
 - [x] No test failures in CI/CD
 
 **PHASE 2 (HIGH)** - Improves maintainability:
+
 - [x] CLI code duplication reduced by ~90 LOC
 - [x] Helper functions have clear, single responsibilities
-- [x] Pipeline command logic is <50 LOC
+- [x] Pipeline command logic is \<50 LOC
 
 **PHASE 3 (OPTIONAL)** - Nice to have:
+
 - [x] Safety improvements applied
 - [x] No regressions introduced
 

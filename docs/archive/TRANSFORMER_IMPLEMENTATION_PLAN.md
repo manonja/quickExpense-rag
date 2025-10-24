@@ -1,7 +1,8 @@
 # YAML-to-JSONL Transformer: Implementation Plan
 
-**Date**: 2025-10-17 (Updated: 2025-10-18) **Status**: Phases 1-3 ✅ COMPLETE, Phases 4-5 IN PROGRESS **Based on**:
-TRANSFORMER_DESIGN_PLAN.md (Zen MCP Planner Analysis) + Zen MCP Review (2025-10-18)
+**Date**: 2025-10-17 (Updated: 2025-10-18) **Status**: Phases 1-3 ✅ COMPLETE, Phases 4-5
+IN PROGRESS **Based on**: TRANSFORMER_DESIGN_PLAN.md (Zen MCP Planner Analysis) + Zen
+MCP Review (2025-10-18)
 
 ______________________________________________________________________
 
@@ -1756,8 +1757,7 @@ ______________________________________________________________________
 
 **Goal**: Essential testing to ensure transformer correctness and production readiness.
 
-**Status**: ✅ Phases 1-3 COMPLETE
-**Updated**: 2025-10-18 (Based on Zen MCP Analysis)
+**Status**: ✅ Phases 1-3 COMPLETE **Updated**: 2025-10-18 (Based on Zen MCP Analysis)
 
 **Philosophy**: Focus on critical logic testing (~85% coverage) rather than vanity
 metrics (≥95%). Defer search quality analysis to post-launch.
@@ -1785,8 +1785,11 @@ returns. Target 85-90% on **critical logic** only.
   - Add edge case tests focusing on critical logic
 
 **TDD Approach**:
+
 - Write failing test → GREEN → Refactor
+
 - Commit after each passing test milestone
+
 - Focus on transformation logic, error handling, and metadata aggregation
 
   ```python
@@ -1959,7 +1962,9 @@ ______________________________________________________________________
 
 **Scope**: End-to-end integration tests with real YAML → JSONL → Database flow
 
-**Status**: ✅ **3 integration tests already passing** in `tests/integration/test_cli_pipeline.py`:
+**Status**: ✅ **3 integration tests already passing** in
+`tests/integration/test_cli_pipeline.py`:
+
 - `test_pipeline_extraction_end_to_end` (lines 199-233)
 - `test_pipeline_extraction_with_intermediate_dir` (lines 236-260)
 - `test_pipeline_extraction_keeps_intermediate_on_success` (lines 263-286)
@@ -2238,9 +2243,10 @@ ______________________________________________________________________
 
 **Scope**: Measure search quality impact of extraction pipeline vs Gemini pipeline
 
-**Status**: ⏸️  **DEFERRED** per Zen MCP analysis
+**Status**: ⏸️ **DEFERRED** per Zen MCP analysis
 
 **Rationale (YAGNI)**:
+
 - Transformer's job is **valid database structure**, not search quality analysis
 - Search quality depends on downstream RAG system, not transformer correctness
 - Testing 50 queries with MRR/precision/recall is analysis work, not production blocker
@@ -2446,10 +2452,12 @@ ______________________________________________________________________
 **Rationale**: Follow 80/20 principle - focus on essential docs that unblock usage
 
 **MVD Approach**:
-- ✅ Update CLAUDE.md extraction pipeline section (already exists, needs transformer update)
+
+- ✅ Update CLAUDE.md extraction pipeline section (already exists, needs transformer
+  update)
 - ✅ Create "Choosing a Pipeline" guide (high-value decision doc)
-- ⏸️  DEFER: Full tutorial (users can reference CLAUDE.md)
-- ⏸️  DEFER: Programmatic examples (transformer.py docstrings suffice)
+- ⏸️ DEFER: Full tutorial (users can reference CLAUDE.md)
+- ⏸️ DEFER: Programmatic examples (transformer.py docstrings suffice)
 
 ### Acceptance Criteria (Scoped for MVD)
 
@@ -2497,7 +2505,8 @@ ______________________________________________________________________
 
   ```
 
-- [ ] **Create "Choosing a Pipeline" Guide**: `docs/howto/choosing-extraction-vs-gemini.md`
+- [ ] **Create "Choosing a Pipeline" Guide**:
+  `docs/howto/choosing-extraction-vs-gemini.md`
 
   ````markdown
   # How-To: Choosing Between Extraction and Gemini Pipelines
@@ -2551,7 +2560,8 @@ ______________________________________________________________________
   - Choosing-a-pipeline guide is clear and actionable
   - Command examples work as documented
 
-**Dependency**: T4.1, T4.2 (need working transformer) **Enables**: Users can understand and choose pipelines **Complexity**: Low (MVD approach - ~1-2 hours)
+**Dependency**: T4.1, T4.2 (need working transformer) **Enables**: Users can understand
+and choose pipelines **Complexity**: Low (MVD approach - ~1-2 hours)
 
 ______________________________________________________________________
 
