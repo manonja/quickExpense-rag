@@ -200,14 +200,183 @@ cat output/**/rules.yml | grep "rule_number:" | sort | uniq -d | wc -l
 - All have anchor IDs matching `tocch3ln\d{4}` pattern
 - Regression test ensures no impact from parser update
 
+## Principle Content (Phase 2)
+
+### What Makes It a Principle
+
+A **principle** is text that references line-numbered rules in an instructional or cross-reference context, but is NOT a rule definition. It:
+
+1. **Contains line references**: Mentions "line {number}" in text
+2. **Lacks anchor ID**: No `tocch\dln\d{4}` anchor pattern
+3. **Instructional context**: Explains how to use or apply rules
+
+Principles are typically found in:
+- Paragraphs (`<p>`) explaining form completion
+- List items (`<li>`) showing where to report amounts
+- Cross-references to other chapters
+
+### HTML Structures
+
+#### Type 1: Instructional Paragraph
+
+```html
+<p>Enter on line 9925 the total business part of the cost of the equipment.</p>
+```
+
+**Characteristics**:
+- Plain `<p>` tag (no anchor ID)
+- Imperative instruction ("Enter on...")
+- References LINE-9925
+
+#### Type 2: Cross-Reference Paragraph
+
+```html
+<p>For more information, see <a href="t4002-4.html#tocch2ln9604">
+<span class="nowrap">Line 9604 –</span> Insurance proceeds</a>.</p>
+```
+
+**Characteristics**:
+- Contains hyperlink to rule definition
+- Text pattern: "For more information, see..."
+- References LINE-9604
+
+#### Type 3: List Item Reference
+
+```html
+<li><span class="nowrap">line 9600</span> for farming income</li>
+```
+
+**Characteristics**:
+- List item with line reference
+- Brief instructional text
+- References LINE-9600
+
+### Extraction Strategy
+
+**Principle Parser Algorithm**:
+
+1. Search `<p>` and `<li>` tags for text containing line references
+2. Extract line numbers using pattern: `\bline\s+(\d{4})\b` (case-insensitive)
+3. Exclude any tags where `is_rule_definition()` returns True
+4. Create ExtractedContent with:
+   - `content_type`: PRINCIPLE
+   - `citation_id`: `{source_file}-PRINCIPLE-{seq}`
+   - `references`: List of LINE-XXXX found in text
+
+**Code Implementation**:
+
+```python
+def extract_line_references(text: str) -> list[str]:
+    """Extract LINE-XXXX references from text."""
+    pattern = r'\bline\s+(\d{4})\b'
+    matches = re.findall(pattern, text, re.IGNORECASE)
+    return sorted(set(f"LINE-{num}" for num in matches))
+
+def parse(html_path: str) -> list[ExtractedContent]:
+    """Extract principles from HTML."""
+    for tag in soup.find_all(['p', 'li']):
+        if is_rule_definition(tag):
+            continue  # Skip rule definitions
+
+        text = tag.get_text(strip=True, separator=" ")
+        references = extract_line_references(text)
+
+        if references:
+            # Create PRINCIPLE content
+```
+
+### YAML Output Format
+
+```yaml
+principles:
+- citation_id: t4002-6-PRINCIPLE-2
+  content_type: PRINCIPLE
+  text: "Enter on line 9925 the total business part of the cost of the equipment."
+  source_file: t4002-6.html
+  anchor_id: null
+  references:
+    - LINE-9925
+- citation_id: t4002-6-PRINCIPLE-3
+  content_type: PRINCIPLE
+  text: "Enter on line 9927 the total business part of the cost of the buildings.
+         The cost includes the purchase price of the building, and any related
+         expenses you should add to the capital cost of the building, such as
+         legal fees, land transfer taxes and mortgage fees."
+  source_file: t4002-6.html
+  anchor_id: null
+  references:
+    - LINE-9927
+```
+
+### Validation Tests
+
+**Test 1: Extract principles from t4002-6.html**
+
+```bash
+uv run extract-principles cra_documents/cra_t4002e_rev24_dump/t4002-6.html output/t4002-6/principles.yml
+grep -c "citation_id:" output/t4002-6/principles.yml
+# Expected: 30 principles extracted
+```
+
+**Test 2: Verify content type**
+
+```bash
+grep "content_type:" output/t4002-6/principles.yml | sort | uniq -c
+# Expected: 30   content_type: PRINCIPLE
+```
+
+**Test 3: Verify references extracted**
+
+```bash
+grep -A 2 "references:" output/t4002-6/principles.yml | head -20
+# Expected: Lists like "- LINE-9925", "- LINE-9927", etc.
+```
+
+### Extraction Results from t4002-6.html
+
+**Total Principles**: 30
+
+**Common Line References**:
+- LINE-9925 (equipment costs)
+- LINE-9927 (building costs)
+- LINE-9923 (land acquisitions)
+- LINE-9929 (quota acquisitions)
+- LINE-9604 (insurance proceeds)
+- LINE-9936 (CCA total)
+- LINE-8230, LINE-9600, LINE-9270, LINE-9790 (income/expense reporting)
+
+**Content Distribution**:
+- Instructional paragraphs: ~22 principles
+- Cross-references: ~4 principles
+- List items: ~4 principles
+
+### Phase 2 Status
+
+✅ **Implementation Complete**
+- Models: ContentType enum, ExtractedContent Pydantic model
+- Parser: extract_line_references(), parse()
+- CLI: extract-principles command
+- Tests: 21 tests (6 model + 15 parser), all passing
+- Documentation: Pattern examples, YAML format, validation commands
+
+**Known Limitations** (baseline, not perfect):
+- Simple regex pattern may miss complex line number formats
+- Does not extract semantic relationships between principles
+- No deduplication of similar instructional text
+- Citation IDs are sequential (not stable across re-extraction)
+
+**Future Enhancements** (Phase 3+):
+- Add TABLES, EXAMPLES, GUIDANCE content types
+- Semantic relationship extraction
+- Stable citation ID generation
+
 ## Future Content Types
 
 *This document will expand as we add support for:*
 
-- **PRINCIPLES**: Guidance text referencing rules (Phase 2)
-- **TABLES**: Structured data (CCA rates, deduction limits)
-- **EXAMPLES**: Case studies with calculations
-- **GUIDANCE**: General instructions and definitions
+- **TABLES**: Structured data (CCA rates, deduction limits) ⏳
+- **EXAMPLES**: Case studies with calculations ⏳
+- **GUIDANCE**: General instructions and definitions ⏳
 
 ## References
 
