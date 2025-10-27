@@ -159,7 +159,12 @@ class ExtractedContent(BaseModel):
         extra = 'forbid'
 ```
 
-**Acceptance Criteria**: TBD (plan with Zen)
+**Acceptance Criteria** (from Zen):
+1. **Structural Correctness**: `src/qe_tax_rag/extraction/ca/models.py` contains `ContentType` enum with `RULE` and `PRINCIPLE` members, and `ExtractedContent` Pydantic model as defined
+2. **Successful Instantiation**: Unit test demonstrates `ExtractedContent` can be created with `content_type=ContentType.PRINCIPLE`
+   - **Validation**: `pytest tests/unit/extraction/ca/test_models.py::test_create_principle_content`
+3. **Type Validation**: Unit test confirms invalid `content_type` string (e.g., `"COMMENT"`) raises `pydantic.ValidationError`
+   - **Validation**: `pytest tests/unit/extraction/ca/test_models.py::test_invalid_content_type`
 
 **Commit**: "feat: add ContentType model with RULE and PRINCIPLE types"
 
@@ -198,7 +203,16 @@ def extract_principles(soup, source_file):
     return principles
 ```
 
-**Acceptance Criteria**: TBD (plan with Zen)
+**Acceptance Criteria** (from Zen):
+1. **Function Existence**: Functions `extract_line_references` and `extract_principles` exist in `principle_parser.py`
+2. **Non-Empty Extraction**: `extract_principles` on t4002-6.html returns non-empty list
+   - **Validation**: Test asserts `len(principles) > 0`
+3. **Correct Content Typing**: Every returned object has `content_type == ContentType.PRINCIPLE`
+   - **Validation**: Test iterates and asserts all items match
+4. **Reference-Text Integrity**: For known principle (e.g., "Enter on line 9925..."), extracted object contains:
+   - `text` accurately matching paragraph content
+   - `references` list containing `"LINE-9925"`
+5. **Exclusion of Rule Definitions**: Parser does NOT extract content where `is_rule_definition(tag)` is true (even if contains line references)
 
 **Commit**: "feat: add principle parser to extract rule references"
 
@@ -213,11 +227,16 @@ uv run extract-rules cra_documents/cra_t4002e_rev24_dump/t4002-6.html output/t40
 uv run extract-principles cra_documents/cra_t4002e_rev24_dump/t4002-6.html output/t4002-6/principles.yml
 
 # Validate
-cat output/t4002-6/rules.yml  # Should show 2 rules
-cat output/t4002-6/principles.yml  # Should show 2+ principles
+cat output/t4002-6/rules.yml  # Should show 0 rules (all are references)
+cat output/t4002-6/principles.yml  # Should show 20+ principles
 ```
 
-**Acceptance Criteria**: TBD (plan with Zen)
+**Acceptance Criteria** (from Zen):
+1. **Successful Execution**: Script runs without unhandled exceptions (exit code 0)
+   - **Validation**: `python -m src.main --file t4002-6.html` (or CLI command) exits with code 0
+2. **Artifact Generation**: Script produces structured output file (e.g., `output/t4002-6/principles.yml`)
+3. **Content Presence**: Output contains at least one object with `content_type: PRINCIPLE`
+4. **Regression Test**: t4002-6.html produces 0 RULE objects (all references correctly filtered, validates Phase 1)
 
 **Commit**: "test: extract rules and principles from t4002-6.html"
 
@@ -230,7 +249,13 @@ Add section showing:
 - Reference links (which rules they point to)
 - Patterns that work, patterns that need refinement
 
-**Acceptance Criteria**: TBD (plan with Zen)
+**Acceptance Criteria** (from Zen):
+1. **File Update**: `docs/CONTENT_PATTERNS.md` file is modified
+2. **New Section**: File contains new, clearly marked section for "Principle Content"
+3. **Concrete Example**: Section includes:
+   - Brief definition of PRINCIPLE content type
+   - Verbatim HTML code block from t4002-6.html extracted as principle
+   - Corresponding YAML output showing final `ExtractedContent` structure
 
 **Commit**: "docs: document principle extraction results from t4002-6.html"
 
