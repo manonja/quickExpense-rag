@@ -1,8 +1,10 @@
 # Duplicate Citation ID Analysis
 
 **Investigation Date**: 2025-10-24
+**Resolution Date**: 2025-10-27
 **Issue**: Database build fails with duplicate `citation_id` errors
 **Duplicates Found**: LINE-9600, LINE-9604
+**Status**: ✅ RESOLVED (Phase 1 implementation)
 
 ## Findings
 
@@ -148,10 +150,48 @@ Expected result after fix:
 - **t4002-6.html**: 2 rules (down from 4 - removed 2 references)
 - **Total**: 18 rules (no duplicates)
 
-## Next Steps
+## Resolution (Phase 1 - Completed 2025-10-27)
 
-1. Implement Option 2 (filter references)
-2. Rerun extraction on t4002-4.html + t4002-6.html
-3. Verify no duplicates
-4. Build database
-5. Document reference content for future V2 extraction
+**Implemented**: Option 2 (Filter Out References)
+
+### Changes Made
+
+1. **Added `is_rule_definition()` function** to classic parser
+   - Validates anchor IDs match pattern `^tocch\dln\d{4}(?:\w+)?$`
+   - Filters rule definitions (with anchors) from references (without anchors)
+
+2. **Updated `parse()` filtering logic**
+   - Combined `is_line_rule()` and `is_rule_definition()` checks
+   - Only extracts h3 tags with both line number pattern AND anchor IDs
+
+3. **Enhanced pattern matching**
+   - Handles combined heading patterns: "Line 9790or9270 –", "Line 8960 and Line 8963 –"
+   - Non-greedy match: `r"Line (\d+).*?–\s*(.+)"`
+
+### Validation Results
+
+**Zero duplicates achieved**:
+```bash
+cat output/t4002-*/rules.yml | grep "rule_number:" | sort | uniq -d | wc -l
+# Output: 0 ✅
+```
+
+**Extraction counts**:
+- **t4002-4.html**: 16 rules (classic parser) ✅
+- **t4002-6.html**: 0 rules (classic parser) - All references correctly filtered ✅
+- **t4002-5.html**: 65 rules (classic parser) - Improved from 63 (found 2 missed combined headings) ✅
+
+### Commits
+
+- `b07fd2e`: Initial anchor ID validation
+- `0ea9ea2`: CONTENT_PATTERNS.md documentation
+- `b96a759`: Enhanced pattern matching for combined headings
+- `06aa44c`: Phase 1 validation results
+
+### Documentation
+
+- Implementation details: `docs/IMPROVED_CAPTURE_PLAN.md` (Phase 1)
+- Validation results: `docs/PHASE1_VALIDATION_RESULTS.md`
+- Pattern documentation: `docs/CONTENT_PATTERNS.md`
+
+**Next Phase**: Phase 2 will implement Option 3 (multi-content-type extraction) to capture references as PRINCIPLE content type.

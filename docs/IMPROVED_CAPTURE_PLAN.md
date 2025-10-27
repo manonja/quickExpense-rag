@@ -1,8 +1,9 @@
 # Improved HTML Content Capture: Modular & Minimal Approach
 
-**Date**: 2025-10-24
+**Date**: 2025-10-24 (Created) | 2025-10-27 (Phase 1 Complete)
 **Goal**: Build toward comprehensive HTML content capture in a smart, modular, and minimal way
 **Philosophy**: Small steps, clear documentation, test one file at a time
+**Status**: Phase 1 ✅ COMPLETE | Phase 2-5 📋 PENDING
 
 ## Current Reality Check
 
@@ -36,9 +37,11 @@ Do this:
 
 ## The Modular Path Forward
 
-### Phase 1: Build Better Rule Extraction (Week 1)
+### Phase 1: Build Better Rule Extraction ✅ COMPLETE (2025-10-27)
 
 **Goal**: Fix current extraction to distinguish definitions from references
+
+**Status**: ✅ All steps completed with improved results
 
 #### Step 1.1: Update Classic Parser (1 hour)
 **File**: `src/qe_tax_rag/extraction/ca/classic_parser.py`
@@ -70,7 +73,13 @@ def extract_rules(soup, source_file):
 - **Anchor ID Pattern**: Use strict `id="tocch2ln\d{4}"` pattern (not loose match)
 - **Regression Test**: Must also test t4002-5.html still extracts 63 rules (no regression)
 
-**Commit**: "fix: distinguish rule definitions from references in classic parser"
+**Commit**: ✅ DONE - `b07fd2e`: "fix: distinguish rule definitions from references in classic parser"
+
+**Actual Results**:
+- t4002-4.html: 16 rules ✅
+- t4002-6.html: 0 rules (not 2 - all references correctly filtered) ✅
+- Pattern enhanced: `^tocch\dln\d{4}(?:\w+)?$` handles variants like `tocch2ln8299fshng`
+- Additional commit `b96a759`: Enhanced pattern matching for combined headings
 
 #### Step 1.2: Document Reference Pattern (30 min)
 **File**: `docs/CONTENT_PATTERNS.md`
@@ -87,7 +96,9 @@ Create pattern documentation showing:
 - **Validation**: Manual peer review - team member can distinguish definition from reference after reading
 - **Failure**: Reviewer cannot immediately distinguish patterns from examples
 
-**Commit**: "docs: document rule definition vs reference patterns"
+**Commit**: ✅ DONE - `0ea9ea2`: "docs: document rule definition vs reference patterns"
+
+**Actual Results**: Comprehensive documentation created with HTML examples, pattern recognition table, and validation commands
 
 #### Step 1.3: Extract & Validate (30 min)
 ```bash
@@ -109,7 +120,14 @@ cat output/t4002-*/rules.yml | grep "rule_number:" | sort | uniq -d
 - **Quality**: Structure validation only (no duplicates); content readability out of scope
 - **Regression**: Must re-process t4002-5.html and verify 63 rules extracted (no regression)
 
-**Commit**: "feat: extract 18 unique rule definitions from t4002-4 and t4002-6"
+**Commit**: ✅ DONE - `06aa44c`: "docs: add Phase 1 validation results with improved extraction findings"
+
+**Actual Results**:
+- Zero duplicates achieved ✅
+- t4002-4.html: 16 rules (classic parser) ✅
+- t4002-6.html: 0 rules (classic parser) - all references correctly filtered ✅
+- t4002-5.html: 65 rules (improved from 63) - found 2 missed combined headings (LINE-8960, LINE-9899) ✅
+- Comprehensive validation document created: `docs/PHASE1_VALIDATION_RESULTS.md`
 
 ### Phase 2: Add ONE New Content Type (Week 1)
 
