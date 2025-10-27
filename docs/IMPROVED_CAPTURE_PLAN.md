@@ -261,20 +261,175 @@ Add section showing:
 
 **Commit**: "docs: document principle extraction results from t4002-6.html"
 
-### Phase 3: Repeat for Each Content Type (Week 2)
+### Phase 3: Add TABLE Content Type 📋 PLANNED (2025-10-27)
 
-Use same pattern for TABLES, EXAMPLES, GUIDANCE:
-1. Build parser for ONE content type
-2. Test on ONE representative file
-3. Document patterns and findings
-4. Commit
-5. Move to next type
+**Goal**: Capture structured data (CCA rates, deduction limits) from HTML tables
 
-**One file, one content type, one commit at a time**
+**Status**: 📋 Acceptance criteria defined, ready for implementation
 
-**Acceptance Criteria**: TBD (plan with Zen for each content type)
+**Target Files**:
+- t4002-10.html: 2 tables (CCA rates - primary target) ✅
+- t4002-9.html: 3 tables
+- t4002-6.html: 2 tables
+- t4002-4.html: 1 table
 
-### Phase 4: Unified Orchestrator (Week 2)
+#### Step 3.1: Update Content Models (1 hour)
+**File**: `src/qe_tax_rag/extraction/ca/models.py`
+
+Add TABLE to ContentType enum and table_data field:
+```python
+class ContentType(str, Enum):
+    RULE = "RULE"
+    PRINCIPLE = "PRINCIPLE"
+    TABLE = "TABLE"
+
+class ExtractedContent(BaseModel):
+    """Unified model for any extracted content."""
+    citation_id: str
+    content_type: ContentType
+    text: str
+    source_file: str
+    anchor_id: str | None = None
+    references: list[str] = []
+    table_data: list[dict[str, str]] | None = None  # NEW: List of dicts format
+
+    class Config:
+        frozen = True
+        extra = 'forbid'
+```
+
+**Storage Format**: List of dictionaries (RAG-friendly)
+```python
+[
+    {"Property": "Chain-saws", "Class number": "10"},
+    {"Property": "Computer equipment...", "Class number": "45"}
+]
+```
+
+**Acceptance Criteria** (from Zen):
+1. **Structural**: `ContentType.TABLE` exists in models.py
+2. **Structural**: `ExtractedContent` has `table_data: list[dict[str, str]] | None` field
+3. **Quality**: `mypy` passes with no new errors
+4. **Unit Test**: Can create `ExtractedContent(content_type=ContentType.TABLE, table_data=[...])`
+   - **Validation**: `pytest tests/unit/extraction/ca/test_models.py::test_create_table_content`
+
+**Commit**: "feat: add TABLE to ContentType model with structured data field"
+
+#### Step 3.2: Build Table Parser (1-2 hours)
+**File**: `src/qe_tax_rag/extraction/ca/table_parser.py`
+
+```python
+def extract_tables(soup: BeautifulSoup, source_file: str) -> list[ExtractedContent]:
+    """Extract structured table data from HTML."""
+    tables = []
+    seq = 1
+
+    for table_tag in soup.find_all('table'):
+        # Extract headers from thead > th
+        thead = table_tag.find('thead')
+        if not thead:
+            logger.warning(f"Skipping table without <thead> in {source_file}")
+            continue
+
+        headers = [th.get_text(strip=True) for th in thead.find_all('th')]
+
+        # Extract rows from tbody > tr > td
+        tbody = table_tag.find('tbody')
+        if not tbody:
+            logger.warning(f"Skipping table without <tbody> in {source_file}")
+            continue
+
+        table_data = []
+        for row in tbody.find_all('tr'):
+            cells = [td.get_text(strip=True) for td in row.find_all('td')]
+            if len(cells) == len(headers):
+                table_data.append(dict(zip(headers, cells)))
+
+        if table_data:
+            tables.append(ExtractedContent(
+                citation_id=f"{source_file}-TABLE-{seq}",
+                content_type=ContentType.TABLE,
+                text=f"Table {seq} from {source_file}",
+                source_file=source_file,
+                table_data=table_data
+            ))
+            seq += 1
+
+    return tables
+```
+
+**Acceptance Criteria** (from Zen):
+1. **Structural**: File `table_parser.py` exists with `extract_tables()` function
+2. **Execution**: 4 unit tests pass:
+   - Happy path: Well-formed table → correct data structure
+   - Malformed table (no thead/tbody) → empty list, no crash
+   - No tables → empty list
+   - Multiple tables → correct count + sequential citation_ids
+3. **Quality**: BeautifulSoup only (no Ghostscript/other deps)
+4. **Quality**: Passes `ruff` linting and formatting
+5. **Validation**: `pytest tests/unit/extraction/ca/test_table_parser.py -v`
+
+**Commit**: "feat: add table parser to extract structured data from HTML tables"
+
+#### Step 3.3: Test on ONE File (30 min)
+**Target**: t4002-10.html (2 CCA rate tables)
+
+```bash
+# Extract tables
+uv run extract-tables cra_documents/cra_t4002e_rev24_dump/t4002-10.html output/t4002-10/tables.yml
+
+# Validate
+cat output/t4002-10/tables.yml  # Should show 2 tables with structured data
+grep -c "content_type: TABLE" output/t4002-10/tables.yml  # Should return 2
+```
+
+**Acceptance Criteria** (from Zen):
+1. **Structural**: `extract-tables` script defined in `pyproject.toml`
+2. **Execution**: Command runs successfully (exit code 0)
+3. **Execution**: Output file `output/t4002-10/tables.yml` created (valid YAML)
+4. **Validation**: `grep -c "content_type: TABLE" output/t4002-10/tables.yml` returns `2`
+5. **Validation**: First table's `table_data` field is non-empty list of dicts
+6. **Quality**: Both tables have correct headers ("Property", "Class number")
+7. **Regression**: No impact on existing `extract-rules` or `extract-principles` commands
+
+**Expected Extraction Counts**:
+- t4002-10.html: 2 tables ✅
+- t4002-9.html: 3 tables (future)
+- t4002-6.html: 2 tables (future)
+- t4002-4.html: 1 table (future)
+
+**Commit**: "test: extract tables from t4002-10.html with structured data"
+
+#### Step 3.4: Document Findings (30 min)
+**File**: `docs/CONTENT_PATTERNS.md` (update)
+
+Add section showing:
+- TABLE content type definition
+- HTML structure from t4002-10.html (CCA rates table)
+- YAML output with list-of-dicts format
+- Rationale: RAG-friendly structured data for semantic search
+- Known limitations (baseline quality)
+
+**Acceptance Criteria** (from Zen):
+1. **Structural**: `docs/CONTENT_PATTERNS.md` modified with new section
+2. **Content**: Section includes:
+   - Brief definition of TABLE content type
+   - Verbatim HTML code block from t4002-10.html
+   - Corresponding YAML output showing `ExtractedContent` structure
+   - List of 5 known limitations (baseline quality)
+3. **Validation**: Manual peer review - team member can understand table extraction
+4. **Quality**: Markdown passes `mdformat` pre-commit hook
+
+**Known Limitations (Baseline Quality - 80/20)**:
+1. **Complex Structures**: No `colspan` or `rowspan` support (simple grid only)
+2. **Nested Tables**: Extracted as flat, separate tables (loses hierarchy)
+3. **Missing Semantic Tags**: Tables without `<thead>` or `<tbody>` skipped with warning
+4. **No Caption/Title**: Does not extract `<caption>` tags or nearby headings
+5. **Inconsistent Columns**: Assumes all rows have same cell count as headers
+
+**Commit**: "docs: document table extraction patterns and baseline limitations"
+
+### Phase 4: Unified Orchestrator (Future)
 
 Once all content type parsers work individually:
 
