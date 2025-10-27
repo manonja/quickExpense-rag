@@ -78,14 +78,49 @@ def parse(html_path: str) -> list[ExtractedRule]:
     h1_tag = soup.find("h1")
     chapter = h1_tag.get_text(strip=True) if h1_tag else "Unknown Chapter"
 
-    # Find all h3 tags matching "Line XXXX –" pattern using function
+    # Find all h3 tags matching "Line XXXX" pattern using function
     def is_line_rule(tag: Tag) -> bool:
         if tag.name != "h3":
             return False
         text = tag.get_text(strip=True)
-        return re.match(r"^\s*Line \d+ –", text) is not None
+        # Pattern matches "Line {number}" followed by optional text then "–"
+        # Examples: "Line 9600 – ...", "Line 9790or9270 – ...", "Line 9476 ... –"
+        return re.match(r"^\s*Line \d+", text) is not None
 
-    rule_headers = soup.find_all(is_line_rule)
+    def is_rule_definition(tag: Tag) -> bool:
+        """
+        Check if tag is a rule definition (not just a reference).
+
+        Rule definitions have anchor IDs matching pattern: id="tocch2ln9600"
+        Rule references don't have anchor IDs (e.g., <span>line 9600</span>)
+
+        Args:
+            tag: BeautifulSoup Tag element to check.
+
+        Returns:
+            True if tag has an anchor child with id matching "tocch\\dln\\d{4}" pattern.
+
+        Example:
+            >>> # Definition: <h3><a id="tocch2ln9600"></a>Line 9600 – Other income</h3>
+            >>> is_rule_definition(definition_tag)
+            True
+            >>> # Reference: <li><span>line 9600</span> for farming income</li>
+            >>> is_rule_definition(reference_tag)
+            False
+
+        """
+        anchor_tag = tag.find("a")
+        if not anchor_tag:
+            return False
+        anchor_id = anchor_tag.get("id")
+        if not anchor_id:
+            return False
+        # Pattern: tocch{chapter}ln{4-digit line number}[optional suffix]
+        # Examples: tocch2ln9600, tocch3ln8523, tocch2ln8299fshng
+        # The suffix (like "fshng" for fishing) is allowed but not required
+        return bool(re.match(r"^tocch\dln\d{4}(?:\w+)?$", anchor_id))
+
+    rule_headers = soup.find_all(lambda tag: is_line_rule(tag) and is_rule_definition(tag))
 
     if not rule_headers:
         logger.warning(
@@ -102,7 +137,9 @@ def parse(html_path: str) -> list[ExtractedRule]:
             header_text = header.get_text(strip=True)
             # Remove any img tag remnants from header_text for clean parsing
             clean_header = re.sub(r"<img[^>]*>", "", header_text)
-            match = re.search(r"Line (\d+) –\s*(.+)", clean_header)
+            # Pattern: "Line {number}" followed by optional text then "–" then title
+            # Handles: "Line 9600 – Title", "Line 9790or9270 – Title"
+            match = re.search(r"Line (\d+).*?–\s*(.+)", clean_header)
             if not match:
                 logger.warning(f"Skipping h3 with unparseable format: '{header_text}'")
                 continue

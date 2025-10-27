@@ -1,0 +1,372 @@
+- rule_number: 8340
+  discrepancy_type: ORPHAN
+  failure_reason: "Unexpected error: ResourceExhausted: 429 You exceeded your current\
+    \ quota. Please migrate to Gemini 2.0 Flash Preview (Image Generation) (models/gemini-2.0-flash-preview-image-generation)\
+    \ for higher quota limits. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits.\
+    \ [violations {\n  quota_metric: \"generativelanguage.googleapis.com/generate_content_paid_tier_input_token_count\"\
+    \n  quota_id: \"GenerateContentPaidTierInputTokensPerModelPerMinute\"\n  quota_dimensions\
+    \ {\n    key: \"model\"\n    value: \"gemini-2.0-flash-exp\"\n  }\n  quota_dimensions\
+    \ {\n    key: \"location\"\n    value: \"global\"\n  }\n  quota_value: 250000\n\
+    }\n, links {\n  description: \"Learn more about Gemini API quotas\"\n  url: \"\
+    https://ai.google.dev/gemini-api/docs/rate-limits\"\n}\n, retry_delay {\n  seconds:\
+    \ 5\n}\n]"
+  source_file: t4002-4.html
+  timestamp: '2025-10-27T16:30:54.743623+00:00'
+  classic_version: null
+  llm_version: null
+  orphan_version:
+    rule_number: 8340
+    title: Direct wage costs
+    content: 'Include the remuneration you paid to employees who work directly in
+      the manufacture of your goods. Do not include:
+
+
+      indirect wages
+
+      a salary paid to yourself or a partner (see Part 9 – Details of equity)
+
+      withdrawals you may have made from the business (see Part 9 – Details of equity)'
+    applies_to: []
+    source_citation: Line 8340 – Direct wage costs
+    chapter: 'Self-employed Business, Professional, Commission, Farming, and Fishing
+      Income: Chapter 2 – Income'
+    section: Part 3D – Cost of goods sold and gross profit
+    source_file: t4002-4.html
+    lineage_stages:
+    - stage: llm_parser
+      timestamp: '2025-10-27T16:28:57.639009+00:00'
+  found_by: llm
+- rule_number: 8230
+  discrepancy_type: ORPHAN
+  failure_reason: "Unexpected error: ResourceExhausted: 429 You exceeded your current\
+    \ quota. Please migrate to Gemini 2.0 Flash Preview (Image Generation) (models/gemini-2.0-flash-preview-image-generation)\
+    \ for higher quota limits. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits.\
+    \ [violations {\n  quota_metric: \"generativelanguage.googleapis.com/generate_content_paid_tier_input_token_count\"\
+    \n  quota_id: \"GenerateContentPaidTierInputTokensPerModelPerMinute\"\n  quota_dimensions\
+    \ {\n    key: \"model\"\n    value: \"gemini-2.0-flash-exp\"\n  }\n  quota_dimensions\
+    \ {\n    key: \"location\"\n    value: \"global\"\n  }\n  quota_value: 250000\n\
+    }\n, links {\n  description: \"Learn more about Gemini API quotas\"\n  url: \"\
+    https://ai.google.dev/gemini-api/docs/rate-limits\"\n}\n, retry_delay {\n  seconds:\
+    \ 4\n}\n]"
+  source_file: t4002-4.html
+  timestamp: '2025-10-27T16:30:55.229402+00:00'
+  classic_version: null
+  llm_version: null
+  orphan_version:
+    rule_number: 8230
+    title: Other income
+    content: 'On line 8230, enter the total income you received from other sources.
+      Some examples of other income are:
+
+
+      a recovered amount you wrote off as a bad debt in a previous year
+
+      the value of prizes or vacation trips awarded to you because of your business
+      or professional activities
+
+      payments you received for land you leased for petroleum or natural gas exploration.
+      For more information, see Interpretation Bulletin IT-200, Surface Rentals and
+      Farming Operations
+
+      grants, subsidies, incentives, or assistance you get from a government, government
+      agency or non-government agency. Input tax credits are considered government
+      assistance. Include the amount you claimed on line 108 of your GST/HST return
+      only if you cannot apply the rebate, grant or assistance you received to reduce
+      a particular expense or an asset''s capital cost. For more information, see Grants,
+      subsidies and rebates
+
+      If you use the quick method to calculate your GST/HST remittances, report the
+      1% credit (maximum $300) that you claimed on line 108 of your GST/HST return
+      (or on line 107 if you filed on paper). For more information, see Interpretation
+      Bulletin IT-273, Government Assistance – General Comments.'
+    applies_to: []
+    source_citation: Line 8230 – Other income
+    chapter: 'Self-employed Business, Professional, Commission, Farming, and Fishing
+      Income: Chapter 2 – Income'
+    section: Part 3C – Gross business or professional income
+    source_file: t4002-4.html
+    lineage_stages:
+    - stage: llm_parser
+      timestamp: '2025-10-27T16:28:57.639009+00:00'
+  found_by: llm
+- rule_number: 8360
+  discrepancy_type: ORPHAN
+  failure_reason: "Unexpected error: ResourceExhausted: 429 You exceeded your current\
+    \ quota. Please migrate to Gemini 2.0 Flash Preview (Image Generation) (models/gemini-2.0-flash-preview-image-generation)\
+    \ for higher quota limits. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits.\
+    \ [violations {\n  quota_metric: \"generativelanguage.googleapis.com/generate_content_paid_tier_input_token_count\"\
+    \n  quota_id: \"GenerateContentPaidTierInputTokensPerModelPerMinute\"\n  quota_dimensions\
+    \ {\n    key: \"model\"\n    value: \"gemini-2.0-flash-exp\"\n  }\n  quota_dimensions\
+    \ {\n    key: \"location\"\n    value: \"global\"\n  }\n  quota_value: 250000\n\
+    }\n, links {\n  description: \"Learn more about Gemini API quotas\"\n  url: \"\
+    https://ai.google.dev/gemini-api/docs/rate-limits\"\n}\n, retry_delay {\n  seconds:\
+    \ 4\n}\n]"
+  source_file: t4002-4.html
+  timestamp: '2025-10-27T16:30:55.687032+00:00'
+  classic_version: null
+  llm_version: null
+  orphan_version:
+    rule_number: 8360
+    title: Subcontracts
+    content: Enter all the costs to hire outside help to perform tasks related to
+      the goods you sell.
+    applies_to: []
+    source_citation: Line 8360 – Subcontracts
+    chapter: 'Self-employed Business, Professional, Commission, Farming, and Fishing
+      Income: Chapter 2 – Income'
+    section: Part 3D – Cost of goods sold and gross profit
+    source_file: t4002-4.html
+    lineage_stages:
+    - stage: llm_parser
+      timestamp: '2025-10-27T16:28:57.639009+00:00'
+  found_by: llm
+- rule_number: 8500
+  discrepancy_type: ORPHAN
+  failure_reason: "Unexpected error: ResourceExhausted: 429 You exceeded your current\
+    \ quota. Please migrate to Gemini 2.0 Flash Preview (Image Generation) (models/gemini-2.0-flash-preview-image-generation)\
+    \ for higher quota limits. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits.\
+    \ [violations {\n  quota_metric: \"generativelanguage.googleapis.com/generate_content_paid_tier_input_token_count\"\
+    \n  quota_id: \"GenerateContentPaidTierInputTokensPerModelPerMinute\"\n  quota_dimensions\
+    \ {\n    key: \"model\"\n    value: \"gemini-2.0-flash-exp\"\n  }\n  quota_dimensions\
+    \ {\n    key: \"location\"\n    value: \"global\"\n  }\n  quota_value: 250000\n\
+    }\n, links {\n  description: \"Learn more about Gemini API quotas\"\n  url: \"\
+    https://ai.google.dev/gemini-api/docs/rate-limits\"\n}\n, retry_delay {\n  seconds:\
+    \ 3\n}\n]"
+  source_file: t4002-4.html
+  timestamp: '2025-10-27T16:30:56.159405+00:00'
+  classic_version: null
+  llm_version: null
+  orphan_version:
+    rule_number: 8500
+    title: Closing inventory
+    content: 'Enter your opening inventory amount at line 8300 and your closing inventory
+      amount at line 8500. These amounts must include raw materials, goods in process
+      and finished goods. The way you value your inventory is important in determining
+      your income. For income tax purposes, choose one of the following two methods:
+
+
+      value your entire inventory at its fair market value (FMV). Use the price you
+      would pay to replace the item or the amount you would get if you sold the item
+
+      value individual items in your inventory at either their FMV or their cost,
+      whichever is less. Cost is the price you incur for an item. Cost also includes
+      any expenses you incur to bring the item to the business location and put it
+      in a condition so that you can use it in the business. When you cannot easily
+      tell one item from another, you can value the items as a group
+
+
+      Once you have chosen a method for valuing your inventory, you have to use that
+      method consistently.
+
+      If this is your first year of reporting business income, you can choose either
+      method to value your inventory. In your first year of business, you will not
+      have an opening inventory amount to enter on line 8300. If this is not your
+      first year of business, continue to use the same method you used in past years.
+      The value of your inventory at the start of a fiscal period has to be the same
+      as the value of your inventory at the end of the preceding fiscal period.
+
+      Do an actual stock count at the end of each fiscal period, unless you use a
+      perpetual inventory system. Under this system, you do periodic stock counts
+      and keep a written record of each count. Remember to keep your inventory records
+      with your other records.
+
+      Businesses that are adventures or concerns in the nature of trade must value
+      their inventory at cost.
+
+      For more information about valuing inventory, see Interpretation Bulletin IT-473,
+      Inventory Valuation.
+
+      Inventory value of an artistic endeavour
+
+      An artistic endeavour occurs when you are in the business of creating paintings,
+      murals, original prints, etchings, drawings, sculptures or similar works of
+      art. An artistic endeavour does not include reproducing works of art.
+
+      When you calculate your income from an artistic endeavour, you can elect to
+      value your closing inventory at zero. To do this, enter zero at line 8500. Your
+      election of zero closing inventory stays in effect for each following year,
+      unless you request a change and we allow the change. You cannot use this election
+      if you reproduced the works of art.
+
+      For more information, see Income Tax Folio S4-F14-C1, Artists and Writers.
+
+      Gifts of inventory by an artist
+
+      If you donate a work of art you created, you may not have to report a profit
+      on your donation for income tax purposes. To benefit from this tax treatment,
+      your gift must fall under the definition of gifts of certified cultural property.
+      For more information about gifts and donations, see Guide P113, Gifts and Income
+      Tax.'
+    applies_to: []
+    source_citation: Line 8500 – Closing inventory
+    chapter: 'Self-employed Business, Professional, Commission, Farming, and Fishing
+      Income: Chapter 2 – Income'
+    section: Part 3D – Cost of goods sold and gross profit
+    source_file: t4002-4.html
+    lineage_stages:
+    - stage: llm_parser
+      timestamp: '2025-10-27T16:28:57.639009+00:00'
+  found_by: llm
+- rule_number: 8000
+  discrepancy_type: ORPHAN
+  failure_reason: "Unexpected error: ResourceExhausted: 429 You exceeded your current\
+    \ quota. Please migrate to Gemini 2.0 Flash Preview (Image Generation) (models/gemini-2.0-flash-preview-image-generation)\
+    \ for higher quota limits. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits.\
+    \ [violations {\n  quota_metric: \"generativelanguage.googleapis.com/generate_content_paid_tier_input_token_count\"\
+    \n  quota_id: \"GenerateContentPaidTierInputTokensPerModelPerMinute\"\n  quota_dimensions\
+    \ {\n    key: \"model\"\n    value: \"gemini-2.0-flash-exp\"\n  }\n  quota_dimensions\
+    \ {\n    key: \"location\"\n    value: \"global\"\n  }\n  quota_value: 250000\n\
+    }\n, links {\n  description: \"Learn more about Gemini API quotas\"\n  url: \"\
+    https://ai.google.dev/gemini-api/docs/rate-limits\"\n}\n, retry_delay {\n  seconds:\
+    \ 3\n}\n]"
+  source_file: t4002-4.html
+  timestamp: '2025-10-27T16:30:56.613925+00:00'
+  classic_version: null
+  llm_version: null
+  orphan_version:
+    rule_number: 8000
+    title: Adjusted gross sales or adjusted professional fees
+    content: 'If you are completing Form T2125 for a business activity, enter at line
+      8000 your adjusted gross sales from amount 3G in Part 3A.
+
+      For a professional activity, enter your adjusted professional fees from amount
+      3N in Part 3B.'
+    applies_to: []
+    source_citation: Line 8000 – Adjusted gross sales or adjusted professional fees
+    chapter: 'Self-employed Business, Professional, Commission, Farming, and Fishing
+      Income: Chapter 2 – Income'
+    section: Part 3C – Gross business or professional income
+    source_file: t4002-4.html
+    lineage_stages:
+    - stage: llm_parser
+      timestamp: '2025-10-27T16:28:57.639009+00:00'
+  found_by: llm
+- rule_number: 8519
+  discrepancy_type: ORPHAN
+  failure_reason: "Unexpected error: ResourceExhausted: 429 You exceeded your current\
+    \ quota. Please migrate to Gemini 2.0 Flash Preview (Image Generation) (models/gemini-2.0-flash-preview-image-generation)\
+    \ for higher quota limits. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits.\
+    \ [violations {\n  quota_metric: \"generativelanguage.googleapis.com/generate_content_paid_tier_input_token_count\"\
+    \n  quota_id: \"GenerateContentPaidTierInputTokensPerModelPerMinute\"\n  quota_dimensions\
+    \ {\n    key: \"model\"\n    value: \"gemini-2.0-flash-exp\"\n  }\n  quota_dimensions\
+    \ {\n    key: \"location\"\n    value: \"global\"\n  }\n  quota_value: 250000\n\
+    }\n, links {\n  description: \"Learn more about Gemini API quotas\"\n  url: \"\
+    https://ai.google.dev/gemini-api/docs/rate-limits\"\n}\n, retry_delay {\n  seconds:\
+    \ 3\n}\n]"
+  source_file: t4002-4.html
+  timestamp: '2025-10-27T16:30:57.039595+00:00'
+  classic_version: null
+  llm_version: null
+  orphan_version:
+    rule_number: 8519
+    title: Gross profit
+    content: 'Enter your gross profit. This is your gross business income minus your
+      cost of goods sold.
+
+      The rules for calculating business and professional income are similar.'
+    applies_to: []
+    source_citation: Line 8519 – Gross profit
+    chapter: 'Self-employed Business, Professional, Commission, Farming, and Fishing
+      Income: Chapter 2 – Income'
+    section: Part 3D – Cost of goods sold and gross profit
+    source_file: t4002-4.html
+    lineage_stages:
+    - stage: llm_parser
+      timestamp: '2025-10-27T16:28:57.639009+00:00'
+  found_by: llm
+- rule_number: 8290
+  discrepancy_type: ORPHAN
+  failure_reason: "Unexpected error: ResourceExhausted: 429 You exceeded your current\
+    \ quota. Please migrate to Gemini 2.0 Flash Preview (Image Generation) (models/gemini-2.0-flash-preview-image-generation)\
+    \ for higher quota limits. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits.\
+    \ [violations {\n  quota_metric: \"generativelanguage.googleapis.com/generate_content_paid_tier_input_token_count\"\
+    \n  quota_id: \"GenerateContentPaidTierInputTokensPerModelPerMinute\"\n  quota_dimensions\
+    \ {\n    key: \"model\"\n    value: \"gemini-2.0-flash-exp\"\n  }\n  quota_dimensions\
+    \ {\n    key: \"location\"\n    value: \"global\"\n  }\n  quota_value: 250000\n\
+    }\n, links {\n  description: \"Learn more about Gemini API quotas\"\n  url: \"\
+    https://ai.google.dev/gemini-api/docs/rate-limits\"\n}\n, retry_delay {\n  seconds:\
+    \ 2\n}\n]"
+  source_file: t4002-4.html
+  timestamp: '2025-10-27T16:30:57.487524+00:00'
+  classic_version: null
+  llm_version: null
+  orphan_version:
+    rule_number: 8290
+    title: Reserves deducted last year
+    content: Include any reserves you deducted for 2023. For more information, see Allowable
+      reserves.
+    applies_to: []
+    source_citation: Line 8290 – Reserves deducted last year
+    chapter: 'Self-employed Business, Professional, Commission, Farming, and Fishing
+      Income: Chapter 2 – Income'
+    section: Part 3C – Gross business or professional income
+    source_file: t4002-4.html
+    lineage_stages:
+    - stage: llm_parser
+      timestamp: '2025-10-27T16:28:57.639009+00:00'
+  found_by: llm
+- rule_number: 8300
+  discrepancy_type: ORPHAN
+  failure_reason: "Unexpected error: ResourceExhausted: 429 You exceeded your current\
+    \ quota. Please migrate to Gemini 2.0 Flash Preview (Image Generation) (models/gemini-2.0-flash-preview-image-generation)\
+    \ for higher quota limits. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits.\
+    \ [violations {\n  quota_metric: \"generativelanguage.googleapis.com/generate_content_paid_tier_input_token_count\"\
+    \n  quota_id: \"GenerateContentPaidTierInputTokensPerModelPerMinute\"\n  quota_dimensions\
+    \ {\n    key: \"model\"\n    value: \"gemini-2.0-flash-exp\"\n  }\n  quota_dimensions\
+    \ {\n    key: \"location\"\n    value: \"global\"\n  }\n  quota_value: 250000\n\
+    }\n, links {\n  description: \"Learn more about Gemini API quotas\"\n  url: \"\
+    https://ai.google.dev/gemini-api/docs/rate-limits\"\n}\n, retry_delay {\n  seconds:\
+    \ 2\n}\n]"
+  source_file: t4002-4.html
+  timestamp: '2025-10-27T16:30:57.961001+00:00'
+  classic_version: null
+  llm_version: null
+  orphan_version:
+    rule_number: 8300
+    title: Opening inventory and Line 8500 – Closing inventory
+    content: 'Enter your opening inventory amount at line 8300 and your closing inventory
+      amount at line 8500. These amounts must include raw materials, goods in process
+      and finished goods. The way you value your inventory is important in determining
+      your income. For income tax purposes, choose one of the following two methods:
+
+
+      value your entire inventory at its fair market value (FMV). Use the price you
+      would pay to replace the item or the amount you would get if you sold the item
+
+      value individual items in your inventory at either their FMV or their cost,
+      whichever is less. Cost is the price you incur for an item. Cost also includes
+      any expenses you incur to bring the item to the business location and put it
+      in a condition so that you can use it in the business. When you cannot easily
+      tell one item from another, you can value the items as a group
+
+
+      Once you have chosen a method for valuing your inventory, you have to use that
+      method consistently.
+
+      If this is your first year of reporting business income, you can choose either
+      method to value your inventory. In your first year of business, you will not
+      have an opening inventory amount to enter on line 8300. If this is not your
+      first year of business, continue to use the same method you used in past years.
+      The value of your inventory at the start of a fiscal period has to be the same
+      as the value of your inventory at the end of the preceding fiscal period.
+
+      Do an actual stock count at the end of each fiscal period, unless you use a
+      perpetual inventory system. Under this system, you do periodic stock counts
+      and keep a written record of each count. Remember to keep your inventory records
+      with your other records.
+
+      Businesses that are adventures or concerns in the nature of trade must value
+      their inventory at cost.
+
+      For more information about valuing inventory, see Interpretation Bulletin IT-473,
+      Inventory Valuation.'
+    applies_to: []
+    source_citation: Line 8300 – Opening inventory and Line 8500 – Closing inventory
+    chapter: 'Self-employed Business, Professional, Commission, Farming, and Fishing
+      Income: Chapter 2 – Income'
+    section: Part 3D – Cost of goods sold and gross profit
+    source_file: t4002-4.html
+    lineage_stages:
+    - stage: llm_parser
+      timestamp: '2025-10-27T16:28:57.639009+00:00'
+  found_by: llm

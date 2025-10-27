@@ -1,5 +1,6 @@
 """Tests for classic HTML parser."""
 
+import re
 from pathlib import Path
 
 import pytest
@@ -213,3 +214,34 @@ def test_parse_rule_with_no_space_after_dash(fixture_html_path: Path) -> None:
     assert rule.title == "Advertising"
     assert "advertising" in rule.content.lower()
     assert rule.applies_to == [ApplicabilityType.BUSINESS]
+
+
+@pytest.mark.unit
+def test_filter_rule_references_without_anchor_ids(fixture_html_path: Path) -> None:
+    """
+    Test parser skips rule references without proper anchor IDs.
+
+    Rule definitions have anchor IDs matching "tocch2ln\\d{4}" pattern.
+    Rule references lack anchor IDs or have non-matching patterns.
+
+    This prevents duplicates when HTML contains both definitions and references.
+    For example:
+    - Definition: <h3><a id="tocch2ln9600"></a>Line 9600 – Other income</h3>
+    - Reference: <h3>Line 9600 – Where to report income</h3> (no anchor)
+
+    Only the definition should be extracted.
+    """
+    rules = parse(str(fixture_html_path))
+
+    # Line 9600 exists in fixture as a REFERENCE (no anchor ID)
+    # Should NOT be extracted
+    assert not any(
+        r.rule_number == 9600 for r in rules
+    ), "Line 9600 reference without anchor ID should be skipped"
+
+    # Verify all extracted rules have proper anchor IDs
+    for rule in rules:
+        assert rule.anchor_id is not None, f"Line {rule.rule_number} missing anchor_id"
+        assert re.match(
+            r"^tocch\dln\d{4}(?:\w+)?$", rule.anchor_id
+        ), f"Line {rule.rule_number} has invalid anchor_id: {rule.anchor_id}"
