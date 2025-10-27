@@ -8,7 +8,6 @@ from pathlib import Path
 
 import pytest
 from bs4 import BeautifulSoup
-
 from qe_tax_rag.extraction.ca.models import ContentType
 from qe_tax_rag.extraction.ca.principle_parser import (
     extract_line_references,

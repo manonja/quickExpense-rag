@@ -6,7 +6,6 @@ Tests ContentType enum and ExtractedContent model validation.
 
 import pytest
 from pydantic import ValidationError
-
 from qe_tax_rag.extraction.ca.models import ContentType, ExtractedContent
 
 
