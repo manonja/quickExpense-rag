@@ -171,5 +171,7 @@ exclude_lines = [
 
 [dependency-groups]
 dev = [
+    "python-levenshtein>=0.27.1",
+    "thefuzz>=0.22.1",
     "vcrpy>=7.0.0",
 ]
