@@ -63,7 +63,12 @@ def extract_rules(soup, source_file):
 **Test**: Run on t4002-4.html and t4002-6.html
 **Expected**: 16 rules from t4002-4, 2 from t4002-6 (no duplicates)
 
-**Acceptance Criteria**: TBD (plan with Zen)
+**Acceptance Criteria** (from Zen):
+- **Primary**: Parser extracts exactly 16 rules from t4002-4.html and exactly 2 from t4002-6.html
+- **Validation**: `uv run extract-rules t4002-4.html | grep -c "^- rule_number:"` returns 16; same for t4002-6 returns 2
+- **Failure**: Any count other than 16/2, or any extraction errors
+- **Anchor ID Pattern**: Use strict `id="tocch2ln\d{4}"` pattern (not loose match)
+- **Regression Test**: Must also test t4002-5.html still extracts 63 rules (no regression)
 
 **Commit**: "fix: distinguish rule definitions from references in classic parser"
 
@@ -75,7 +80,12 @@ Create pattern documentation showing:
 - Rule reference HTML structure (with examples from t4002-6.html)
 - How to distinguish them programmatically
 
-**Acceptance Criteria**: TBD (plan with Zen)
+**Acceptance Criteria** (from Zen):
+- **Primary**: `docs/CONTENT_PATTERNS.md` exists with two sections: "Rule Definitions" and "Rule References"
+- **Content**: Each section has ≥1 complete HTML snippet (full `<h3>...</h3>` tag, not just attributes) + brief explanation
+- **Contrast**: Include one negative example in "Rule Definition" section showing a reference and why it's NOT a definition
+- **Validation**: Manual peer review - team member can distinguish definition from reference after reading
+- **Failure**: Reviewer cannot immediately distinguish patterns from examples
 
 **Commit**: "docs: document rule definition vs reference patterns"
 
@@ -91,7 +101,13 @@ uv run extract-rules cra_documents/cra_t4002e_rev24_dump/t4002-6.html output/t40
 cat output/t4002-*/rules.yml | grep "rule_number:" | sort | uniq -d
 ```
 
-**Acceptance Criteria**: TBD (plan with Zen)
+**Acceptance Criteria** (from Zen):
+- **Primary**: Zero duplicate `citation_id` values across all extracted files
+- **Validation**: `cat output/**/rules.yml | grep "rule_number:" | sort | uniq -d | wc -l` returns 0
+- **Failure**: Command outputs number >0 (any duplicates found)
+- **Scope**: Automated validation only (no manual spot-check required)
+- **Quality**: Structure validation only (no duplicates); content readability out of scope
+- **Regression**: Must re-process t4002-5.html and verify 63 rules extracted (no regression)
 
 **Commit**: "feat: extract 18 unique rule definitions from t4002-4 and t4002-6"
 
