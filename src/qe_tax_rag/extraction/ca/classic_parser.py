@@ -120,7 +120,9 @@ def parse(html_path: str) -> list[ExtractedRule]:
         # The suffix (like "fshng" for fishing) is allowed but not required
         return bool(re.match(r"^tocch\dln\d{4}(?:\w+)?$", anchor_id))
 
-    rule_headers = soup.find_all(lambda tag: is_line_rule(tag) and is_rule_definition(tag))
+    rule_headers = soup.find_all(
+        lambda tag: is_line_rule(tag) and is_rule_definition(tag)
+    )
 
     if not rule_headers:
         logger.warning(

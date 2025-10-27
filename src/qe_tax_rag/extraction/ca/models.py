@@ -72,7 +72,7 @@ class ExtractedContent(BaseModel):
         ...     text="Other income\\n\\nInclude any other income...",
         ...     source_file="t4002-5.html",
         ...     anchor_id="tocch2ln9600",
-        ...     references=[]
+        ...     references=[],
         ... )
 
     Example (PRINCIPLE):
@@ -82,7 +82,7 @@ class ExtractedContent(BaseModel):
         ...     text="Enter on line 9925 the total business part...",
         ...     source_file="t4002-6.html",
         ...     anchor_id=None,
-        ...     references=["LINE-9925"]
+        ...     references=["LINE-9925"],
         ... )
 
     Example (TABLE):
@@ -95,8 +95,8 @@ class ExtractedContent(BaseModel):
         ...     references=[],
         ...     table_data=[
         ...         {"Property": "Chain-saws", "Class number": "10"},
-        ...         {"Property": "Computer equipment", "Class number": "45"}
-        ...     ]
+        ...         {"Property": "Computer equipment", "Class number": "45"},
+        ...     ],
         ... )
     """
 

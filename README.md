@@ -28,7 +28,8 @@ need programmatic access to CRA expense rule information.
 - **Lineage Tracking**: 100% coverage with source traceability
 - **RAG Examples**: Full integration examples with Gemini, OpenAI, Anthropic
 - **Data Scope**: Current database covers single HTML source (future: full T4002 guide)
-- **GitHub Release**: [data-v2025.10.23](https://github.com/manonja/quickExpense-rag/releases/tag/data-v2025.10.23)
+- **GitHub Release**:
+  [data-v2025.10.23](https://github.com/manonja/quickExpense-rag/releases/tag/data-v2025.10.23)
 
 ## Key Features
 
@@ -114,11 +115,12 @@ QE Tax RAG uses a multi-stage hybrid search approach:
 
 - **Code**: Distributed via PyPI (`pip install qe-tax-rag`)
 - **Database**: Downloaded from
-  [GitHub Releases](https://github.com/manonja/quickExpense-rag/releases) on first `init()`
-  call (~1.7 MB)
+  [GitHub Releases](https://github.com/manonja/quickExpense-rag/releases) on first
+  `init()` call (~1.7 MB)
 - **Current Release**:
   [data-v2025.10.23](https://github.com/manonja/quickExpense-rag/releases/tag/data-v2025.10.23)
-  - **Source**: Single HTML file (t4002-5.html) from CRA T4002 Business and Professional Income Guide
+  - **Source**: Single HTML file (t4002-5.html) from CRA T4002 Business and Professional
+    Income Guide
   - **Coverage**: 63 searchable expense rules
   - **Lineage**: 100% coverage with extraction timestamps and source tracking
   - **Note**: Future releases will expand to full T4002 guide (247+ rules)
@@ -127,7 +129,9 @@ QE Tax RAG uses a multi-stage hybrid search approach:
 - **Updates**: Database versions released independently from code versions
 
 **Current Limitations:**
-- Database contains federal CRA rules only (no province or business-type specific metadata)
+
+- Database contains federal CRA rules only (no province or business-type specific
+  metadata)
 - Filtering by `province` or `business_type` parameters will return 0 results
 - Use `expense_types` filtering for categorizing rules
 

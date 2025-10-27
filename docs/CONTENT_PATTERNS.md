@@ -1,20 +1,21 @@
 # T4002 HTML Content Patterns
 
-**Purpose**: Document HTML patterns for different content types found in CRA T4002 guide dumps to enable accurate extraction and prevent duplicates.
+**Purpose**: Document HTML patterns for different content types found in CRA T4002 guide
+dumps to enable accurate extraction and prevent duplicates.
 
-**Created**: 2025-10-27
-**Updated**: 2025-10-27 (Phase 3 - TABLE content type)
+**Created**: 2025-10-27 **Updated**: 2025-10-27 (Phase 3 - TABLE content type)
 **Status**: Phase 3 (Rule Definitions, Principles, Tables)
 
 ## Rule Definitions
 
 ### What Makes It a Definition
 
-A **rule definition** is the canonical source of truth for a line-numbered expense rule. It contains:
+A **rule definition** is the canonical source of truth for a line-numbered expense rule.
+It contains:
 
 1. **Anchor ID with strict pattern**: `id="tocch{chapter}ln{line_number}"`
-2. **Heading tag**: Usually `<h3>` with "Line {number} – {title}" format
-3. **Full content**: Complete explanation, instructions, and examples
+1. **Heading tag**: Usually `<h3>` with "Line {number} – {title}" format
+1. **Full content**: Complete explanation, instructions, and examples
 
 ### HTML Structure
 
@@ -27,7 +28,8 @@ A **rule definition** is the canonical source of truth for a line-numbered expen
 
 - Anchor ID: `tocch2ln9600` (chapter 2, line 9600)
 - Pattern: `tocch\dln\d{4}` (chapter digit + "ln" + 4-digit line number)
-- Location: Definition appears in the chapter where the line is explained (e.g., Chapter 2 for farming income)
+- Location: Definition appears in the chapter where the line is explained (e.g., Chapter
+  2 for farming income)
 - Content: Multiple paragraphs, lists, examples follow the heading
 
 ### Another Example
@@ -53,7 +55,8 @@ A **rule definition** is the canonical source of truth for a line-numbered expen
 **Why this is NOT a definition**:
 
 - ❌ NO anchor ID on the `<a>` tag
-- ❌ This is a cross-reference in Chapter 3 (expenses) pointing back to the definition in Chapter 2 (income)
+- ❌ This is a cross-reference in Chapter 3 (expenses) pointing back to the definition in
+  Chapter 2 (income)
 - ❌ Does not contain the full rule explanation
 - ❌ Heading describes where to report, not what the rule is
 
@@ -61,11 +64,13 @@ A **rule definition** is the canonical source of truth for a line-numbered expen
 
 ### What Makes It a Reference
 
-A **rule reference** mentions a line number but does NOT provide the canonical definition. It:
+A **rule reference** mentions a line number but does NOT provide the canonical
+definition. It:
 
-1. **Lacks anchor ID**: Either no `<a>` tag, or `<a>` without matching `tocch\dln\d{4}` pattern
-2. **Cross-references other chapters**: Points to where the rule is defined
-3. **Brief mentions**: Short text or list items mentioning line numbers
+1. **Lacks anchor ID**: Either no `<a>` tag, or `<a>` without matching `tocch\dln\d{4}`
+   pattern
+1. **Cross-references other chapters**: Points to where the rule is defined
+1. **Brief mentions**: Short text or list items mentioning line numbers
 
 ### HTML Structures
 
@@ -117,9 +122,9 @@ A **rule reference** mentions a line number but does NOT provide the canonical d
 **Classic Parser Algorithm**:
 
 1. Find all `<h3>` tags matching pattern "Line {number} –"
-2. For each tag, check if it has an `<a>` child with `id` attribute
-3. Validate anchor ID matches strict pattern: `^tocch\dln\d{4}$`
-4. Extract ONLY tags passing both checks
+1. For each tag, check if it has an `<a>` child with `id` attribute
+1. Validate anchor ID matches strict pattern: `^tocch\dln\d{4}$`
+1. Extract ONLY tags passing both checks
 
 **Code Implementation**:
 
@@ -205,13 +210,15 @@ cat output/**/rules.yml | grep "rule_number:" | sort | uniq -d | wc -l
 
 ### What Makes It a Principle
 
-A **principle** is text that references line-numbered rules in an instructional or cross-reference context, but is NOT a rule definition. It:
+A **principle** is text that references line-numbered rules in an instructional or
+cross-reference context, but is NOT a rule definition. It:
 
 1. **Contains line references**: Mentions "line {number}" in text
-2. **Lacks anchor ID**: No `tocch\dln\d{4}` anchor pattern
-3. **Instructional context**: Explains how to use or apply rules
+1. **Lacks anchor ID**: No `tocch\dln\d{4}` anchor pattern
+1. **Instructional context**: Explains how to use or apply rules
 
 Principles are typically found in:
+
 - Paragraphs (`<p>`) explaining form completion
 - List items (`<li>`) showing where to report amounts
 - Cross-references to other chapters
@@ -225,6 +232,7 @@ Principles are typically found in:
 ```
 
 **Characteristics**:
+
 - Plain `<p>` tag (no anchor ID)
 - Imperative instruction ("Enter on...")
 - References LINE-9925
@@ -237,6 +245,7 @@ Principles are typically found in:
 ```
 
 **Characteristics**:
+
 - Contains hyperlink to rule definition
 - Text pattern: "For more information, see..."
 - References LINE-9604
@@ -248,6 +257,7 @@ Principles are typically found in:
 ```
 
 **Characteristics**:
+
 - List item with line reference
 - Brief instructional text
 - References LINE-9600
@@ -257,9 +267,9 @@ Principles are typically found in:
 **Principle Parser Algorithm**:
 
 1. Search `<p>` and `<li>` tags for text containing line references
-2. Extract line numbers using pattern: `\bline\s+(\d{4})\b` (case-insensitive)
-3. Exclude any tags where `is_rule_definition()` returns True
-4. Create ExtractedContent with:
+1. Extract line numbers using pattern: `\bline\s+(\d{4})\b` (case-insensitive)
+1. Exclude any tags where `is_rule_definition()` returns True
+1. Create ExtractedContent with:
    - `content_type`: PRINCIPLE
    - `citation_id`: `{source_file}-PRINCIPLE-{seq}`
    - `references`: List of LINE-XXXX found in text
@@ -338,6 +348,7 @@ grep -A 2 "references:" output/t4002-6/principles.yml | head -20
 **Total Principles**: 30
 
 **Common Line References**:
+
 - LINE-9925 (equipment costs)
 - LINE-9927 (building costs)
 - LINE-9923 (land acquisitions)
@@ -347,6 +358,7 @@ grep -A 2 "references:" output/t4002-6/principles.yml | head -20
 - LINE-8230, LINE-9600, LINE-9270, LINE-9790 (income/expense reporting)
 
 **Content Distribution**:
+
 - Instructional paragraphs: ~22 principles
 - Cross-references: ~4 principles
 - List items: ~4 principles
@@ -354,6 +366,7 @@ grep -A 2 "references:" output/t4002-6/principles.yml | head -20
 ### Phase 2 Status
 
 ✅ **Implementation Complete**
+
 - Models: ContentType enum, ExtractedContent Pydantic model
 - Parser: extract_line_references(), parse()
 - CLI: extract-principles command
@@ -361,12 +374,14 @@ grep -A 2 "references:" output/t4002-6/principles.yml | head -20
 - Documentation: Pattern examples, YAML format, validation commands
 
 **Known Limitations** (baseline, not perfect):
+
 - Simple regex pattern may miss complex line number formats
 - Does not extract semantic relationships between principles
 - No deduplication of similar instructional text
 - Citation IDs are sequential (not stable across re-extraction)
 
 **Future Enhancements** (Phase 3+):
+
 - Add TABLES, EXAMPLES, GUIDANCE content types
 - Semantic relationship extraction
 - Stable citation ID generation
@@ -375,7 +390,9 @@ grep -A 2 "references:" output/t4002-6/principles.yml | head -20
 
 ### What Makes It a Table
 
-A **table** is structured tabular data with column headers and row data. Tables are used for:
+A **table** is structured tabular data with column headers and row data. Tables are used
+for:
+
 - CCA (Capital Cost Allowance) rate schedules
 - Property class assignments
 - Deduction limits and thresholds
@@ -383,8 +400,8 @@ A **table** is structured tabular data with column headers and row data. Tables 
 Phase 3 implements a baseline extractor (80/20 principle) that:
 
 1. **Requires standard HTML structure**: `<table>` with `<thead>` and `<tbody>`
-2. **Converts to list-of-dicts format**: RAG-friendly structured data
-3. **Gracefully degrades**: Skips malformed tables with warnings
+1. **Converts to list-of-dicts format**: RAG-friendly structured data
+1. **Gracefully degrades**: Skips malformed tables with warnings
 
 ### HTML Structures
 
@@ -413,6 +430,7 @@ Phase 3 implements a baseline extractor (80/20 principle) that:
 ```
 
 **Characteristics**:
+
 - Standard `<thead>` with `<th>` headers
 - Standard `<tbody>` with `<tr>` rows and `<td>` cells
 - Consistent column count across all rows
@@ -442,6 +460,7 @@ Phase 3 implements a baseline extractor (80/20 principle) that:
 ```
 
 **Characteristics**:
+
 - Simple 2-column structure
 - Numerical data (class numbers, percentages)
 - Header row clearly defines column semantics
@@ -451,13 +470,13 @@ Phase 3 implements a baseline extractor (80/20 principle) that:
 **Table Parser Algorithm**:
 
 1. Find all `<table>` tags in HTML
-2. For each table:
+1. For each table:
    - Extract column headers from `<thead>` `<th>` elements
    - Extract row data from `<tbody>` `<tr>` elements
    - Convert each row to dictionary: `{header1: cell1, header2: cell2, ...}`
-3. Skip tables without proper structure (no `<thead>` or `<tbody>`)
-4. Skip rows with mismatched column counts
-5. Create ExtractedContent with:
+1. Skip tables without proper structure (no `<thead>` or `<tbody>`)
+1. Skip rows with mismatched column counts
+1. Create ExtractedContent with:
    - `content_type`: TABLE
    - `citation_id`: `{source_file}-TABLE-{seq}`
    - `table_data`: List of row dictionaries
@@ -559,12 +578,14 @@ grep -A 5 "table_data:" output/t4002-10/tables.yml | head -20
 **Total Tables**: 2
 
 **Table 1: CCA Property Classes**
+
 - Citation ID: `t4002-10-TABLE-1`
 - Rows: 107
 - Columns: 2 (Depreciable property, Class No.)
 - Content: Property types mapped to CCA class numbers
 
 **Table 2: CCA Rates**
+
 - Citation ID: `t4002-10-TABLE-2`
 - Rows: 20
 - Columns: 2 (Class No., Rates)
@@ -573,6 +594,7 @@ grep -A 5 "table_data:" output/t4002-10/tables.yml | head -20
 ### Phase 3 Status
 
 ✅ **Implementation Complete**
+
 - Models: ContentType.TABLE enum, table_data field on ExtractedContent
 - Parser: extract_table_data(), parse() in table_parser.py
 - CLI: extract-tables command
@@ -580,13 +602,19 @@ grep -A 5 "table_data:" output/t4002-10/tables.yml | head -20
 - Documentation: Pattern examples, YAML format, validation commands
 
 **Known Limitations** (80/20 baseline, not perfect):
-1. **No colspan/rowspan support**: Only simple grid structures (cells aligned in rows/columns)
-2. **Nested tables extracted flat**: Loses hierarchical relationships if tables are nested
-3. **Tables without `<thead>` or `<tbody>` skipped**: Requires standard HTML5 table structure
-4. **No caption/title extraction**: Table metadata (captions, summaries) not captured
-5. **Assumes consistent column counts**: Rows with mismatched cell counts are skipped with warnings
+
+1. **No colspan/rowspan support**: Only simple grid structures (cells aligned in
+   rows/columns)
+1. **Nested tables extracted flat**: Loses hierarchical relationships if tables are
+   nested
+1. **Tables without `<thead>` or `<tbody>` skipped**: Requires standard HTML5 table
+   structure
+1. **No caption/title extraction**: Table metadata (captions, summaries) not captured
+1. **Assumes consistent column counts**: Rows with mismatched cell counts are skipped
+   with warnings
 
 **Future Enhancements** (Phase 4+):
+
 - Add caption/title extraction for table context
 - Support for complex table structures (merged cells, nested tables)
 - Semantic table type classification (rates vs properties vs limits)

@@ -1,18 +1,20 @@
 # Epic 0 Completion Summary: Make Search Work
 
-**Date**: 2025-10-24
-**Status**: ✅ COMPLETE
-**Philosophy**: KISS and YAGNI - simplicity with transparency over complexity
+**Date**: 2025-10-24 **Status**: ✅ COMPLETE **Philosophy**: KISS and YAGNI - simplicity
+with transparency over complexity
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
-Epic 0 successfully validated the core hypothesis: **users can search for tax rules and understand where results came from**. The MVP demonstrates working hybrid search with 100% lineage traceability on a production dataset.
+Epic 0 successfully validated the core hypothesis: **users can search for tax rules and
+understand where results came from**. The MVP demonstrates working hybrid search with
+100% lineage traceability on a production dataset.
 
-**Key Achievement**: Proved that existing search infrastructure works with traceable results from real CRA data.
+**Key Achievement**: Proved that existing search infrastructure works with traceable
+results from real CRA data.
 
----
+______________________________________________________________________
 
 ## Goal (from Epic Definition)
 
@@ -20,13 +22,14 @@ Epic 0 successfully validated the core hypothesis: **users can search for tax ru
 
 **✅ ACHIEVED**
 
----
+______________________________________________________________________
 
 ## What We Built
 
 ### 1. Production Database (data-v2025.10.23)
 
-- **Source**: Single HTML file (t4002-5.html from CRA T4002 Business and Professional Income Guide)
+- **Source**: Single HTML file (t4002-5.html from CRA T4002 Business and Professional
+  Income Guide)
 - **Coverage**: 63 searchable expense rules
 - **Format**: SQLite database with FTS5 + vector embeddings
 - **Size**: 1.7 MB
@@ -68,7 +71,7 @@ Complete examples for building tax Q&A chatbots:
 - Works with API keys from `.env.local`
 - Demonstrates search → context → LLM → response pipeline
 
----
+______________________________________________________________________
 
 ## Success Metrics (All Met)
 
@@ -82,7 +85,8 @@ Complete examples for building tax Q&A chatbots:
 ### Quality ✅
 
 - ✅ **10/10 test queries return relevant results** (100% vs 70% threshold)
-- ✅ **HTML extraction ≥95% complete vs PDF ground truth** (validated in PRE-143, PRE-144, PRE-145)
+- ✅ **HTML extraction ≥95% complete vs PDF ground truth** (validated in PRE-143,
+  PRE-144, PRE-145)
 - ✅ 100% chunks have valid citation_id and lineage
 
 ### Usability ✅
@@ -91,7 +95,7 @@ Complete examples for building tax Q&A chatbots:
 - ✅ Failed queries have lineage for debugging
 - ✅ Clear improvement path identified via lineage analysis
 
----
+______________________________________________________________________
 
 ## Technical Implementation
 
@@ -104,10 +108,10 @@ HTML → Classic+LLM Parser → ExtractedRule (YAML) → DatabaseChunk → SQLit
 **Key Components**:
 
 1. **Classic Parser** (BeautifulSoup) - Fast, deterministic DOM traversal
-2. **LLM Parser** (Gemini 2.0 Flash) - Semantic understanding
-3. **Adjudicator** - Grounded self-correction, resolves conflicts
-4. **Builder** - Converts YAML to SQLite via DatabaseChunk Pydantic model
-5. **Validator** - Smoke tests for database integrity
+1. **LLM Parser** (Gemini 2.0 Flash) - Semantic understanding
+1. **Adjudicator** - Grounded self-correction, resolves conflicts
+1. **Builder** - Converts YAML to SQLite via DatabaseChunk Pydantic model
+1. **Validator** - Smoke tests for database integrity
 
 ### Lineage Schema (Minimal)
 
@@ -120,20 +124,21 @@ class LineageMetadata(BaseModel):
     confidence: float | None = None
 ```
 
-**Philosophy**: Minimal viable lineage - just enough to trace results, not over-engineered.
+**Philosophy**: Minimal viable lineage - just enough to trace results, not
+over-engineered.
 
----
+______________________________________________________________________
 
 ## Tickets Completed
 
-| Ticket | Description | Status |
-|--------|-------------|--------|
-| PRE-143 | HTML Extraction Validation with Lineage Tracking | ✅ Complete |
-| PRE-144 | Validate database population with lineage preservation | ✅ Complete |
-| PRE-145 | Implement search validation with lineage verification | ✅ Complete |
+| Ticket  | Description                                                        | Status      |
+| ------- | ------------------------------------------------------------------ | ----------- |
+| PRE-143 | HTML Extraction Validation with Lineage Tracking                   | ✅ Complete |
+| PRE-144 | Validate database population with lineage preservation             | ✅ Complete |
+| PRE-145 | Implement search validation with lineage verification              | ✅ Complete |
 | PRE-148 | Release SQLite Database to GitHub Releases with RAG Usage Examples | ✅ Complete |
 
----
+______________________________________________________________________
 
 ## Data Scope and Limitations
 
@@ -150,9 +155,10 @@ class LineageMetadata(BaseModel):
 - ❌ **Business type metadata** - No `business_type` field
 - ❌ **Full T4002 coverage** - Only t4002-5.html processed (247+ rules remain)
 
-**Impact**: Filtering by `province` or `business_type` returns 0 results. Future epics will expand coverage and add provincial rules.
+**Impact**: Filtering by `province` or `business_type` returns 0 results. Future epics
+will expand coverage and add provincial rules.
 
----
+______________________________________________________________________
 
 ## Validation Evidence
 
@@ -161,44 +167,53 @@ class LineageMetadata(BaseModel):
 **10/10 test queries successful:**
 
 1. ✅ "vehicle expenses" → Found LINE-9190 (Motor vehicle expenses)
-2. ✅ "meals and entertainment" → Found LINE-8523 (Meals and entertainment)
-3. ✅ "home office deduction" → Found LINE-8810 (Business-use-of-home expenses)
-4. ✅ "travel costs for business" → Found LINE-9200 (Travel expenses)
-5. ✅ "advertising expenses" → Found LINE-8700 (Advertising)
-6. ✅ "capital cost allowance" → Found LINE-9936 (Capital cost allowance)
-7. ✅ "professional fees" → Found LINE-8862 (Legal, accounting, and other professional fees)
-8. ✅ "office supplies" → Found LINE-8811 (Office stationery and supplies)
-9. ✅ "insurance premiums" → Found LINE-9804 (Insurance)
-10. ✅ "telephone and internet" → Found LINE-9220 (Telephone and utilities)
+1. ✅ "meals and entertainment" → Found LINE-8523 (Meals and entertainment)
+1. ✅ "home office deduction" → Found LINE-8810 (Business-use-of-home expenses)
+1. ✅ "travel costs for business" → Found LINE-9200 (Travel expenses)
+1. ✅ "advertising expenses" → Found LINE-8700 (Advertising)
+1. ✅ "capital cost allowance" → Found LINE-9936 (Capital cost allowance)
+1. ✅ "professional fees" → Found LINE-8862 (Legal, accounting, and other professional
+   fees)
+1. ✅ "office supplies" → Found LINE-8811 (Office stationery and supplies)
+1. ✅ "insurance premiums" → Found LINE-9804 (Insurance)
+1. ✅ "telephone and internet" → Found LINE-9220 (Telephone and utilities)
 
 **Success Rate**: 100% (exceeds 70% threshold)
 
----
+______________________________________________________________________
 
 ## Lessons Learned
 
 ### What Worked Well
 
 1. **KISS Principle** - Minimal lineage schema was sufficient, avoided over-engineering
-2. **Mixture-of-Experts** - Classic parser + LLM parser + adjudicator provided high-quality extraction
-3. **Type Safety** - Pydantic v2 models caught errors early, prevented data corruption
-4. **Direct YAML→Database** - Eliminated JSONL intermediate format, simplified pipeline
-5. **GitHub Releases** - Separating code (PyPI) and data (releases) worked perfectly
+1. **Mixture-of-Experts** - Classic parser + LLM parser + adjudicator provided
+   high-quality extraction
+1. **Type Safety** - Pydantic v2 models caught errors early, prevented data corruption
+1. **Direct YAML→Database** - Eliminated JSONL intermediate format, simplified pipeline
+1. **GitHub Releases** - Separating code (PyPI) and data (releases) worked perfectly
 
 ### What Was Challenging
 
-1. **Citation ID Format** - Had to relax pattern from `S#-F#-C#-p#` to `LINE-{number}` for HTML extraction
-2. **Province Metadata** - Initially assumed province filtering would work, discovered federal rules don't have this
-3. **get_version() Bug** - Hardcoded "not_initialized" caused confusion, required post-release fix
-4. **Example Filtering** - RAG example initially used province filter, returned 0 results
+1. **Citation ID Format** - Had to relax pattern from `S#-F#-C#-p#` to `LINE-{number}`
+   for HTML extraction
+1. **Province Metadata** - Initially assumed province filtering would work, discovered
+   federal rules don't have this
+1. **get_version() Bug** - Hardcoded "not_initialized" caused confusion, required
+   post-release fix
+1. **Example Filtering** - RAG example initially used province filter, returned 0
+   results
 
 ### What to Do Differently
 
-1. **Validate Metadata Early** - Check what metadata actually exists in source data before assuming
-2. **Test Examples Against Real Database** - Ensure examples work with production data, not just fixture database
-3. **Document Limitations Prominently** - Make it clear what's NOT in the current data scope
+1. **Validate Metadata Early** - Check what metadata actually exists in source data
+   before assuming
+1. **Test Examples Against Real Database** - Ensure examples work with production data,
+   not just fixture database
+1. **Document Limitations Prominently** - Make it clear what's NOT in the current data
+   scope
 
----
+______________________________________________________________________
 
 ## Next Steps (Future Epics)
 
@@ -221,42 +236,46 @@ class LineageMetadata(BaseModel):
 - Create automated update pipeline for new CRA releases
 - Add API versioning and deprecation strategy
 
----
+______________________________________________________________________
 
 ## Metrics Summary
 
-| Metric | Target | Achieved |
-|--------|--------|----------|
-| Search Success Rate | ≥70% | 100% (10/10) |
-| Lineage Coverage | 100% | 100% (63/63 chunks) |
-| Citation ID Integrity | 100% | 100% (no NULL/empty) |
-| HTML Extraction Completeness | ≥95% | 100% (validated vs PDF) |
-| Database Size | <5 MB | 1.7 MB ✅ |
-| Query Latency | <250ms | Sub-250ms ✅ |
+| Metric                       | Target  | Achieved                |
+| ---------------------------- | ------- | ----------------------- |
+| Search Success Rate          | ≥70%    | 100% (10/10)            |
+| Lineage Coverage             | 100%    | 100% (63/63 chunks)     |
+| Citation ID Integrity        | 100%    | 100% (no NULL/empty)    |
+| HTML Extraction Completeness | ≥95%    | 100% (validated vs PDF) |
+| Database Size                | \<5 MB  | 1.7 MB ✅               |
+| Query Latency                | \<250ms | Sub-250ms ✅            |
 
----
+______________________________________________________________________
 
 ## Release Artifacts
 
 1. **Code**: qe-tax-rag v0.3.0 on PyPI
-2. **Database**: [data-v2025.10.23](https://github.com/manonja/quickExpense-rag/releases/tag/data-v2025.10.23) on GitHub Releases
-3. **Documentation**: Updated README, CLAUDE.md, CHANGELOG.md
-4. **Examples**: `examples/basic_rag.py` with setup guide
-5. **Tests**: Comprehensive test suite (23/23 passing)
+1. **Database**:
+   [data-v2025.10.23](https://github.com/manonja/quickExpense-rag/releases/tag/data-v2025.10.23)
+   on GitHub Releases
+1. **Documentation**: Updated README, CLAUDE.md, CHANGELOG.md
+1. **Examples**: `examples/basic_rag.py` with setup guide
+1. **Tests**: Comprehensive test suite (23/23 passing)
 
----
+______________________________________________________________________
 
 ## The Bottom Line
 
 **We stopped building infrastructure and started validating what exists.**
 
 Epic 0 delivered on its promise:
+
 - ✅ Validated HTML extraction completeness (vs PDF ground truth)
 - ✅ Implemented minimal lineage (Pydantic v2, super basic)
 - ✅ Proved search works with existing infrastructure
 - ✅ Human-in-the-loop quality gates with clear assessment criteria
 - ✅ KISS and YAGNI principles throughout
 
-**The system works. Users can search for tax rules and understand where results came from.**
+**The system works. Users can search for tax rules and understand where results came
+from.**
 
 Ready for Epic 1: Expand Coverage. 🚀

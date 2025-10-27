@@ -57,6 +57,7 @@ def extract(
 
     Example:
         uv run extract-tables cra_documents/t4002-10.html output/tables.yml
+
     """
     # Configure logging
     logging.basicConfig(

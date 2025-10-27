@@ -48,6 +48,7 @@ def extract_table_data(table_tag: Tag) -> list[dict[str, str]] | None:
         - Nested tables extracted flat (loses hierarchy)
         - No caption/title extraction
         - Assumes consistent column counts across rows
+
     """
     # Extract headers from <thead>
     thead = table_tag.find("thead")
@@ -55,7 +56,8 @@ def extract_table_data(table_tag: Tag) -> list[dict[str, str]] | None:
         logger.debug("Skipping table without <thead>")
         return None
 
-    headers = [th.get_text(strip=True) for th in thead.find_all("th")]
+    # Type annotation for BeautifulSoup find_all results
+    headers: list[str] = [th.get_text(strip=True) for th in thead.find_all("th")]
     if not headers:
         logger.debug("Skipping table with empty <thead>")
         return None
@@ -68,7 +70,8 @@ def extract_table_data(table_tag: Tag) -> list[dict[str, str]] | None:
 
     table_data: list[dict[str, str]] = []
     for row in tbody.find_all("tr"):
-        cells = [td.get_text(strip=True) for td in row.find_all("td")]
+        # Type annotation for BeautifulSoup find_all results
+        cells: list[str] = [td.get_text(strip=True) for td in row.find_all("td")]
 
         # Skip rows with mismatched column count (graceful degradation)
         if len(cells) != len(headers):
@@ -78,7 +81,7 @@ def extract_table_data(table_tag: Tag) -> list[dict[str, str]] | None:
             continue
 
         # Create row dictionary with headers as keys
-        row_dict = dict(zip(headers, cells))
+        row_dict: dict[str, str] = dict(zip(headers, cells, strict=False))
         table_data.append(row_dict)
 
     # Return None if no valid rows extracted
@@ -124,6 +127,7 @@ def parse(html_path: str) -> list[ExtractedContent]:
         - Tables without <thead>/<tbody> skipped with warnings
         - No caption/title extraction
         - Assumes consistent column counts across rows
+
     """
     # Read HTML file
     try:
