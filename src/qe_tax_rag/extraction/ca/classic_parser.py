@@ -78,12 +78,14 @@ def parse(html_path: str) -> list[ExtractedRule]:
     h1_tag = soup.find("h1")
     chapter = h1_tag.get_text(strip=True) if h1_tag else "Unknown Chapter"
 
-    # Find all h3 tags matching "Line XXXX –" pattern using function
+    # Find all h3 tags matching "Line XXXX" pattern using function
     def is_line_rule(tag: Tag) -> bool:
         if tag.name != "h3":
             return False
         text = tag.get_text(strip=True)
-        return re.match(r"^\s*Line \d+ –", text) is not None
+        # Pattern matches "Line {number}" followed by optional text then "–"
+        # Examples: "Line 9600 – ...", "Line 9790or9270 – ...", "Line 9476 ... –"
+        return re.match(r"^\s*Line \d+", text) is not None
 
     def is_rule_definition(tag: Tag) -> bool:
         """
@@ -135,7 +137,9 @@ def parse(html_path: str) -> list[ExtractedRule]:
             header_text = header.get_text(strip=True)
             # Remove any img tag remnants from header_text for clean parsing
             clean_header = re.sub(r"<img[^>]*>", "", header_text)
-            match = re.search(r"Line (\d+) –\s*(.+)", clean_header)
+            # Pattern: "Line {number}" followed by optional text then "–" then title
+            # Handles: "Line 9600 – Title", "Line 9790or9270 – Title"
+            match = re.search(r"Line (\d+).*?–\s*(.+)", clean_header)
             if not match:
                 logger.warning(f"Skipping h3 with unparseable format: '{header_text}'")
                 continue
