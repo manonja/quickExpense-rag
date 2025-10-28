@@ -66,14 +66,14 @@ def extract_section_content(
             page_tables = page.extract_tables()
             for table_idx, table in enumerate(page_tables):
                 if table and len(table) > 1:  # Has headers + rows
-                    # Convert to list of dicts
-                    headers = table[0]
+                    # Convert to list of dicts (filter None values)
+                    headers = [h or f"Column{i}" for i, h in enumerate(table[0])]
                     rows = []
                     for row in table[1:]:
                         row_dict = {}
                         for i, header in enumerate(headers):
                             if i < len(row):
-                                row_dict[header or f"Column{i}"] = row[i] or ""
+                                row_dict[header] = row[i] or ""
                         rows.append(row_dict)
 
                     tables.append(
