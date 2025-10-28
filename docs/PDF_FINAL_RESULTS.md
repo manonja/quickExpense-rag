@@ -1,8 +1,11 @@
 # PDF Search Final Results - Post Deduplication
 
+**Date**: 2025-10-28
+**Status**: ✅ **COMPLETE** (Superseded by Phase 3 - see `PDF_PHASE3_RESULTS.md`)
 **Database**: `output/pdf_full/t4002_pdf_v2.db` (429 unique items, 0% duplicates)
-**Test Date**: 2025-10-28
 **Evaluator**: Manual review of top-3 results per query
+
+> **Note**: Phase 2 successfully eliminated duplicates (43% → 0%). This work was extended in Phase 3 to add Chapter 3 coverage, resulting in the production database `t4002_pdf_v3.db` with 60% coverage (pages 1-68) and 289 unique items.
 
 ## Phase 2 Improvements
 
