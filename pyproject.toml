@@ -74,6 +74,7 @@ Changelog = "https://github.com/manonja/qe-tax-rag/blob/main/CHANGELOG.md"
 extract-rules = "qe_tax_rag.extraction.ca.cli:app"
 extract-principles = "qe_tax_rag.extraction.ca.principle_cli:app"
 extract-tables = "qe_tax_rag.extraction.ca.table_cli:app"
+extract-pdf = "qe_tax_rag.extraction.ca.pdf.pdf_cli:main"
 
 [tool.hatch.version]
 path = "src/qe_tax_rag/__init__.py"
