@@ -1,9 +1,11 @@
-"""PDF content extraction and structuring using pdfplumber and LLM.
+"""
+PDF content extraction and structuring using pdfplumber and LLM.
 
 This module extracts content from PDF semantic sections and structures it
 using an LLM (Gemini). It handles both text and table extraction.
 """
 
+import hashlib
 import logging
 from pathlib import Path
 
@@ -20,7 +22,8 @@ def extract_section_content(
     pdf_path: Path,
     section: SemanticSection,
 ) -> tuple[str, list[dict]]:
-    """Extract raw text and tables from a PDF section using pdfplumber.
+    """
+    Extract raw text and tables from a PDF section using pdfplumber.
 
     Args:
         pdf_path: Path to PDF file
@@ -33,13 +36,13 @@ def extract_section_content(
 
     Example:
         >>> text, tables = extract_section_content(
-        ...     Path("T4002.pdf"),
-        ...     SemanticSection("Chapter 3", (38, 68))
+        ...     Path("T4002.pdf"), SemanticSection("Chapter 3", (38, 68))
         ... )
         >>> len(text)
         15234
         >>> len(tables)
         3
+
     """
     logger.info(
         f"Extracting content from {section.title} "
@@ -98,7 +101,8 @@ def build_llm_prompt(
     text: str,
     tables: list[dict],
 ) -> str:
-    """Build detailed LLM prompt for content structuring.
+    """
+    Build detailed LLM prompt for content structuring.
 
     Args:
         section: SemanticSection being processed
@@ -107,6 +111,7 @@ def build_llm_prompt(
 
     Returns:
         Formatted prompt string for LLM
+
     """
     table_summary = ""
     if tables:
@@ -192,7 +197,8 @@ def parse_llm_response(
     section: SemanticSection,
     tables: list[dict],
 ) -> list[ExtractedContent]:
-    """Parse LLM YAML response into ExtractedContent objects.
+    """
+    Parse LLM YAML response into ExtractedContent objects.
 
     Args:
         response: Raw LLM response (should be YAML list)
@@ -204,6 +210,7 @@ def parse_llm_response(
 
     Raises:
         ValueError: If response is not valid YAML or missing required fields
+
     """
     # Strip markdown code fences if present (common LLM behavior)
     cleaned_response = response.strip()
@@ -258,16 +265,16 @@ def parse_llm_response(
             )
             continue
 
-        # Build citation_id
-        citation_id = f"T4002-P{page_number}-ITEM{idx + 1}"
+        # Build citation_id using content hash for global uniqueness
+        # This prevents duplicates when multiple sections cover the same page
+        content_hash = hashlib.sha256(text.encode()).hexdigest()[:8]
+        citation_id = f"T4002-P{page_number}-{content_hash}"
 
         # Handle TABLE content type specially
         table_data = None
         if content_type_enum == ContentType.TABLE and tables:
             # Find matching table by page number
-            matching_tables = [
-                t for t in tables if t["page_number"] == page_number
-            ]
+            matching_tables = [t for t in tables if t["page_number"] == page_number]
             if matching_tables:
                 # Use first matching table's data
                 table_data = matching_tables[table_counter % len(matching_tables)][
@@ -301,7 +308,8 @@ def parse_section(
     section: SemanticSection,
     llm_call_func: callable,
 ) -> list[ExtractedContent]:
-    """Extract and structure content from a PDF section.
+    """
+    Extract and structure content from a PDF section.
 
     This is the main entry point that orchestrates:
     1. Raw content extraction (text + tables)
@@ -327,6 +335,7 @@ def parse_section(
         >>> content = parse_section(Path("T4002.pdf"), section, my_llm_call)
         >>> len(content)
         42
+
     """
     logger.info(f"Parsing section: {section.title}")
 
@@ -352,7 +361,5 @@ def parse_section(
         logger.debug(f"Raw response: {response[:500]}")
         raise
 
-    logger.info(
-        f"Successfully extracted {len(extracted)} items from {section.title}"
-    )
+    logger.info(f"Successfully extracted {len(extracted)} items from {section.title}")
     return extracted

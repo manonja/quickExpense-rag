@@ -20,7 +20,8 @@ from qe_tax_rag.search.enums import BusinessType, Province
 # Regex for CRA citation IDs
 # Supports legacy format: "S3-F2-C1-p1.25" (S#-F#-C#-p#.#)
 # Supports LINE format: "LINE-8523" (LINE-{number})
-CITATION_ID_PATTERN = r"^(S\d+-F\d+-C\d+-p\d+\.?\d*|LINE-\d+)$"
+# Supports PDF format: "T4002-P10-a1b2c3d4" (T4002-P#-{8-char hash})
+CITATION_ID_PATTERN = r"^(S\d+-F\d+-C\d+-p\d+\.?\d*|LINE-\d+|T4002-P\d+-[a-f0-9]{8})$"
 
 # Regex for YYYY.MM version format
 DATA_VERSION_PATTERN = r"^\d{4}\.\d{2}$"
