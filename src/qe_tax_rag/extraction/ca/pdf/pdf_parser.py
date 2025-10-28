@@ -4,11 +4,11 @@ This module extracts content from PDF semantic sections and structures it
 using an LLM (Gemini). It handles both text and table extraction.
 """
 
-import json
 import logging
 from pathlib import Path
 
 import pdfplumber
+import yaml
 
 from qe_tax_rag.extraction.ca.models import ContentType, ExtractedContent
 from qe_tax_rag.extraction.ca.pdf.structure_detector import SemanticSection
@@ -140,7 +140,7 @@ CRITICAL RULES:
 2. For RULE type: Include the line number in the text (e.g., "Line 8523")
 3. For TABLE type: Just note "Table from page X" - don't duplicate table data
 4. page_number MUST be an integer within the section's page range
-5. Output MUST be valid JSON array
+5. Output MUST be valid YAML (more robust than JSON for large responses)
 
 {table_summary}
 
@@ -149,16 +149,30 @@ Section content:
 {text[:50000]}  # Limit to ~50k chars to avoid token limits
 ---
 
-Return JSON array ONLY (no markdown, no explanation):
-[
-  {{
-    "type": "RULE",
-    "text": "Line 8523 – Meals and entertainment\\n\\nYou can deduct...",
-    "page_number": 42,
-    "applies_to": ["business", "farming"]
-  }},
-  ...
-]"""
+Return YAML ONLY (no markdown code fences, no explanation).
+IMPORTANT: For multiline text, use the pipe (|) block scalar indicator.
+
+Example format:
+- type: RULE
+  text: |
+    Line 8523 – Meals and entertainment
+
+    You can deduct 50% of food, beverage, and entertainment expenses...
+  page_number: 42
+  applies_to: [business, farming]
+
+- type: PRINCIPLE
+  text: |
+    See Chapter 4 for capital cost allowance rules.
+  page_number: 43
+  applies_to: [business, farming, fishing]
+
+- type: DEFINITION
+  text: |
+    Capital cost allowance (CCA) – A tax deduction for the cost of depreciable property.
+  page_number: 44
+  applies_to: [business, farming, fishing]
+"""
 
 
 def parse_llm_response(
@@ -166,10 +180,10 @@ def parse_llm_response(
     section: SemanticSection,
     tables: list[dict],
 ) -> list[ExtractedContent]:
-    """Parse LLM JSON response into ExtractedContent objects.
+    """Parse LLM YAML response into ExtractedContent objects.
 
     Args:
-        response: Raw LLM response (should be JSON array)
+        response: Raw LLM response (should be YAML list)
         section: SemanticSection for metadata
         tables: Extracted tables for TABLE content type
 
@@ -177,25 +191,25 @@ def parse_llm_response(
         List of ExtractedContent objects
 
     Raises:
-        ValueError: If response is not valid JSON or missing required fields
+        ValueError: If response is not valid YAML or missing required fields
     """
     # Strip markdown code fences if present (common LLM behavior)
     cleaned_response = response.strip()
-    if cleaned_response.startswith("```json"):
-        cleaned_response = cleaned_response.removeprefix("```json").strip()
+    if cleaned_response.startswith("```yaml"):
+        cleaned_response = cleaned_response.removeprefix("```yaml").strip()
     if cleaned_response.startswith("```"):
         cleaned_response = cleaned_response.removeprefix("```").strip()
     if cleaned_response.endswith("```"):
         cleaned_response = cleaned_response.removesuffix("```").strip()
 
     try:
-        items = json.loads(cleaned_response)
-    except json.JSONDecodeError as e:
-        msg = f"Failed to parse LLM response as JSON: {e}"
+        items = yaml.safe_load(cleaned_response)
+    except yaml.YAMLError as e:
+        msg = f"Failed to parse LLM response as YAML: {e}"
         raise ValueError(msg) from e
 
     if not isinstance(items, list):
-        msg = f"Expected JSON array, got {type(items)}"
+        msg = f"Expected YAML list, got {type(items)}"
         raise ValueError(msg)
 
     extracted: list[ExtractedContent] = []
