@@ -1,9 +1,14 @@
 # Improved HTML Content Capture: Modular & Minimal Approach
 
-**Date**: 2025-10-24 (Created) | 2025-10-27 (Phase 1 Complete) **Goal**: Build toward
-comprehensive HTML content capture in a smart, modular, and minimal way **Philosophy**:
-Small steps, clear documentation, test one file at a time **Status**: Phase 1 ✅ COMPLETE
-| Phase 2 ✅ COMPLETE | Phase 3-5 📋 PENDING
+**Date**: 2025-10-24 (Created) | 2025-10-27 (Phase 1-2 Complete)
+**Status**: Phase 1 ✅ COMPLETE | Phase 2 ✅ COMPLETE | Phase 3-5 📋 ON HOLD
+
+**Note**: HTML extraction paused in favor of PDF extraction approach (see `docs/PDF_EXTRACTION_PLAN_REVISED.md`).
+PDF extraction provides better coverage and quality for T4002 guide. HTML extraction remains valuable for
+other CRA documents without PDF versions.
+
+**Goal**: Build toward comprehensive HTML content capture in a smart, modular, and minimal way
+**Philosophy**: Small steps, clear documentation, test one file at a time
 
 ## Current Reality Check
 
