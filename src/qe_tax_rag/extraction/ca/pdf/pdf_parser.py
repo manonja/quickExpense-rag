@@ -117,7 +117,19 @@ def build_llm_prompt(
                 f"columns: {', '.join(table['headers'])}\n"
             )
 
-    return f"""You are extracting structured content from "{section.title}"
+    # Check for text truncation and log warning
+    MAX_CHARS = 50000
+    if len(text) > MAX_CHARS:
+        logger.warning(
+            f"Truncating text for section '{section.full_title}' "
+            f"from {len(text)} to {MAX_CHARS} characters. "
+            f"Consider subdividing this section further."
+        )
+        text_for_prompt = text[:MAX_CHARS]
+    else:
+        text_for_prompt = text
+
+    return f"""You are extracting structured content from "{section.full_title}"
 (pages {section.page_range[0]}-{section.page_range[1]}) of the T4002 CRA Business Expenses Guide.
 
 Extract ALL instances of these content types:
@@ -146,7 +158,7 @@ CRITICAL RULES:
 
 Section content:
 ---
-{text[:50000]}  # Limit to ~50k chars to avoid token limits
+{text_for_prompt}
 ---
 
 Return YAML ONLY (no markdown code fences, no explanation).

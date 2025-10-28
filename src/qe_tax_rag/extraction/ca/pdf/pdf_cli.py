@@ -12,11 +12,15 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+import fitz  # PyMuPDF
 import yaml
 
 from qe_tax_rag.extraction.ca.pdf.llm_client import call_gemini
 from qe_tax_rag.extraction.ca.pdf.pdf_parser import parse_section
-from qe_tax_rag.extraction.ca.pdf.structure_detector import discover_sections
+from qe_tax_rag.extraction.ca.pdf.structure_detector import (
+    discover_sections,
+    discover_subsections,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -52,52 +56,78 @@ def extract_pdf(
     """
     logger.info(f"Starting PDF extraction from {pdf_path.name}")
 
-    # Pass 1: Discover structure (local, fast)
-    logger.info("Pass 1: Discovering document structure...")
-    all_sections = discover_sections(pdf_path)
-    logger.info(f"Discovered {len(all_sections)} semantic sections")
+    # Pass 1: Discover top-level structure (local, fast)
+    logger.info("Pass 1: Discovering document chapters...")
+    all_chapters = discover_sections(pdf_path)
+    logger.info(f"Discovered {len(all_chapters)} chapters")
 
-    # Filter sections by page range if specified
+    # Filter chapters by page range if specified
     if start_page or end_page:
         start = start_page or 1
         end = end_page or float("inf")
-        sections = [
+        chapters_to_process = [
             s
-            for s in all_sections
+            for s in all_chapters
             if s.page_range[0] >= start and s.page_range[1] <= end
         ]
         logger.info(
-            f"Filtered to {len(sections)} sections in page range {start}-{end}"
+            f"Filtered to {len(chapters_to_process)} chapters in page range {start}-{end}"
         )
     else:
-        sections = all_sections
+        chapters_to_process = all_chapters
 
-    # Pass 2: Extract content (LLM per section)
+    # Pass 1.5: Discover subsections within chapters (hierarchical detection)
+    logger.info("Pass 1.5: Discovering subsections within chapters...")
+    doc = fitz.open(pdf_path)
+    processing_units = []
+
+    for chapter in chapters_to_process:
+        subsections = discover_subsections(doc, chapter)
+        if subsections:
+            processing_units.extend(subsections)
+            logger.info(
+                f"Found {len(subsections)} subsections in '{chapter.title}'"
+            )
+        else:
+            # If no subsections, process the entire chapter as one unit
+            processing_units.append(chapter)
+            logger.info(
+                f"No subsections in '{chapter.title}', processing as a whole"
+            )
+
+    doc.close()
+
+    logger.info(
+        f"Total processing units: {len(processing_units)} "
+        f"(chapters + subsections)"
+    )
+
+    # Pass 2: Extract content (LLM per subsection or chapter)
     logger.info("Pass 2: Extracting and structuring content...")
     all_content = []
     failed_sections = []
 
-    for i, section in enumerate(sections, 1):
+    for i, unit in enumerate(processing_units, 1):
         logger.info(
-            f"Processing section {i}/{len(sections)}: {section.title} "
-            f"(pages {section.page_range[0]}-{section.page_range[1]})"
+            f"Processing unit {i}/{len(processing_units)}: {unit.full_title} "
+            f"(pages {unit.page_range[0]}-{unit.page_range[1]})"
         )
 
         try:
-            # Parse section with Gemini
+            # Parse unit with Gemini
             chunks = parse_section(
                 pdf_path=pdf_path,
-                section=section,
+                section=unit,
                 llm_call_func=call_gemini,
             )
             all_content.extend(chunks)
-            logger.info(f"Extracted {len(chunks)} items from {section.title}")
+            logger.info(f"Extracted {len(chunks)} items from {unit.full_title}")
 
         except Exception as e:
             error_msg = f"{type(e).__name__}: {e}"
-            failed_sections.append((section.title, error_msg))
-            logger.error(f"Failed to process {section.title}: {error_msg}")
-            # Continue processing other sections
+            failed_sections.append((unit.full_title, error_msg))
+            logger.error(f"Failed to process {unit.full_title}: {error_msg}")
+            # Continue processing other units
 
     # Generate YAML
     if all_content:
@@ -126,9 +156,9 @@ def extract_pdf(
 
     # Return stats
     stats = {
-        "total_sections": len(sections),
+        "total_sections": len(processing_units),
         "total_chunks": len(all_content),
-        "api_calls": len(sections) - len(failed_sections),  # Successful calls only
+        "api_calls": len(processing_units) - len(failed_sections),  # Successful calls only
         "failed_sections": failed_sections,
     }
 
