@@ -279,31 +279,32 @@ class IndexBuilder:
                 convert_extracted_content_to_rule(item) for item in pdf_content_items
             ]
 
-            # Handle duplicate citation_ids by appending sequence number
-            # This is a workaround for PDF extraction pipeline generating duplicates
-            seen_citations: dict[str, int] = {}
+            # Handle duplicate citation_ids by discarding duplicates
+            # Keep only the first occurrence of each unique citation ID
+            seen_citations: set[str] = set()
             deduplicated_rules = []
+            duplicates_discarded = 0
 
             for rule in converted_rules:
                 citation = rule.source_citation
 
                 if citation in seen_citations:
-                    # Append sequence number to make unique
-                    seen_citations[citation] += 1
-                    seq_num = seen_citations[citation]
-                    unique_citation = f"{citation}-DUP{seq_num}"
-                    logger.warning(
-                        f"Duplicate citation_id detected: {citation}, "
-                        f"renaming to {unique_citation}"
+                    # Skip duplicate, keep only first occurrence
+                    duplicates_discarded += 1
+                    logger.debug(
+                        f"Discarding duplicate citation_id: {citation} "
+                        f"(duplicate #{duplicates_discarded})"
                     )
-
-                    # Create new rule with unique citation
-                    rule_dict = rule.model_dump(mode="json")
-                    rule_dict["source_citation"] = unique_citation
-                    deduplicated_rules.append(rule_dict)
                 else:
-                    seen_citations[citation] = 0
+                    # First occurrence - add to output
+                    seen_citations.add(citation)
                     deduplicated_rules.append(rule.model_dump(mode="json"))
+
+            if duplicates_discarded > 0:
+                logger.info(
+                    f"Discarded {duplicates_discarded} duplicate items "
+                    f"({len(deduplicated_rules)} unique items retained)"
+                )
 
             # Replace content list with deduplicated rules list
             data["rules"] = deduplicated_rules
