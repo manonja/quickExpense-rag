@@ -29,7 +29,7 @@ for i, result in enumerate(results, 1):
     print(f"\nResult {i}:")
     print(f"  Citation: {result.citation_id}")
     print(f"  Score: {result.score:.4f}")
-    print(f"  Content: {result.content[:200]}...")
+    print(f"  Content ({len(result.content)} chars): {result.content}")
     if result.expense_types:
         print(f"  Expense Types: {', '.join(result.expense_types)}")
 
