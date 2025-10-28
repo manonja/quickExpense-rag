@@ -404,7 +404,8 @@ def _extract_source_files_from_input(input_path: Path) -> list[SourceFile]:
     """
     Extract unique source file names from YAML or JSONL input.
 
-    For YAML: reads ExtractedRule.source_file field
+    For YAML: reads ExtractedRule.source_file field (HTML pipeline)
+              or ExtractedContent.source_file field (PDF pipeline)
     For JSONL: reads ParsedDocument.source_filename field
 
     Args:
@@ -423,8 +424,14 @@ def _extract_source_files_from_input(input_path: Path) -> list[SourceFile]:
         with open(input_path) as f:
             data = yaml.safe_load(f)
 
+        # Handle HTML extraction format (rules field)
         for rule in data.get("rules", []):
             if source_file := rule.get("source_file"):
+                source_filenames.add(source_file)
+
+        # Handle PDF extraction format (content field)
+        for content_item in data.get("content", []):
+            if source_file := content_item.get("source_file"):
                 source_filenames.add(source_file)
 
     elif input_path.suffix == ".jsonl":

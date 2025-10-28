@@ -263,6 +263,61 @@ class IndexBuilder:
         with open(yaml_path) as f:
             data = yaml.safe_load(f)
 
+        # Auto-detect PDF format and convert to HTML-compatible format
+        if "content" in data and "rules" not in data:
+            logger.info("Detected PDF YAML format, converting to ExtractedRule format...")
+            from qe_tax_rag.extraction.ca.models import ExtractedContent
+            from qe_tax_rag.extraction.ca.pdf_adapter import (
+                convert_extracted_content_to_rule,
+            )
+
+            # Convert PDF ExtractedContent items to ExtractedRule
+            pdf_content_items = [
+                ExtractedContent.model_validate(item) for item in data["content"]
+            ]
+            converted_rules = [
+                convert_extracted_content_to_rule(item) for item in pdf_content_items
+            ]
+
+            # Handle duplicate citation_ids by appending sequence number
+            # This is a workaround for PDF extraction pipeline generating duplicates
+            seen_citations: dict[str, int] = {}
+            deduplicated_rules = []
+
+            for rule in converted_rules:
+                citation = rule.source_citation
+
+                if citation in seen_citations:
+                    # Append sequence number to make unique
+                    seen_citations[citation] += 1
+                    seq_num = seen_citations[citation]
+                    unique_citation = f"{citation}-DUP{seq_num}"
+                    logger.warning(
+                        f"Duplicate citation_id detected: {citation}, "
+                        f"renaming to {unique_citation}"
+                    )
+
+                    # Create new rule with unique citation
+                    rule_dict = rule.model_dump(mode="json")
+                    rule_dict["source_citation"] = unique_citation
+                    deduplicated_rules.append(rule_dict)
+                else:
+                    seen_citations[citation] = 0
+                    deduplicated_rules.append(rule.model_dump(mode="json"))
+
+            # Replace content list with deduplicated rules list
+            data["rules"] = deduplicated_rules
+            del data["content"]
+
+            # Clean up PDF-specific top-level fields
+            data.pop("source_document", None)
+            data.pop("expert_source", None)
+            data.pop("pipeline_stages", None)
+
+            logger.info(
+                f"Converted {len(converted_rules)} PDF content items to ExtractedRule format"
+            )
+
         ruleset = RuleSet.model_validate(data)
 
         # Create filename stem → SourceFile mapping

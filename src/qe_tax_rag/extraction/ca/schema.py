@@ -278,10 +278,20 @@ class RuleSet(BaseModel):
                     pipeline_stages=rule.lineage_stages,
                 )
 
+            # Use source_citation as citation_id (preserves PDF citation IDs)
+            # For HTML extraction, source_citation follows "Line XXXX" pattern
+            # For PDF extraction, source_citation is the unique PDF citation_id
+            citation_id = rule.source_citation
+
+            # For backwards compatibility: if source_citation is "Line XXXX",
+            # normalize to "LINE-XXXX" format
+            if citation_id.startswith("Line "):
+                citation_id = citation_id.replace("Line ", "LINE-")
+
             chunks.append(
                 DatabaseChunk(
                     content=f"{rule.title}\n\n{rule.content}",
-                    citation_id=f"LINE-{rule.rule_number}",
+                    citation_id=citation_id,
                     source_url=str(source_file.url),
                     source_hash=source_file.hash,
                     province=None,  # Federal rules have no province
