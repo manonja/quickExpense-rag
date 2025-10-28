@@ -11,12 +11,12 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
-def call_gemini(prompt: str, model: str = "gemini-1.5-flash") -> str:
+def call_gemini(prompt: str, model: str = "gemini-2.0-flash-exp") -> str:
     """Call Gemini API with a prompt and return the response text.
 
     Args:
         prompt: The prompt to send to Gemini
-        model: Gemini model to use (default: gemini-1.5-flash for speed/cost)
+        model: Gemini model to use (default: gemini-2.0-flash-exp for speed/cost)
 
     Returns:
         Response text from Gemini

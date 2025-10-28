@@ -179,8 +179,17 @@ def parse_llm_response(
     Raises:
         ValueError: If response is not valid JSON or missing required fields
     """
+    # Strip markdown code fences if present (common LLM behavior)
+    cleaned_response = response.strip()
+    if cleaned_response.startswith("```json"):
+        cleaned_response = cleaned_response.removeprefix("```json").strip()
+    if cleaned_response.startswith("```"):
+        cleaned_response = cleaned_response.removeprefix("```").strip()
+    if cleaned_response.endswith("```"):
+        cleaned_response = cleaned_response.removesuffix("```").strip()
+
     try:
-        items = json.loads(response)
+        items = json.loads(cleaned_response)
     except json.JSONDecodeError as e:
         msg = f"Failed to parse LLM response as JSON: {e}"
         raise ValueError(msg) from e

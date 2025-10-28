@@ -6,14 +6,17 @@ content from PDF files using the two-pass approach:
 2. Content extraction (one LLM call per semantic section)
 """
 
+import json
 import logging
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
+
+import yaml
 
 from qe_tax_rag.extraction.ca.pdf.llm_client import call_gemini
 from qe_tax_rag.extraction.ca.pdf.pdf_parser import parse_section
 from qe_tax_rag.extraction.ca.pdf.structure_detector import discover_sections
-from qe_tax_rag.extraction.ca.yaml_generator import generate
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +102,24 @@ def extract_pdf(
     # Generate YAML
     if all_content:
         logger.info(f"Generating YAML with {len(all_content)} items...")
-        generate(content=all_content, output_path=output_yaml)
+
+        # Create parent directories
+        output_yaml.parent.mkdir(parents=True, exist_ok=True)
+
+        # Create metadata wrapper
+        output_data = {
+            "schema_version": "1.0",
+            "extraction_timestamp": datetime.now(timezone.utc).isoformat(),
+            "source_file": pdf_path.name,
+            "content": json.loads(
+                json.dumps([item.model_dump() for item in all_content], default=str)
+            ),
+        }
+
+        # Write YAML
+        with output_yaml.open("w", encoding="utf-8") as f:
+            yaml.dump(output_data, f, default_flow_style=False, width=88)
+
         logger.info(f"YAML written to {output_yaml}")
     else:
         logger.warning("No content extracted, skipping YAML generation")
