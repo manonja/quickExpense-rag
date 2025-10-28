@@ -24,7 +24,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class ContentType(StrEnum):
     """
-    Type of content extracted from HTML.
+    Type of content extracted from HTML or PDF.
 
     Discriminator for unified ExtractedContent model.
 
@@ -33,11 +33,17 @@ class ContentType(StrEnum):
         PRINCIPLE: Text referencing rules without being a definition
             (e.g., "Complete line 9600 if...")
         TABLE: Structured tabular data (e.g., CCA rate tables)
+        DEFINITION: Glossary terms and definitions (PDF only)
+        FORMULA: Calculation methods and examples (PDF only)
+        EXAMPLE: Illustrative cases (PDF only)
     """
 
     RULE = "RULE"
     PRINCIPLE = "PRINCIPLE"
     TABLE = "TABLE"
+    DEFINITION = "DEFINITION"
+    FORMULA = "FORMULA"
+    EXAMPLE = "EXAMPLE"
 
 
 class ExtractedContent(BaseModel):
@@ -119,4 +125,12 @@ class ExtractedContent(BaseModel):
     table_data: list[dict[str, str]] | None = Field(
         default=None,
         description="Structured table data (TABLE only, None for RULE/PRINCIPLE)",
+    )
+    page_number: int | None = Field(
+        default=None,
+        description="PDF page number (1-indexed) where content was extracted (PDF only, None for HTML)",
+    )
+    section_title: str | None = Field(
+        default=None,
+        description="Section/chapter title from structure detection (PDF only, None for HTML)",
     )

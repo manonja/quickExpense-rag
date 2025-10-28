@@ -1,0 +1,31 @@
+# PDF Search Benchmark Queries
+# Test queries for validating PDF extraction search quality
+# Target: >80% success rate (at least one top-3 result correctly answers query)
+
+## Broad Topic Queries (General Search)
+travel expenses
+vehicle deductions
+business income
+advertising costs
+home office expenses
+insurance deductions
+professional fees
+office supplies
+utilities costs
+
+## Specific Filtered Queries (Requires expense_type classification)
+meal expense for business sole proprietor
+travel expenses for farming business
+vehicle lease deduction rules
+home office deduction for self-employed
+
+## Edge Cases & Complex Queries
+can I deduct my car lease
+what percentage of meals can I deduct
+GST/HST requirements for businesses
+capital cost allowance rules
+inventory valuation methods
+
+## Expected to Fail (Tests Missing Features)
+meal expenses in BC
+farming expenses in Quebec
