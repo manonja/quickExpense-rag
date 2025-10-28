@@ -6,7 +6,6 @@ content from PDF files using the two-pass approach:
 2. Content extraction (one LLM call per semantic section)
 """
 
-import json
 import logging
 import sys
 from datetime import datetime, timezone
@@ -136,19 +135,28 @@ def extract_pdf(
         # Create parent directories
         output_yaml.parent.mkdir(parents=True, exist_ok=True)
 
-        # Create metadata wrapper
+        # Define lineage metadata
+        pipeline_stages_list = [
+            "discover_sections",
+            "discover_subsections",
+            "parse_section_with_gemini",
+        ]
+
+        # Create metadata wrapper consistent with the HTML pipeline
         output_data = {
             "schema_version": "1.0",
             "extraction_timestamp": datetime.now(timezone.utc).isoformat(),
-            "source_file": pdf_path.name,
-            "content": json.loads(
-                json.dumps([item.model_dump() for item in all_content], default=str)
-            ),
+            "source_document": pdf_path.name,
+            "expert_source": "pdf_hierarchical_chunker",
+            "pipeline_stages": pipeline_stages_list,
+            "content": [item.model_dump(mode="json") for item in all_content],
         }
 
         # Write YAML
         with output_yaml.open("w", encoding="utf-8") as f:
-            yaml.dump(output_data, f, default_flow_style=False, width=88)
+            yaml.dump(
+                output_data, f, default_flow_style=False, width=88, sort_keys=False
+            )
 
         logger.info(f"YAML written to {output_yaml}")
     else:
