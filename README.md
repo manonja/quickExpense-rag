@@ -118,12 +118,13 @@ QE Tax RAG uses a multi-stage hybrid search approach:
   [GitHub Releases](https://github.com/manonja/quickExpense-rag/releases) on first
   `init()` call (~1.7 MB)
 - **Current Release**:
-  [data-v2025.10.23](https://github.com/manonja/quickExpense-rag/releases/tag/data-v2025.10.23)
-  - **Source**: Single HTML file (t4002-5.html) from CRA T4002 Business and Professional
+  [data-v2025.10.28](https://github.com/manonja/quickExpense-rag/releases/tag/data-v2025.10.28)
+  - **Source**: Full T4002 PDF (pages 1-113) from CRA T4002 Business and Professional
     Income Guide
-  - **Coverage**: 63 searchable expense rules
-  - **Lineage**: 100% coverage with extraction timestamps and source tracking
-  - **Note**: Future releases will expand to full T4002 guide (247+ rules)
+  - **Coverage**: 662 searchable content items (RULE, DEFINITION, PRINCIPLE, TABLE)
+  - **Lineage**: 100% extraction coverage with timestamps and source tracking
+  - **Improvements**: Dedicated sections for CCA, farm losses, capital gains
+  - **Note**: Future releases will expand to additional CRA documents and HTML chapters
 - **Versioning**: Schema version + data version stored in database metadata
 - **Integrity**: SHA256 checksums verified automatically on download
 - **Updates**: Database versions released independently from code versions

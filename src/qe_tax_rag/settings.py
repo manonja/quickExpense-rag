@@ -28,11 +28,11 @@ class Settings(BaseSettings):
         description="Directory to cache the downloaded database.",
     )
     db_download_url: str = Field(
-        default="https://github.com/manonja/quickExpense-rag/releases/download/data-v2025.10.23/cra_rules.db",
+        default="https://github.com/manonja/quickExpense-rag/releases/download/data-v2025.10.28/t4002_pdf_v4.db",
         description="URL to download the SQLite database from.",
     )
     db_filename: str = Field(
-        default="cra_rules.db",
+        default="t4002_pdf_v4.db",
         description="Default filename for the downloaded database.",
     )
 
