@@ -7,18 +7,20 @@ the library and searching CRA expense rules.
 
 from __future__ import annotations
 
+import os
+import sqlite3
+from importlib import resources
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from pydantic import ValidationError
 
-from qe_tax_rag.data.manager import DataManager
+from qe_tax_rag import __version__
 from qe_tax_rag.embeddings.encoder import _EmbeddingService
 from qe_tax_rag.exceptions import DatabaseNotInitializedError
 from qe_tax_rag.search.enums import BusinessType, Province
 from qe_tax_rag.search.hybrid import HybridSearchEngine
 from qe_tax_rag.search.models import ExpenseQuery, SearchResult
-from qe_tax_rag.settings import settings
 
 if TYPE_CHECKING:
     pass
@@ -28,9 +30,9 @@ _search_engine: HybridSearchEngine | None = None
 _db_path: Path | None = None
 
 
-def init(force_update: bool = False) -> None:  # noqa: ARG001
+def init(db_path: str | None = None) -> None:
     """
-    Initialize library and download database if needed.
+    Initialize library with bundled database.
 
     ⚠️ LEGAL DISCLAIMER:
     This library provides informational content only and does not
@@ -38,29 +40,92 @@ def init(force_update: bool = False) -> None:  # noqa: ARG001
     tax professional or accountant. CRA rules are complex and change
     frequently. The data may be incomplete or outdated.
 
+    The function determines the database path in the following order:
+    1. A path provided directly to the function (db_path parameter)
+    2. A path specified by the QE_TAX_RAG_DATA_PATH environment variable
+    3. The database file bundled with the package (default)
+
     Args:
-        force_update: Force re-download even if cached DB exists.
+        db_path: Optional custom path to database file. If provided, this path
+                is used instead of the bundled database or environment variable.
 
     Raises:
-        NetworkError: If download fails and no cached DB available.
-        DataVersionMismatchError: If DB version incompatible.
+        FileNotFoundError: If specified path doesn't exist.
+        RuntimeError: If bundled database cannot be located.
 
     """
     global _search_engine, _db_path
 
-    # Step 1: Initialize DataManager and get database path
-    data_manager = DataManager(settings=settings)
-    db_path = data_manager.get_database_path()
+    # Priority 1: Direct parameter override
+    if db_path:
+        path = Path(db_path)
+        if not path.is_file():
+            raise FileNotFoundError(
+                f"Database not found at specified path: {db_path}"
+            )
+        resolved_path = path
+    else:
+        # Priority 2: Environment variable override
+        env_path_str = os.getenv("QE_TAX_RAG_DATA_PATH")
+        if env_path_str:
+            path = Path(env_path_str)
+            if not path.is_file():
+                raise FileNotFoundError(
+                    f"Database not found at environment variable path: {env_path_str}"
+                )
+            resolved_path = path
+        else:
+            # Priority 3: Bundled database (default)
+            # The recommended pattern for bundled data that needs to persist is to
+            # copy it to a stable user-accessible location on first use. This
+            # avoids issues with `importlib.resources.as_file` creating temporary
+            # files that are deleted after the context exits.
+            cache_dir = Path.home() / ".qe_tax_rag"
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            resolved_path = cache_dir / "t4002.db"
+            version_file = cache_dir / "version.txt"
+
+            # Check if the cached DB is present and its version matches the library version.
+            # This ensures that if the user updates the package, the DB is re-extracted.
+            cached_version = (
+                version_file.read_text().strip() if version_file.exists() else None
+            )
+
+            if not resolved_path.is_file() or cached_version != __version__:
+                try:
+                    # Modern approach for Python 3.9+
+                    # Access bundled database using resources.files()
+                    # The qe_tax_rag.data package uses lazy loading to avoid httpx import
+                    db_bytes = (
+                        resources.files("qe_tax_rag.data")
+                        .joinpath("t4002.db")
+                        .read_bytes()
+                    )
+                except AttributeError:
+                    # Fallback for Python < 3.9
+                    db_bytes = resources.read_binary("qe_tax_rag.data", "t4002.db")
+
+                # Write the new database file and update the version file.
+                resolved_path.write_bytes(db_bytes)
+                version_file.write_text(__version__)
+
+    # Final validation
+    if not resolved_path or not resolved_path.is_file():
+        raise RuntimeError(
+            "Could not locate the bundled database. "
+            "The package installation may be corrupted. "
+            "Try reinstalling: pip install --force-reinstall qe-tax-rag"
+        )
 
     # Step 2: Initialize embedding service (singleton)
     encoder = _EmbeddingService()
 
     # Step 3: Create HybridSearchEngine with database and encoder
-    search_engine = HybridSearchEngine(db_path=db_path, encoder=encoder)
+    search_engine = HybridSearchEngine(db_path=resolved_path, encoder=encoder)
 
     # Step 4: Store in module state for reuse
     _search_engine = search_engine
-    _db_path = db_path
+    _db_path = resolved_path
 
 
 def search(
@@ -122,8 +187,6 @@ def get_version() -> dict[str, str]:
         If database not initialized, version fields return "not_initialized".
 
     """
-    from qe_tax_rag import __version__
-
     # If database not initialized, return stubs
     if _db_path is None:
         return {
@@ -133,8 +196,6 @@ def get_version() -> dict[str, str]:
         }
 
     # Query database metadata table
-    import sqlite3
-
     conn = sqlite3.connect(_db_path)
     try:
         cursor = conn.execute(

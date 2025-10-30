@@ -29,7 +29,6 @@ dependencies = [
     "pydantic>=2.0",
     "pydantic-settings>=2.0",
     "sqlite-vec>=0.1",
-    "httpx>=0.25",
     "tqdm>=4.66",
     "numpy>=1.24,<2.0",
     "sentence-transformers>=2.2",
@@ -80,7 +79,8 @@ extract-pdf = "qe_tax_rag.extraction.ca.pdf.pdf_cli:main"
 path = "src/qe_tax_rag/__init__.py"
 
 [tool.hatchling.build.targets.wheel]
-packages = ["qe_tax_rag"]
+packages = ["src/qe_tax_rag"]
+include = ["/src/qe_tax_rag/data/*.db"]
 
 [tool.ruff]
 target-version = "py312"
