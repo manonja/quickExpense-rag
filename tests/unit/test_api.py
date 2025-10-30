@@ -36,74 +36,75 @@ class TestSearchWithoutInit:
 class TestInit:
     """Test init() function behavior."""
 
-    @patch("qe_tax_rag.api.DataManager")
     @patch("qe_tax_rag.api.HybridSearchEngine")
     @patch("qe_tax_rag.api._EmbeddingService")
-    def test_init_creates_search_engine(
-        self, mock_encoder_cls, mock_engine_cls, mock_dm_cls
-    ):
+    def test_init_creates_search_engine(self, mock_encoder_cls, mock_engine_cls):
         """
         GIVEN: Fresh library state
-        WHEN: init() is called
-        THEN: DataManager is instantiated and HybridSearchEngine is created
+        WHEN: init() is called without arguments
+        THEN: HybridSearchEngine is created with bundled database
         """
         # Reset module state
         api._search_engine = None
         api._db_path = None
 
         # Setup mocks
-        mock_db_path = Path("/fake/path/to/database.db")
-        mock_dm = Mock()
-        mock_dm.get_database_path.return_value = mock_db_path
-        mock_dm_cls.return_value = mock_dm
-
         mock_encoder = Mock()
         mock_encoder_cls.return_value = mock_encoder
 
         mock_engine = Mock()
         mock_engine_cls.return_value = mock_engine
 
-        # Call init()
+        # Call init() with bundled database (default behavior)
         api.init()
 
-        # Verify DataManager was instantiated and get_database_path called
-        mock_dm_cls.assert_called_once()
-        mock_dm.get_database_path.assert_called_once()
-
-        # Verify HybridSearchEngine was created with correct arguments
-        mock_engine_cls.assert_called_once_with(
-            db_path=mock_db_path, encoder=mock_encoder
-        )
-
-        # Verify module state was updated
+        # Verify HybridSearchEngine was created
+        assert mock_engine_cls.called
         assert api._search_engine is mock_engine
-        assert api._db_path == mock_db_path
 
-    @patch("qe_tax_rag.api.DataManager")
+        # Verify encoder was created
+        mock_encoder_cls.assert_called_once()
+
     @patch("qe_tax_rag.api.HybridSearchEngine")
     @patch("qe_tax_rag.api._EmbeddingService")
-    def test_init_with_force_update(
-        self, mock_encoder_cls, mock_engine_cls, mock_dm_cls
-    ):
+    def test_init_with_custom_db_path(self, mock_encoder_cls, mock_engine_cls):
         """
-        GIVEN: Cached database exists
-        WHEN: init(force_update=True) is called
-        THEN: force_update flag is passed to download_database
+        GIVEN: User provides a custom database path
+        WHEN: init(db_path="/custom/path") is called
+        THEN: HybridSearchEngine is created with custom path
         """
         # Reset module state
         api._search_engine = None
+        api._db_path = None
 
         # Setup mocks
-        mock_db_path = Path("/fake/path/to/database.db")
-        mock_dm = Mock()
-        mock_dm.get_database_path.return_value = mock_db_path
-        mock_dm_cls.return_value = mock_dm
+        mock_encoder = Mock()
+        mock_encoder_cls.return_value = mock_encoder
 
-        # Call init with force_update
-        api.init(force_update=True)
+        mock_engine = Mock()
+        mock_engine_cls.return_value = mock_engine
 
-        # Verify get_database_path was called (force_update handling is in DataManager)
-        mock_dm.get_database_path.assert_called_once()
+        # Create a temporary database file
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp_db:
+            custom_db_path = tmp_db.name
+
+        try:
+            # Call init with custom path
+            api.init(db_path=custom_db_path)
+
+            # Verify HybridSearchEngine was called with custom path
+            assert mock_engine_cls.called
+            call_args = mock_engine_cls.call_args
+            assert str(call_args[1]["db_path"]) == custom_db_path
+
+            # Verify module state
+            assert api._search_engine is mock_engine
+            assert str(api._db_path) == custom_db_path
+        finally:
+            # Cleanup
+            Path(custom_db_path).unlink(missing_ok=True)
 
 
 class TestSearch:
@@ -202,10 +203,13 @@ class TestGetVersion:
 
     def test_get_version_returns_dict(self):
         """
-        GIVEN: Library module loaded
+        GIVEN: Library is initialized with bundled database
         WHEN: get_version() is called
         THEN: Returns dict with library_version, data_version, schema_version
         """
+        # Initialize with bundled database
+        api.init()
+
         version_info = api.get_version()
 
         # Verify structure
@@ -218,6 +222,10 @@ class TestGetVersion:
         from qe_tax_rag import __version__
 
         assert version_info["library_version"] == __version__
+
+        # Verify data and schema versions are not "not_initialized"
+        assert version_info["data_version"] != "not_initialized"
+        assert version_info["schema_version"] != "not_initialized"
 
 
 class TestLegalDisclaimers:

@@ -383,6 +383,98 @@ and advanced patterns.
 - **Privacy**: Search queries and CRA data never leave your machine (only LLM queries
   use external APIs)
 
+## Integration with Multi-Agent Systems
+
+QE Tax RAG is designed for seamless integration into production multi-agent workflows,
+particularly AutoGen-based systems for expense processing and tax compliance.
+
+### Use Case: quickExpense Integration
+
+The library serves as the knowledge base for the **quickExpense** application's
+CRArulesAgent, providing retrieval-grounded compliance analysis:
+
+**Before RAG Integration:**
+
+- CRArulesAgent relies purely on LLM reasoning → risk of hallucinations
+- No source citations or audit trail
+- Rules limited to LLM's training data cutoff
+
+**After RAG Integration:**
+
+- Every tax decision backed by authoritative CRA rules from the database
+- Citations (e.g., `LINE-8523`) link to official CRA publications
+- Hybrid approach: Retrieval (factual) + LLM (interpretation)
+- Database updates independently from application code
+
+### Integration Guide
+
+For detailed step-by-step instructions on integrating qe-tax-rag into multi-agent
+workflows:
+
+**📖 [Integration Guide for quickExpense](docs/INTEGRATION_QUICKEXPENSE.md)**
+
+The guide covers:
+
+- Architecture & data flow diagrams
+- 15-step integration checklist with acceptance criteria
+- API usage patterns for agent workflows
+- Testing strategies (unit, integration, E2E)
+- Deployment considerations (Docker, Kubernetes, FastAPI lifespan)
+- Performance optimization and caching
+- Troubleshooting common integration issues
+
+### Quick Integration Example
+
+```python
+# In your AutoGen CRArulesAgent
+import qe_tax_rag as qe
+
+class CRArulesAgent:
+    def __init__(self):
+        qe.init()  # Initialize RAG database
+        self.llm = TogetherAI(model="llama-3.1-70b")
+
+    def analyze_expense(self, expense_data: dict) -> dict:
+        # Step 1: Retrieve relevant CRA rules
+        query = f"{expense_data['category']} {expense_data['vendor']} deduction"
+        rules = qe.search(query, expense_types=[expense_data['category']], top_k=5)
+
+        # Step 2: Format context for LLM
+        context = "\n\n".join([
+            f"[{r.citation_id}] {r.content}\nSource: {r.source_url}"
+            for r in rules
+        ])
+
+        # Step 3: LLM reasoning with grounded context
+        prompt = f"Analyze expense: {expense_data}\n\nCRA Rules:\n{context}"
+        response = self.llm.generate(prompt)
+
+        return parse_json(response)  # Returns citations + deductible percentage
+```
+
+### Production Deployment
+
+For FastAPI applications, initialize once on startup using lifespan events:
+
+```python
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+import qe_tax_rag as qe
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Initialize RAG database
+    qe.init(path=os.environ.get("QE_TAX_RAG_DB_PATH", "/data/qe_tax_rag"))
+    print(f"✅ qe-tax-rag initialized: {qe.get_version()}")
+    yield
+    # Shutdown cleanup
+
+app = FastAPI(lifespan=lifespan)
+```
+
+See the [Integration Guide](docs/INTEGRATION_QUICKEXPENSE.md) for complete deployment
+patterns including Docker, Kubernetes, and multi-instance configurations.
+
 ## Troubleshooting
 
 ### Database Download Issues
