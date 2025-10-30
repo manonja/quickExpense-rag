@@ -9,7 +9,7 @@ Always consult a qualified tax professional or accountant.
 
 import logging
 
-__version__ = "0.1.0"
+__version__ = "0.2.4"
 
 from qe_tax_rag.api import get_version, init, search
 from qe_tax_rag.exceptions import (
